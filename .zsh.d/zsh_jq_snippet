@@ -1,1 +1,0 @@
-alias jq_aws_elbv2_target_health="jq -r '.TargetHealthDescriptions[] | [.Target.Id, .TargetHealth.State] | join(\" \")'"
