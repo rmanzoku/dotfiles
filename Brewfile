@@ -17,6 +17,7 @@ brew "openjdk@17"
 brew "poppler"
 brew "qwen-code"
 brew "rbenv"
+brew "shellcheck"
 brew "tflint"
 brew "xcodegen"
 brew "hashicorp/tap/terraform", link: false

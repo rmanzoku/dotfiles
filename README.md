@@ -33,6 +33,25 @@ git add -A && git commit -m "update dotfiles"
 git push
 ```
 
+### chezmoi 管理外の変更を検出 (`chezmoi-drift`)
+
+ツールやアプリが dotfile を直接変更した場合のケア:
+
+```bash
+# 差分のあるファイルを確認
+chezmoi-drift
+
+# 外部の変更を chezmoi ソースに取り込む
+chezmoi-drift --apply
+
+# chezmoi ソースの状態に戻す
+chezmoi-drift --restore
+```
+
+### Worktree での AI 編集
+
+Conductor などのツールが git worktree を立ち上げて dotfiles を編集する際、`setup.sh` が自動実行されます。このスクリプトは chezmoi ソースとの差分を検出し、編集前にドリフトがあれば警告します。
+
 ## 管理対象ファイル
 
 | ファイル | 用途 |
@@ -43,6 +62,7 @@ git push
 | `.gitconfig` | Git 設定 |
 | `.config/git/ignore` | グローバル gitignore |
 | `.local/bin/env` | PATH 設定スクリプト |
+| `.local/bin/chezmoi-drift` | ドリフト検出スクリプト |
 | `.claude/CLAUDE.md` | Claude Code グローバル設定 |
 | `.claude/settings.json` | Claude Code 設定 |
 | `.claude/skills/` | Claude Code カスタムスキル |

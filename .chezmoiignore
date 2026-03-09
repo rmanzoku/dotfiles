@@ -1,6 +1,7 @@
 # Repo-only files (not deployed to home)
 Brewfile
 README.md
+setup.sh
 
 # macOS
 .DS_Store
