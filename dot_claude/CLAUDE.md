@@ -1,7 +1,10 @@
-# User Preferences
+# 共通ルール
 
 - 日本語で応答すること
 - MCP サーバーよりも CLI ツールの利用を優先して検討すること
+
+# Claude Code 固有ルール
+
 - コミット前に、auto memory（~/.claude/projects/*/memory/）に保存された内容のうちプロジェクトに有用なものがあれば、プロジェクトの CLAUDE.md に反映するか確認すること
 - Plan をユーザーに提示する前に、Codex でレビューを行いフィードバックを反映すること。勝手にモデルとReasoningを変更しないこと。コマンドパターン:
 

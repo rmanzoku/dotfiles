@@ -1,0 +1,31 @@
+{
+  "$version": 3,
+  "modelProviders": {
+    "openai": [
+      {
+        "id": "qwen3.5:4b",
+        "name": "Local Qwen 4B",
+        "baseUrl": "http://192.168.128.178:11434/v1",
+        "envKey": "OPENAI_API_KEY"
+      },
+      {
+        "id": "qwen3.5:9b",
+        "name": "Local Qwen 9B",
+        "baseUrl": "http://192.168.128.178:11434/v1",
+        "envKey": "OPENAI_API_KEY"
+      },
+      {
+        "id": "qwen3.5:2b",
+        "name": "Local Qwen 2B",
+        "baseUrl": "http://192.168.128.178:11434/v1",
+        "envKey": "OPENAI_API_KEY"
+      }
+    ]
+  },
+  "security": {
+    "auth": {}
+  },
+  "model": {
+    "name": "qwen3.5:4b"
+  }
+}

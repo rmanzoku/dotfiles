@@ -18,5 +18,5 @@ warn "以下のファイルに chezmoi ソースとの差分があります:"
 echo "$diff_output" | grep -E '^(---|\+\+\+) [ab]/' | sed 's|^... [ab]/|  |' | sort -u
 echo ""
 warn "編集前に差分を解消してください:"
-warn "  変更を取り込む: chezmoi-drift --apply"
-warn "  管理状態に戻す: chezmoi-drift --restore"
+warn "  変更を取り込む: scripts/chezmoi-drift --apply"
+warn "  管理状態に戻す: scripts/chezmoi-drift --restore"

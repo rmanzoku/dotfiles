@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash(git commit*)",
+        "command": ".claude/hooks/chezmoi-pre-commit-hook",
+        "timeout": 10000
+      }
+    ]
+  }
+}
