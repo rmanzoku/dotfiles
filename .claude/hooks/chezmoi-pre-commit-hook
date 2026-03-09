@@ -1,0 +1,31 @@
+#!/bin/bash
+set -eu
+
+# Claude Code の PreToolUse hook から呼ばれるスクリプト
+# chezmoi ソースと実機の差分がある場合にコミットをブロックする
+
+# chezmoi が利用可能か確認
+if ! command -v chezmoi >/dev/null 2>&1; then
+  exit 0
+fi
+
+# chezmoi diff を実行
+diff_output="$(chezmoi diff 2>/dev/null || true)"
+
+if [ -z "$diff_output" ]; then
+  exit 0
+fi
+
+# 差分ファイル一覧を抽出（最大20行）
+files="$(echo "$diff_output" | grep -E '^(---|\+\+\+) [ab]/' | sed 's|^... [ab]/|  |' | sort -u | head -20)"
+
+echo "chezmoi ドリフトを検出しました。コミット前に解消してください。"
+echo ""
+echo "差分のあるファイル:"
+echo "$files"
+echo ""
+echo "解消方法:"
+echo "  scripts/chezmoi-drift --apply   (外部の変更を取り込む)"
+echo "  scripts/chezmoi-drift --restore (chezmoi ソースの状態に戻す)"
+
+exit 2
