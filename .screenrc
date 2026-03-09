@@ -1,9 +1,0 @@
-startup_message off
-
-escape ^Tt
-
-hardstatus alwayslastline "%{.bW}%-w%{.rW}%n %t%{-}%+w %=%{..G} %H %{..Y} %Y %m/%d %c "
-hardstatus off
-
-defwrap on
-
