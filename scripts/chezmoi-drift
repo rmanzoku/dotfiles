@@ -24,7 +24,7 @@ EXTRA_FILES=(
   "dot_claude/CLAUDE.md:.claude/CLAUDE.md:raw"
   "dot_claude/settings.json:.claude/settings.json:raw"
   "dot_claude/skills/skill-manager/SKILL.md:.claude/skills/skill-manager/SKILL.md:raw"
-  "dot_codex/private_config.toml.tmpl:.codex/config.toml:template"
+  "dot_codex/private_config.toml:.codex/config.toml:raw"
 )
 
 render_template_to_file() {

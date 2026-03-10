@@ -1,0 +1,14 @@
+model = "gpt-5.4"
+model_reasoning_effort = "medium"
+personality = "pragmatic"
+service_tier = "fast"
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+
+[features]
+collaboration_modes = true
+multi_agent = true
+
+[mcp_servers.pencil]
+command = "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64"
+args = [ "--app", "desktop" ]
