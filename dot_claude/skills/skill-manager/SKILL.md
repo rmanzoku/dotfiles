@@ -22,6 +22,30 @@ Plugin state is stored in JSON files under `~/.claude/plugins/`:
 
 **Always read these files directly** rather than using `claude plugin list` CLI, which may return empty output when invoked via Bash tool. Use `claude plugin install/uninstall/update` CLI only for mutating operations (install, remove, update).
 
+## Agent Conventions
+
+Skill directory structures and constraints for each agent. Subcommands follow these rules.
+
+### Claude Code (primary)
+
+- Global skills: `~/.claude/skills/*/SKILL.md`
+- Legacy format (deprecated): `~/.claude/commands/*.md`
+- Project skills: `<git-root>/.claude/skills/*/SKILL.md`
+- Plugins: managed via `claude plugin` CLI, state stored in `~/.claude/plugins/`
+- Legacy format files trigger migration warnings
+
+### Codex
+
+- Global skills: `~/.codex/skills/<name>/` (symlinks from Claude)
+- Project skills: `<git-root>/.agents/skills/<name>/` (relative symlinks)
+- **System skills**: `~/.codex/skills/.system/` contains Codex-managed skills. When a skill name matches a `.system` entry, `.system` takes precedence — silently skip during sync, migration, clean, and health checks (no warning needed)
+- Manifests: `~/.codex/skills/.skill-manager-sync.json` (global), `<git-root>/.agents/skills/.skill-manager-sync.json` (project)
+
+### Qwen Code
+
+- Global skills: `~/.qwen/skills/`
+- Sync not yet supported
+
 ## Commands
 
 ### `list [--full]`
@@ -220,7 +244,7 @@ Steps:
    - If scope omitted: scan both, use whichever exists. If both exist, ask user to specify scope.
 3. Check for conflicts:
    - Error if `<scope>/.claude/skills/<name>/SKILL.md` already exists
-   - Silently skip if name collides with a `.system` skill in `~/.codex/skills/.system/` (no warning needed — this is a known constraint)
+   - Skip if name conflicts with an agent system skill (see Agent Conventions > Codex)
 4. Convert:
    - Create directory `<scope>/.claude/skills/<name>/`
    - Copy content from `.claude/commands/<name>.md` to `.claude/skills/<name>/SKILL.md`
@@ -244,7 +268,7 @@ Steps:
    - Read `~/.claude/plugins/installed_plugins.json` → for each installed plugin, read the corresponding marketplace manifest (`<installLocation>/.claude-plugin/marketplace.json`) to get the plugin's `skills` array, then resolve each skill path under `installPath`. Do NOT scan `installPath` directory — only sync skills explicitly listed in the manifest for that plugin.
    - Glob `~/.claude/skills/*/SKILL.md` → global Skills format
 3. For each skill, create symlink `~/.codex/skills/<name>` → `<source-dir>`
-   - Silently skip if name matches anything in `~/.codex/skills/.system/` (no warning needed — this is a known constraint)
+   - Skip names reserved by target agent (see Agent Conventions > Codex)
    - Skip if target already exists (unless `--force`)
    - Check for case-insensitive collisions on macOS
 4. If any Commands format files exist in `~/.claude/commands/`, warn:
@@ -289,7 +313,7 @@ Update the manifest after each sync operation. Write atomically (temp file + ren
 
 #### `--clean`
 
-Remove only symlinks recorded in the manifest. Never touch `.system/` or non-symlink entries.
+Remove only symlinks recorded in the manifest. Never touch agent system directories or non-symlink entries (see Agent Conventions > Codex).
 Read manifest → for each entry, verify `lstat` shows symlink → remove → delete manifest.
 
 #### `--dry-run`
@@ -320,6 +344,7 @@ Checks:
 6. **Codex sync status**:
    - Read `~/.codex/skills/.skill-manager-sync.json` and `<git-root>/.agents/skills/.skill-manager-sync.json`
    - For each entry: verify symlink exists and target is valid
+   - Skip names reserved by target agent (see Agent Conventions > Codex)
    - Count synced, broken, and unsynced skills
    - Report and suggest `/skill-manager sync codex` if needed
 7. **`.agents/skills/` integrity**: Verify each symlink in `.agents/skills/` points to a valid `.claude/skills/<name>` directory containing `SKILL.md`.
