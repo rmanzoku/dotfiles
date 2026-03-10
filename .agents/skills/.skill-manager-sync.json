@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "synced_at": "2026-03-10T16:50:24Z",
+  "links": [
+    {
+      "name": "dotfile-update",
+      "target": "../../.claude/skills/dotfile-update",
+      "link": "/Users/rmanzoku/.local/share/chezmoi/.agents/skills/dotfile-update",
+      "source_type": "project_skill",
+      "source_id": null
+    }
+
+  ]
+}
