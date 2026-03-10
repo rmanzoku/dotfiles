@@ -24,6 +24,12 @@ trust_level = "trusted"
 [projects."{{ .chezmoi.homeDir }}/conductor/repos/rwa-sample"]
 trust_level = "trusted"
 
+[projects."{{ .chezmoi.homeDir }}/conductor/repos/sbi-rwapf-workspace"]
+trust_level = "trusted"
+
+[projects."{{ .chezmoi.homeDir }}/conductor/repos/fastpoker"]
+trust_level = "trusted"
+
 [mcp_servers.pencil]
 command = "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64"
 args = [ "--app", "desktop" ]

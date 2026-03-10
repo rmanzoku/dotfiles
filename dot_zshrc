@@ -13,3 +13,4 @@ export PATH="$JAVA_HOME/bin:$PATH"
 
 # GEMINI_API_KEY is set in ~/.zshenv
 . "$HOME/.local/bin/env"
+export PATH=$PATH:$HOME/.maestro/bin

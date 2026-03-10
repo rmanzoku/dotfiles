@@ -18,6 +18,12 @@
         "source": "github",
         "repo": "anthropics/skills"
       }
+    },
+    "oasys-dev-marketplace": {
+      "source": {
+        "source": "git",
+        "url": "git@github.com:oasysgames/claude-code-dev-marketplace.git"
+      }
     }
   }
 }
