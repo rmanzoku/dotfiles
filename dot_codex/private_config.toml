@@ -12,3 +12,7 @@ multi_agent = true
 [mcp_servers.pencil]
 command = "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64"
 args = [ "--app", "desktop" ]
+
+[mcp_servers.freee-mcp]
+command = "npx"
+args = [ "freee-mcp" ]
