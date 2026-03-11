@@ -4,7 +4,9 @@ CLAUDE.md
 README.md
 setup.sh
 scripts
-.claude
+.claude/*
+!.claude/skills/
+!.claude/skills/**
 
 # macOS
 .DS_Store

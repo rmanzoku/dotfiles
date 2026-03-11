@@ -57,6 +57,31 @@ Show installed/active skills. With `--full`, also show uninstalled marketplace p
 2. Parse the returned JSON
 3. Format as tables shown below
 
+The script keeps the existing top-level JSON keys:
+
+```json
+{
+  "marketplace_plugins": [],
+  "global_skills": [],
+  "project_skills": [],
+  "project_root": null,
+  "skill_sources": null,
+  "errors": []
+}
+```
+
+Additional metadata is attached inside list elements:
+
+- `sync_state`: `system|synced|broken|unsynced`
+- `format`: `skills|command`
+- `deprecated`: boolean
+- `hidden_duplicate`: boolean
+- `warnings`: array of `{code, path, reason}`
+
+Error objects use the fixed shape `{code, path, reason}`.
+When run outside a git repository, `project_root` must be `null` and `project_skills` must be `[]`.
+Only `list` is refactored to use the Python-backed fast path in this skill version; other subcommands still follow the documented manual workflows below.
+
 **Fallback** (if script not found or fails):
 
 Steps:
@@ -66,15 +91,16 @@ Steps:
 4. Scan global custom skills (merge both formats, Skills format takes precedence):
    a. Glob `~/.claude/skills/*/SKILL.md` → Skills format (read `name` and `description` from YAML frontmatter)
    b. List `~/.claude/commands/*.md` → Commands format (deprecated). If a skill exists in both `.claude/skills/` and `.claude/commands/`, show only the Skills format version and mark the Commands version as `(deprecated)`.
-   c. Check global Codex sync: read `~/.codex/skills/.skill-manager-sync.json` if exists, or check `~/.codex/skills/<name>` symlink existence for each skill. Show Codex column.
+   c. Check global Codex sync: read `~/.codex/skills/.skill-manager-sync.json` if exists, validate the current link target, and return `sync_state`.
 5. Scan project skills (merge both formats, Skills format takes precedence):
    a. Run `git rev-parse --show-toplevel` to find git root. If not in a git repo, display "Project Skills: not in a git repository" and skip this section.
    b. Glob `<git-root>/.claude/skills/*/SKILL.md` → Skills format
    c. List `<git-root>/.claude/commands/*.md` → Commands format (deprecated)
-   d. Check project Codex sync: check `<git-root>/.agents/skills/<name>` symlink existence for each skill. Show Codex column.
+   d. Check project Codex sync: read `<git-root>/.agents/skills/.skill-manager-sync.json` if exists, validate the current link target, and return `sync_state`.
 6. If `~/.claude/skill-sources.json` exists, read it for custom skill source/update info.
 
 **Important**: Do NOT use `claude plugin list` or `claude plugin marketplace list` CLI commands for the `list` subcommand — they may return empty output when run via Bash tool. Instead, always read the JSON files directly from `~/.claude/plugins/`.
+**Important**: For marketplace plugins, use only the manifest's `skills` array to resolve bundled skills. Do NOT fall back to scanning `installPath`.
 
 #### Default output (`list`)
 
@@ -332,31 +358,55 @@ List what would be synced/cleaned without making changes.
 
 Verify health of all skills and plugins.
 
+**Fast path** (preferred):
+1. Run `bash ~/.claude/skills/skill-manager/scripts/doctor.sh` via a single Bash tool call
+2. Parse the returned JSON
+3. Format the findings for the user
+
+The script returns a JSON object with:
+
+```json
+{
+  "summary": {"pass": 0, "warn": 0, "fail": 0},
+  "checks": {},
+  "errors": [],
+  "project_root": null
+}
+```
+
+- `summary`: count of `pass|warn|fail`
+- `checks`: object keyed by category, each value is an array of check objects
+- Check object fields: `status`, `code`, `path`, `reason`, `subject`, `scope`
+- `errors`: script-level failures in `{code, path, reason}` format
+- When run outside a git repository, `project_root` must be `null` and project-scope checks must not be generated
+
+`doctor` is detection-only in this skill version. It must not create backups, rewrite registries, repair symlinks, or re-bootstrap state.
+
 Checks:
 1. **Marketplace plugins**: Read `~/.claude/plugins/installed_plugins.json` and verify each plugin's `installPath` directory exists.
 2. **Custom skills**: For each entry in `skill-sources.json`:
    - Verify `installed_as` file exists
    - If `has_resources`: verify `resources_path` directory exists and contains expected files
    - Verify source repo clone is accessible
-3. **Registry integrity**: Check `skill-sources.json` is valid JSON with `schema_version`. If corrupted, back up as `.bak` and offer to re-bootstrap.
-4. **Project skills**: Verify `.claude/commands/` files have valid YAML frontmatter.
-5. **Deprecated format detection**: Scan `~/.claude/commands/*.md` and `<git-root>/.claude/commands/*.md` for Commands format files. Report count and suggest `/skill-manager migrate --all`.
-6. **Codex sync status**:
+3. **Registry integrity**: Check `skill-sources.json` is valid JSON with `schema_version`. Report failures only; do not create `.bak` or re-bootstrap automatically.
+4. **Deprecated format detection**: Scan `~/.claude/commands/*.md` and `<git-root>/.claude/commands/*.md` for Commands format files. Report count and suggest `/skill-manager migrate --all`.
+5. **Codex sync status**:
    - Read `~/.codex/skills/.skill-manager-sync.json` and `<git-root>/.agents/skills/.skill-manager-sync.json`
    - For each entry: verify symlink exists and target is valid
    - Skip names reserved by target agent (see Agent Conventions > Codex)
    - Count synced, broken, and unsynced skills
    - Report and suggest `/skill-manager sync codex` if needed
-7. **`.agents/skills/` integrity**: Verify each symlink in `.agents/skills/` points to a valid `.claude/skills/<name>` directory containing `SKILL.md`.
-8. **Project skill format compliance**: For each project skill (`<git-root>/.claude/skills/*/SKILL.md`), validate against Skill Creator format rules. The agent reads each file directly — no script invocation needed.
-   - **FAIL** criteria (based on `quick_validate.py` rules):
-     - YAML frontmatter missing (`---` delimiters)
-     - `name` missing or invalid (must be kebab-case `^[a-z0-9][a-z0-9-]*[a-z0-9]$`, ≤64 chars, no `--`)
-     - `description` missing or invalid (must be string, ≤1024 chars, no `<>`)
-     - Unknown frontmatter keys (allowed: `name`, `description`, `license`, `allowed-tools`, `metadata`, `compatibility`)
-     - `compatibility` invalid (if present: must be string, ≤500 chars)
+6. **`.agents/skills/` integrity**: Verify each symlink in `.agents/skills/` points to a valid `.claude/skills/<name>` directory containing `SKILL.md`.
+7. **Project skill format compliance**: For each project skill (`<git-root>/.claude/skills/*/SKILL.md`), call `skill-creator/scripts/quick_validate.py` and treat its current behavior as the source of truth.
+   - **FAIL** criteria (based on current `quick_validate.py` rules):
+     - YAML frontmatter missing or malformed
+     - `name` missing or invalid
+     - `description` missing or invalid
+     - Unknown frontmatter keys (allowed by current validator: `name`, `description`, `license`, `allowed-tools`, `metadata`)
+     - `compatibility` present in frontmatter
    - **WARN** criteria (best practice, beyond quick_validate.py scope):
      - SKILL.md exceeds 500 lines — suggest splitting to `references/`
+     - `agents/openai.yaml` exists but is not auto-validated against `SKILL.md`
    - Output format:
      ```
      ## Project Skill Format Compliance
