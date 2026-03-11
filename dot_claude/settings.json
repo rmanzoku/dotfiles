@@ -10,7 +10,8 @@
   },
   "enabledPlugins": {
     "document-skills@anthropic-agent-skills": true,
-    "skill-creator@claude-plugins-official": true
+    "skill-creator@claude-plugins-official": true,
+    "claude-code-metrics-plugin@oasys-dev-marketplace": true
   },
   "extraKnownMarketplaces": {
     "anthropic-agent-skills": {
