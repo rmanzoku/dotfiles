@@ -4,6 +4,15 @@ set -eu
 # Claude Code の PreToolUse hook から呼ばれるスクリプト
 # chezmoi ソースと実機の差分がある場合にコミットをブロックする
 
+# Bash ツールの呼び出し情報は stdin JSON で渡される。git commit 以外は何もしない。
+payload="$(cat)"
+tool_command="$(printf '%s' "$payload" | python3 -c 'import json,sys; data=json.load(sys.stdin); print(data.get("tool_input", {}).get("command", ""))')"
+
+case "$tool_command" in
+  git\ commit* ) ;;
+  * ) exit 0 ;;
+esac
+
 # chezmoi が利用可能か確認
 if ! command -v chezmoi >/dev/null 2>&1; then
   exit 0
