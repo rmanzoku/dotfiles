@@ -27,6 +27,7 @@ chezmoi のソースファイルを直接編集する。
 補足:
 - repo ローカルの `.claude/skills/` 配下の skill 追加・更新は `dotfile-update` ではなく `skill-creator` の責務として扱う。
 - source / target の対応で迷ったら `chezmoi target-path <source-path>` と `chezmoi source-path <target-path>` で確認する。
+- `*.md` のドキュメントを更新した場合は、更新後にそのファイル全体を読み直し、重複した指示や矛盾した記述が残っていないか確認する。
 
 ### 2. AI 間の設定対応
 
