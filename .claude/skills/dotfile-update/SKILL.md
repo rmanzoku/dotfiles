@@ -3,7 +3,7 @@ name: dotfile-update
 description: >
   chezmoi 管理の dotfiles リポジトリで dotfile を追加・変更・削除するためのワークフロースキル。
   `dot_*` ファイル、`.chezmoiignore`、`Brewfile`、共通ルールファイル
-  （`dot_claude/CLAUDE.md`、`dot_codex/AGENTS.md`、`dot_qwen/QWEN.md`）を
+  （`dot_claude/CLAUDE.md`、`dot_codex/AGENTS.md`、`dot_qwen/QWEN.md`、`dot_gemini/GEMINI.md`）を
   編集する依頼で必ず使用すること。
   AI 間の設定対応、`json` から `toml` への変換、chezmoi の
   `private_` / `dot_` 属性や source / target の対応確認が関わる依頼にも適用すること。
@@ -36,10 +36,10 @@ chezmoi のソースファイルを直接編集する。
 
 対応表:
 
-| 設定カテゴリ | Claude | Codex | Qwen |
-|---|---|---|---|
-| 指示ファイル | `dot_claude/CLAUDE.md` | `dot_codex/AGENTS.md` | `dot_qwen/QWEN.md` |
-| クライアント設定 | `dot_claude/settings.json` | `dot_codex/private_config.toml` | `dot_qwen/settings.json` |
+| 設定カテゴリ | Claude | Codex | Qwen | Gemini |
+|---|---|---|---|---|
+| 指示ファイル | `dot_claude/CLAUDE.md` | `dot_codex/AGENTS.md` | `dot_qwen/QWEN.md` | `dot_gemini/GEMINI.md` |
+| クライアント設定 | `dot_claude/settings.json` | `dot_codex/private_config.toml` | `dot_qwen/settings.json` | `dot_gemini/settings.json` |
 
 判断ルール:
 - 共通運用ルール、保存方針、Plan ルールのように AI 間でそろえるべき内容は、対応ファイルを確認して必要なら反映する。
@@ -47,6 +47,7 @@ chezmoi のソースファイルを直接編集する。
 - `json` と `toml` のようにフォーマットが違う場合は、構文を合わせて再構成する。直接コピーしない。
 - 対応先があるか曖昧な場合は、既存ファイル内容と product の実在キーを確認してから判断する。
 - 反映しなかった場合は、「対応項目なし」「product 固有」「今回は同期不要」など理由を作業結果に残す。
+- Gemini の `~/.gemini/` では `settings.json` と `GEMINI.md` を managed 対象候補として確認し、`oauth_creds.json`、`trustedFolders.json`、`history/` などの state ファイルは原則 `.chezmoiignore` で非管理にする。
 
 フォーマット差分の扱い:
 - `settings.json` を `config.toml` へそのままコピーしない。必ず `toml` として再構成する。
@@ -101,3 +102,4 @@ scripts/chezmoi-drift
 - シークレット（API キー等）は `~/.zshenv` に配置し、chezmoi 管理外とする。リポジトリにコミットしない
 - pre-commit hook（`.claude/hooks/chezmoi-pre-commit-hook`）がコミット前にドリフトを自動検出する。ドリフトがあるとコミットがブロックされるため、必ず apply まで完了させること
 - chezmoi の仕様に自信がない場合は、推測で編集せず公式ドキュメントを確認してから変更すること
+- `.claude/skills/` 配下を更新した場合は、`skill-creator` の手順に従い `scripts/quick_validate.py` で基本妥当性を確認すること

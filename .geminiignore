@@ -1,0 +1,3 @@
+# Exclude chezmoi source-only AI config directories from Gemini project context.
+dot_codex/
+dot_gemini/

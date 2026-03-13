@@ -1,0 +1,32 @@
+{
+  "general": {
+    "defaultApprovalMode": "auto_edit"
+  },
+  "ui": {
+    "theme": "Default Light"
+  },
+  "context": {
+    "fileName": [
+      "AGENTS.md",
+      "GEMINI.md"
+    ]
+  },
+  "mcpServers": {
+    "pencil": {
+      "command": "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64",
+      "args": [
+        "--app",
+        "desktop"
+      ],
+      "env": {}
+    }
+  },
+  "security": {
+    "auth": {
+      "selectedType": "oauth-personal"
+    },
+    "folderTrust": {
+      "enabled": true
+    }
+  }
+}
