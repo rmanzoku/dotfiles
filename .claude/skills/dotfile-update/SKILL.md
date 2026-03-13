@@ -27,7 +27,9 @@ chezmoi のソースファイルを直接編集する。
 補足:
 - repo ローカルの `.claude/skills/` 配下の skill 追加・更新は `dotfile-update` ではなく `skill-creator` の責務として扱う。
 - source / target の対応で迷ったら `chezmoi target-path <source-path>` と `chezmoi source-path <target-path>` で確認する。
+- 恒久性のあるユーザー指示、再発しやすい運用判断、複数回参照しそうな手順が出たら、関連 docs、AI 別指示ファイル、必要な Skill への反映要否を同じターンで確認する。
 - `*.md` のドキュメントを更新した場合は、更新後にそのファイル全体を読み直し、重複した指示や矛盾した記述が残っていないか確認する。
+- `*.md` や Skill を更新した場合は、新ルールが既存 Skill や関連ドキュメントと矛盾していないか確認する。
 
 ### 2. AI 間の設定対応
 
@@ -58,13 +60,18 @@ chezmoi のソースファイルを直接編集する。
 
 ### 3. 共通ルールの同期
 
-`dot_claude/CLAUDE.md`、`dot_codex/AGENTS.md`、`dot_qwen/QWEN.md` は共通ルールセクションを共有している。
-いずれかの共通ルール部分を変更した場合、残りの 2 ファイルにも同じ変更を反映すること。
+`dot_claude/CLAUDE.md`、`dot_codex/AGENTS.md`、`dot_qwen/QWEN.md`、`dot_gemini/GEMINI.md` は共通ルールセクションを共有している。
+いずれかの共通ルール部分を変更した場合、残りのファイルにも同じ変更を反映すること。
 
 共通ルールセクションの識別: `# 共通ルール` 見出し配下の箇条書き。
 
 Claude Code 固有ルール（`# Claude Code 固有ルール` 以降）は `dot_claude/CLAUDE.md` のみに存在し、
 同期対象外。
+
+共通ルールや指示ファイルを更新したときの追加確認:
+- 恒久運用の変更なら、必要に応じて `docs/adr/` に背景判断を残す。
+- 反復手順の変更があるなら、関連 Skill の更新要否も同じターンで確認する。
+- Skill 更新が必要な場合は `skill-creator` の手順に従い、更新後に `quick_validate.py` を実行する。
 
 ### 4. chezmoi apply の実行
 

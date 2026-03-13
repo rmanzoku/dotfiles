@@ -6,6 +6,13 @@
 - dotfile 変更前に [docs/chezmoi-reference.md](/Users/rmanzoku/.local/share/chezmoi/docs/chezmoi-reference.md) を確認し、source / target / ignore の前提を外さないこと
 - 手動編集は `~/.zshenv` 等の chezmoi 管理外ファイルに限る
 
+# 恒久指示の反映運用
+
+- 恒久性のあるユーザー指示、再発しやすい運用判断、複数回参照しそうな手順は、原則その作業ターン内で git 管理ファイルへ反映すること
+- 反映先は、運用ルールや判断基準なら `AGENTS.md` と AI 別指示ファイル、背景や継続判断なら `docs/adr/`、反復手順や更新フローなら対応 Skill を使い分けること
+- 反映不要とする例外は、一過性の事情、既存文書に重複する内容、ユーザーが今回は文書化不要と明示した場合に限ること
+- 例外を適用した場合は、反映しなかった理由を作業結果に残すこと
+
 # スキル管理
 
 - 本リポジトリではリポジトリ専用の Claude Code 用スキル（`.claude/skills/`）も管理対象に含む
