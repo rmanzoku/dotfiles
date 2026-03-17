@@ -12,3 +12,6 @@ multi_agent = true
 [mcp_servers.pencil]
 command = "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64"
 args = [ "--app", "desktop" ]
+
+[projects."/Users/rmanzoku/conductor/repos/changer-all"]
+trust_level = "trusted"
