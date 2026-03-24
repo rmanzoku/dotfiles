@@ -3,6 +3,8 @@
 export PATH="$PATH:/Users/rmanzoku/.lmstudio/bin":$HOME/.nodebrew/current/bin/
 # End of LM Studio CLI section
 
+eval "$(direnv hook zsh)"
+
 # for Android studio
 export ANDROID_HOME=$HOME/Library/Android/sdk
 export PATH=$PATH:$ANDROID_HOME/emulator
