@@ -3,7 +3,7 @@ model_reasoning_effort = "medium"
 personality = "pragmatic"
 service_tier = "fast"
 approval_policy = "never"
-sandbox_mode = "workspace-write"
+sandbox_mode = "danger-full-access"
 
 [features]
 codex_hooks = true
@@ -14,5 +14,14 @@ multi_agent = true
 command = "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64"
 args = [ "--app", "desktop" ]
 
+[projects."/Users/rmanzoku/conductor/repos"]
+trust_level = "trusted"
+
+[projects."/Users/rmanzoku/conductor/repos/ow-management-v1"]
+trust_level = "trusted"
+
 [projects."/Users/rmanzoku/conductor/repos/changer-all"]
 trust_level = "trusted"
+
+[plugins."github@openai-curated"]
+enabled = true

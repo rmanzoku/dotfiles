@@ -1,0 +1,11 @@
+Include ~/.ssh/config.local
+
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519
+    IdentitiesOnly yes
+
+# Keep client- or project-specific GitHub identities in an unmanaged local file.
+# Example aliases belong in ~/.ssh/config.local and can target github.com with a
+# separate IdentityFile, so the managed repo does not disclose client names.
