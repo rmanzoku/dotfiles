@@ -48,7 +48,8 @@
 2. source 名から target 名を推測せず、必要なら `chezmoi target-path` で確認する。
 3. 権限属性と名前変換を混同しない。特に `private_` を filename rewrite と見なさない。
 4. `.chezmoiignore` を触る場合は、pattern が target path 基準かを確認する。
-5. 変更後に `chezmoi diff` を見て、意図した target だけが差分になっているか確認する。
+5. `chezmoi apply` の前とドリフト確認時に `scripts/chezmoi-drift --check-ignore` を実行し、source が `.chezmoiignore` により意図せず無効化されていないか確認する。
+6. 変更後に `chezmoi diff` を見て、意図した target だけが差分になっているか確認する。
 
 ## 公式ドキュメント
 

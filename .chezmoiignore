@@ -9,7 +9,7 @@ scripts
 .DS_Store
 
 # Secrets (managed outside chezmoi)
-.zshenv
+.zshenv.local
 
 # History files
 .zsh_history

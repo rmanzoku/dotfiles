@@ -18,6 +18,16 @@ if ! command -v chezmoi >/dev/null 2>&1; then
   exit 0
 fi
 
+if ! scripts/chezmoi-drift --check-ignore >/dev/null 2>&1; then
+  echo "chezmoi の source state と .chezmoiignore の不整合を検出しました。"
+  echo ""
+  echo "確認方法:"
+  echo "  scripts/chezmoi-drift --check-ignore"
+  echo ""
+  echo ".chezmoiignore を修正してからコミットしてください。"
+  exit 2
+fi
+
 # chezmoi diff を実行
 diff_output="$(chezmoi diff 2>/dev/null || true)"
 

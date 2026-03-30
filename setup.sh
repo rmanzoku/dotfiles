@@ -4,6 +4,12 @@ set -eu
 info() { printf '\033[1;34m[info]\033[0m %s\n' "$1"; }
 warn() { printf '\033[1;33m[warn]\033[0m %s\n' "$1"; }
 
+if ! scripts/chezmoi-drift --check-ignore >/dev/null; then
+  warn ".chezmoiignore と source state の不整合があります。編集前に解消してください。"
+  warn "  詳細確認: scripts/chezmoi-drift --check-ignore"
+  exit 1
+fi
+
 # --- ドリフト検出 ---
 info "chezmoi 管理下のファイルの差分を確認しています..."
 

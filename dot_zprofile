@@ -1,2 +1,6 @@
 
 eval "$(/opt/homebrew/bin/brew shellenv)"
+
+if [ -x /opt/homebrew/bin/rbenv ]; then
+  eval "$(/opt/homebrew/bin/rbenv init - zsh)"
+fi

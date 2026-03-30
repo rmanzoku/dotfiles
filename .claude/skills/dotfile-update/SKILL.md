@@ -78,9 +78,10 @@ Claude Code 固有ルール（`# Claude Code 固有ルール` 以降）は `dot_
 
 編集が完了したら、変更を実機に反映する:
 
-1. `chezmoi diff` で差分を確認し、ユーザーに提示する
-2. ユーザーの確認を得てから `chezmoi apply` を実行する（確認なしに自動実行しない）
-3. chezmoi が未インストールの場合は `brew install chezmoi` を案内して停止する
+1. `scripts/chezmoi-drift --check-ignore` を実行し、source state と `.chezmoiignore` の不整合がないことを確認する
+2. `chezmoi diff` で差分を確認し、ユーザーに提示する
+3. ユーザーの確認を得てから `chezmoi apply` を実行する（確認なしに自動実行しない）
+4. chezmoi が未インストールの場合は `brew install chezmoi` を案内して停止する
 
 ### 5. ドリフト確認
 
@@ -90,7 +91,7 @@ apply 後に差分がないことを確認する:
 scripts/chezmoi-drift
 ```
 
-「差分はありません」と出力されれば完了。
+`.chezmoiignore` の不整合とドリフトの両方がなければ完了。
 
 ### 6. `.chezmoiignore` の管理
 
@@ -107,7 +108,7 @@ scripts/chezmoi-drift
 ## 注意事項
 
 - `Brewfile` の更新後は `brew bundle` の実行は不要（パッケージインストールはユーザーが別途行う）
-- シークレット（API キー等）は `~/.zshenv` に配置し、chezmoi 管理外とする。リポジトリにコミットしない
+- シークレット（API キー等）は `~/.zshenv.local` に配置し、chezmoi 管理外とする。リポジトリにコミットしない
 - pre-commit hook（`.claude/hooks/chezmoi-pre-commit-hook`）がコミット前にドリフトを自動検出する。ドリフトがあるとコミットがブロックされるため、必ず apply まで完了させること
 - chezmoi の仕様に自信がない場合は、推測で編集せず公式ドキュメントを確認してから変更すること
 - `.claude/skills/` 配下を更新した場合は、`skill-creator` の手順に従い `scripts/quick_validate.py` で基本妥当性を確認すること
