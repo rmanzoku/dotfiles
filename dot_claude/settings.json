@@ -12,13 +12,20 @@
   "enabledPlugins": {
     "document-skills@anthropic-agent-skills": true,
     "skill-creator@claude-plugins-official": true,
-    "claude-code-metrics-plugin@oasys-dev-marketplace": true
+    "claude-code-metrics-plugin@oasys-dev-marketplace": true,
+    "codex@openai-codex": true
   },
   "extraKnownMarketplaces": {
     "anthropic-agent-skills": {
       "source": {
         "source": "github",
         "repo": "anthropics/skills"
+      }
+    },
+    "openai-codex": {
+      "source": {
+        "source": "github",
+        "repo": "openai/codex-plugin-cc"
       }
     },
     "oasys-dev-marketplace": {
