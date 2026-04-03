@@ -6,7 +6,7 @@ description: >
   （`dot_claude/CLAUDE.md`、`dot_codex/AGENTS.md`、`dot_qwen/QWEN.md`、`dot_gemini/GEMINI.md`）を
   編集する依頼で必ず使用すること。
   AI 間の設定対応、`json` から `toml` への変換、chezmoi の
-  `private_` / `dot_` 属性や source / target の対応確認が関わる依頼にも適用すること。
+  `private_` / `dot_` / `symlink_` 属性や source / target の対応確認が関わる依頼にも適用すること。
 ---
 
 # dotfile-update
@@ -27,6 +27,7 @@ chezmoi のソースファイルを直接編集する。
 補足:
 - repo ローカルの `.claude/skills/` 配下の skill 追加・更新は `dotfile-update` ではなく `skill-creator` の責務として扱う。
 - source / target の対応で迷ったら `chezmoi target-path <source-path>` と `chezmoi source-path <target-path>` で確認する。
+- symlink を扱うときは、source で `symlink_` file を書いて target symlink を表現するのか、`chezmoi add --follow` で既存 symlink のリンク先実体を file として取り込むのかを先に区別する。
 - 恒久性のあるユーザー指示、再発しやすい運用判断、複数回参照しそうな手順が出たら、関連 docs、AI 別指示ファイル、必要な Skill への反映要否を同じターンで確認する。
 - `*.md` のドキュメントを更新した場合は、更新後にそのファイル全体を読み直し、重複した指示や矛盾した記述、ルール漏れが残っていないか確認し、必要なら同じターンで修正する。
 - `*.md` のメタデータは本文に混在させず、必ず Front Matter で管理する。
@@ -104,6 +105,7 @@ scripts/chezmoi-drift
 - パターンは source path ではなく target path に対して書く。
 - `dot_claude/...` のような chezmoi ソース名ではなく、`.claude/...` のような最終 target 名で考える。
 - 先頭 `.` の source ディレクトリは `.chezmoi*` を除いて既定で無視されるため、repo ローカルの `.claude/skills/` を `.chezmoiignore` で制御しようとしない。
+- symlink 管理では `symlink_` source の内容が link target になる。通常 file と見た目が似るため、誤って binary や wrapper script を置かない。
 
 ## 注意事項
 
@@ -111,4 +113,5 @@ scripts/chezmoi-drift
 - シークレット（API キー等）は `~/.zshenv.local` に配置し、chezmoi 管理外とする。リポジトリにコミットしない
 - pre-commit hook（`.claude/hooks/chezmoi-pre-commit-hook`）がコミット前にドリフトを自動検出する。ドリフトがあるとコミットがブロックされるため、必ず apply まで完了させること
 - chezmoi の仕様に自信がない場合は、推測で編集せず公式ドキュメントを確認してから変更すること
+- `python` のような互換コマンドが必要な場合は、まず `symlink_` source で足りるかを確認し、macOS shim の都合で不適切な場合だけ wrapper script を検討すること
 - `.claude/skills/` 配下を更新した場合は、`skill-creator` の手順に従い `scripts/quick_validate.py` で基本妥当性を確認すること
