@@ -63,3 +63,7 @@ codex exec --full-auto -m gpt-5.3-codex-spark \
 # Claude Code 固有ルール
 
 - コミット前に、auto memory（~/.claude/projects/*/memory/）に保存された内容のうちプロジェクトに有用なものがあれば、プロジェクトの CLAUDE.md に反映するか確認すること
+- テキスト変換は単発・バッチ処理を優先し、同一ファイルに対して `sed` などの逐次実行を繰り返さないこと
+- `sed` を使う場合は `-e` で式をまとめるか script file を使い、複数変更を 1 回の実行に集約すること
+- 複雑なパターンは `perl`、JSON / TS / AST などの構造化データは専用 parser / tool を使うこと
+- 複数ファイルの一括処理は `xargs` や `git ls-files` などでまとめ、不必要なプロセス spawn と file I/O を避けること
