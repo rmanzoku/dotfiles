@@ -12,6 +12,14 @@
 - AI 間や CLI 間で複数行や構造化された内容を受け渡すときは、作業 worktree 内の `.context/` に置いた実ファイル経由を標準とし、`-p` などの引数へのインライン展開や here-doc 直書きは原則避けること
 - パイプでの受け渡しは、単一のコマンドが標準入力をただちに 1 回だけ読む単発処理に限って許容し、再読・再送・サブプロセス引き継ぎ・別 Agent への移譲が絡む場合は実ファイル経由を優先すること
 - `/private` や `/tmp` は一時ファイル置き場として使わないこと
+- Phase / Step を持つ作業では、各 Phase / Step の完了前に `.context/` 配下へ中間成果物 artifact を保存すること
+- 次の Phase / Step へ進む条件は、対応する artifact の生成とすること
+- 口頭合意、推論上の完了宣言、Memory 内だけの状態遷移で Phase / Step を進めてはならない
+- artifact の初期必須項目は `task`、`phase_or_step`、`created_at` とし、Markdown は Front Matter、JSON は同名キーで保持すること
+- artifact の推奨命名は `.context/<task-or-date>/<nn>-<phase-name>.(md|json)` とし、同名更新時は最新更新時刻のファイルのみを有効扱いにすること
+- 非 Phase 作業は artifact 必須対象外とする。ただし単発例外として artifact gate を明示的にバイパスする場合だけ `.context/single-step/<task>.json` を使い、`enabled=true`、`task`、`reason`、`expires_at` を必須とすること
+- Phase / Step 遷移の最小原則は repo の `AGENTS.md` を正本とし、各 Skill 固有の required artifact は `SKILL.md` を正本とすること
+- repo の `AGENTS.md` と `SKILL.md` が競合する場合は `SKILL.md` をその Skill 実行中の具体契約として優先し、`AGENTS.md` は下限ルールとして常に適用すること
 - `*.md` ファイルを編集した際は、ファイル全体を見直し、矛盾・重複・ルール漏れが発生していないか必ず確認し、必要なら同じターンで修正すること
 - `*.md` ファイルのメタデータは本文に書かず、必ず Front Matter で管理すること
 - アーキテクチャ、運用方針、永続設定、複数ファイルにまたがるワークフロー変更などの大きめの変更では、作業リポジトリの `docs/adr/` に ADR を作成または更新すること
@@ -62,6 +70,8 @@ codex exec --full-auto -m gpt-5.3-codex-spark \
 
 # Claude Code 固有ルール
 
+- Claude Code の hook は `artifact gate` の補助 enforcement として使い、自然言語の意味理解や「本当に完了したか」の判定は持たせないこと
+- この repo では `dot_claude/settings.json` の hook と repo ローカル `.claude/settings.json` の hook を併用し、validator は `.context/` の artifact 有無、命名、初期必須キー、例外宣言ファイルの有無だけを検査すること
 - コミット前に、auto memory（~/.claude/projects/*/memory/）に保存された内容のうちプロジェクトに有用なものがあれば、プロジェクトの CLAUDE.md に反映するか確認すること
 - テキスト変換は単発・バッチ処理を優先し、同一ファイルに対して `sed` などの逐次実行を繰り返さないこと
 - `sed` を使う場合は `-e` で式をまとめるか script file を使い、複数変更を 1 回の実行に集約すること

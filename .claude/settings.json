@@ -6,6 +6,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/scripts/phase_artifact_hook.py --event pretool",
+            "timeout": 10
+          },
+          {
+            "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/chezmoi-pre-commit-hook",
             "timeout": 10
           }
