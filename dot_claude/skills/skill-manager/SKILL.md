@@ -1,11 +1,11 @@
 ---
 name: skill-manager
-description: "Manage external and local agent skills across Claude Code, Codex, and other supported agents. Use when the user wants to find, install, remove, update, audit, adopt, or inventory skills, especially with `npx skills` / skills.sh, agent-specific installs, vendored skills, or cross-agent differences."
+description: "Manage external and local agent skills across Claude Code, Codex, and other supported agents. Use when the user wants to find, install, remove, update, migrate, audit, adopt, or inventory skills, especially with `gh skill`, `npx skills` / skills.sh, agent-specific installs, vendored skills, or cross-agent differences."
 ---
 
 # Skill Manager
 
-External skill management workflow centered on `skills.sh`.
+External skill management workflow centered on `gh skill`, with `skills.sh` retained for legacy installs and staged migration.
 This skill no longer assumes that Claude Code and Codex must have the same skill set.
 Treat agent differences as normal, and track why each skill exists where it does.
 
@@ -31,7 +31,7 @@ A skill may intentionally exist only in Claude, only in Codex, or in both.
 
 ## Primary backend
 
-Use `skills.sh` CLI as the default backend for external skill discovery and installation.
+Use `gh skill` as the default backend for external skill discovery, installation, update, and publishing when `gh >= 2.90.0` is available.
 
 Run commands with telemetry disabled unless the user explicitly wants default telemetry behavior:
 
@@ -39,7 +39,23 @@ Run commands with telemetry disabled unless the user explicitly wants default te
 SKILLS_TELEMETRY_DISABLED=1 npx --yes skills <subcommand> ...
 ```
 
-Prefer `npx --yes skills` over maintaining a parallel custom registry for remote skills.
+When `gh` is version `2.90.0` or newer, `gh skill` is available in public preview as an official GitHub CLI subcommand.
+
+Treat the tools like this:
+
+- `gh skill`: GitHub-native preview/install/update/publish flow with provenance metadata and agent-host aware placement
+- `npx --yes skills`: legacy workflow compatibility, existing trial installs, and migration source inventory
+
+Prefer `gh skill` when the user wants:
+- install provenance recorded into `SKILL.md`
+- pinning and update checks tied to GitHub refs and tree SHA
+- `gh skill publish` validation against agentskills.io and GitHub release-based publishing
+- a new install path going forward
+
+Prefer `npx --yes skills` when the user wants:
+- compatibility with an existing `skills.sh`-based workflow
+- to inspect or migrate already-installed `skills.sh` entries
+- behavior on machines where `gh < 2.90.0`
 
 ## What this skill manages
 
@@ -63,12 +79,14 @@ If the user intent is ambiguous, default to `list`.
 
 ### `find [query]`
 
-Search external skills with `skills.sh`.
+Search external skills.
 
 Steps:
-1. Run `SKILLS_TELEMETRY_DISABLED=1 npx --yes skills find [query]`
+1. Prefer `gh skill search [query]`
 2. Summarize the candidate skills
 3. If the user is choosing between candidates, call out supported agents and likely fit
+
+If the user explicitly wants the old registry view or is comparing against legacy `skills.sh` results, also run `SKILLS_TELEMETRY_DISABLED=1 npx --yes skills find [query]` and note which backend each result came from.
 
 ### `list [--global] [--json]`
 
@@ -108,7 +126,45 @@ Steps:
 
 Guidance:
 - Use agent-specific install targets when parity is not needed
+- Use this flow mainly for existing `skills.sh` workflows or explicit compatibility requests
 - Do not auto-copy a newly installed external skill into this repo unless the user asks to adopt or make it persistent
+
+### `gh install <repo-or-skill> [--pin <ref>]`
+
+Install an external skill via `gh skill install`.
+
+Use this when the user has `gh >= 2.90.0` and wants GitHub-native skill management.
+
+Steps:
+1. Confirm `gh` version supports `gh skill`
+2. Run `gh skill preview <repo-or-skill>` before installation when practical
+3. Run `gh skill install <repo-or-skill> [--pin <ref>]`
+4. Re-run `list` or inspect the target agent directory to confirm placement
+5. Report recorded provenance metadata and whether the install should remain trial-only or be adopted into git-managed dotfiles
+
+Guidance:
+- Prefer `gh skill install` over `npx skills add` when the user values provenance, pinning, and GitHub-native update/publish behavior
+- Remember that `gh skill install` copies into agent-native directories instead of using the `~/.agents` plus symlink model described by `skills.sh`
+- Do not auto-copy a newly installed skill into this repo unless the user asks to adopt or make it persistent
+
+### `migrate gh [--scope global|project|all]`
+
+Generate staged migration commands from legacy `skills.sh` installs to `gh skill`.
+
+Use this when the user wants to make `gh skill` the new standard but cannot migrate every existing skill or repository immediately.
+
+Steps:
+1. Run `bash scripts/executable_plan_gh_migration.sh [--scope ...]`
+2. Review the generated commands and unmappable entries
+3. Apply global migrations first
+4. Leave project-scoped migrations as queued commands until each repository is ready
+5. Only remove legacy `skills.sh` installs after the corresponding `gh skill install` has been verified
+
+Guidance:
+- The migration command must be reviewable and non-destructive by default
+- Prefer emitting one `gh skill preview ...` and one `gh skill install ...` command per skill
+- If the legacy metadata cannot be mapped to a GitHub repository, report it as manual follow-up instead of guessing
+- Do not batch-apply project-scoped migrations across unrelated repositories automatically
 
 ### `remove <skill> [--agent <agent...>] [--global]`
 
@@ -137,6 +193,19 @@ Steps:
 2. Re-run `list`
 3. Report which installs changed
 4. If the updated skill is also vendored here, explicitly note that the repo copy did not change
+
+If the skill was installed through `gh skill`, use `gh skill update` instead and report whether the pinned ref or recorded provenance changed.
+
+### `publish`
+
+Publish a skill with `gh skill publish`.
+
+Use this when the user wants to publish a skill to GitHub in a way that validates against agentskills.io and records GitHub-native release metadata.
+
+Guidance:
+- Prefer `gh skill publish` for GitHub-hosted public distribution
+- Call out that GitHub recommends inspecting skills before install and that `gh skill` does not verify prompt safety for the user
+- Treat repository security checks such as tag protection, secret scanning, and code scanning as part of the release-readiness review
 
 ### `adopt <skill>`
 
@@ -199,7 +268,9 @@ When presenting inventory, classify each skill into one of these states:
 
 When helping the user choose a management path:
 
-- Prefer `npx skills add` for trial and discovery
+- Prefer `gh skill install` for new installs
+- Prefer `migrate gh` to generate staged replacement commands for existing `skills.sh` installs
+- Use `npx skills add` only for explicit compatibility needs or legacy workflow support
 - Prefer vendoring into this repo for long-lived, modified, or policy-sensitive skills
 - Prefer reporting agent differences instead of automatically syncing them away
 - Keep marketplace plugin management separate unless the user explicitly asks about plugins

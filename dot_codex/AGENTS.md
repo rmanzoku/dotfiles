@@ -5,7 +5,7 @@
 - 永続的に参照すべき指示や、worktree / セッションをまたいで再現が必要な情報は Memory ではなく git 管理ファイルに保存すること
 - 継続的な指示の保存先は、作業リポジトリの `docs/`、`.agents/`、またはグローバル dotfiles（例: `~/.codex/AGENTS.md`）を使うこと
 - 恒久性のあるユーザー指示、再発しやすい運用判断、複数回参照しそうな手順は、原則その作業ターン内で git 管理ファイルへ反映すること
-- 反映先は、運用ルールや判断基準なら repo の `AGENTS.md` と AI 別指示ファイル、背景や継続判断なら `docs/adr/`、反復手順や更新フローなら対応 Skill を使い分けること
+- 反映先は、運用ルールや判断基準なら現在作業中のリポジトリの正規指示ファイル（通常は `AGENTS.md`）と AI 別指示ファイル、背景や継続判断なら `docs/adr/`、反復手順や更新フローなら対応 Skill を使い分けること
 - 反映不要とする例外は、一過性の事情、既存文書に重複する内容、ユーザーが今回は文書化不要と明示した場合に限ること
 - 例外を適用した場合は、反映しなかった理由を作業結果に残すこと
 - 一時ファイル、下書き、調査メモなどの一過性ファイルは作業 worktree 内の `.context/` に生成すること
@@ -18,8 +18,8 @@
 - artifact の初期必須項目は `task`、`phase_or_step`、`created_at` とし、Markdown は Front Matter、JSON は同名キーで保持すること
 - artifact の推奨命名は `.context/<task-or-date>/<nn>-<phase-name>.(md|json)` とし、同名更新時は最新更新時刻のファイルのみを有効扱いにすること
 - 非 Phase 作業は artifact 必須対象外とする。ただし単発例外として artifact gate を明示的にバイパスする場合だけ `.context/single-step/<task>.json` を使い、`enabled=true`、`task`、`reason`、`expires_at` を必須とすること
-- Phase / Step 遷移の最小原則は repo の `AGENTS.md` を正本とし、各 Skill 固有の required artifact は `SKILL.md` を正本とすること
-- repo の `AGENTS.md` と `SKILL.md` が競合する場合は `SKILL.md` をその Skill 実行中の具体契約として優先し、`AGENTS.md` は下限ルールとして常に適用すること
+- Phase / Step 遷移の最小原則は現在作業中のリポジトリの正規指示ファイル（通常は `AGENTS.md`）を正本とし、各 Skill 固有の required artifact は `SKILL.md` を正本とすること
+- 現在作業中のリポジトリの正規指示ファイル（通常は `AGENTS.md`）と `SKILL.md` が競合する場合は `SKILL.md` をその Skill 実行中の具体契約として優先し、正規指示ファイルは下限ルールとして常に適用すること
 - `*.md` ファイルを編集した際は、ファイル全体を見直し、矛盾・重複・ルール漏れが発生していないか必ず確認し、必要なら同じターンで修正すること
 - `*.md` ファイルのメタデータは本文に書かず、必ず Front Matter で管理すること
 - アーキテクチャ、運用方針、永続設定、複数ファイルにまたがるワークフロー変更などの大きめの変更では、作業リポジトリの `docs/adr/` に ADR を作成または更新すること
@@ -76,7 +76,7 @@ codex exec --full-auto -m gpt-5.3-codex-spark \
 
 - Codex の repo enforcement 用 hook は repo ローカル `.codex/hooks.json` を正本とし、`~/.codex/hooks.json` は個人通知などのグローバル用途だけに使うこと
 - Codex の hook は `artifact gate` の補助 enforcement として使い、自然言語の意味理解や「本当に完了したか」の判定は持たせないこと
-- validator が検査する範囲は `.context/` の artifact 有無、命名、初期必須キー、例外宣言ファイルの有無までに限定すること
+- validator が検査する範囲は `.context/` の artifact 存在、初期必須キー、単発例外宣言ファイルの妥当性までに限定すること
 - Codex の trust 設定は原則 `~/.codex/config.toml` に集約し、`[projects."<path>"]` は常用しないこと
 - project-scoped `.codex/config.toml` を読む必要がある repo / worktree だけ、例外として対応する `trust_level = "trusted"` を追加すること
 - 例外追加前に、その repo に project 固有の Codex 設定が本当に必要か確認すること

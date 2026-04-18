@@ -27,7 +27,7 @@ Plan 合意や Skill 定義に明示された Phase / Step が、会話上の合
 - Phase / Step 遷移の最小原則は repo の `AGENTS.md` を正本とし、Skill 固有の required artifact は `SKILL.md` を正本とする。
 - `AGENTS.md` と `SKILL.md` が競合する場合は、`SKILL.md` をその Skill 実行中の具体契約として優先し、`AGENTS.md` は下限ルールとして常に適用する。
 - Hook は補助 enforcement に限定し、自然言語の意味理解や「本当に完了したか」の判定は持たせない。
-- Claude Code では `dot_claude/settings.json` と repo ローカル `.claude/settings.json`、Codex では repo ローカル `.codex/hooks.json` を使って artifact gate を補助する。
+- artifact gate は Claude Code と Codex の hook で補助し、グローバル設定と repo ローカル設定の役割分担は各ツールの設定ファイル側で管理する。
 - Codex の `~/.codex/hooks.json` は個人通知などのグローバル用途に限定し、repo enforcement は載せない。
 
 ## Consequences

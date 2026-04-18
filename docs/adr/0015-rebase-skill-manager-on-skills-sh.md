@@ -1,8 +1,8 @@
 ---
-title: "ADR 0015: skill-manager は skills.sh を backend にし agent 差分を前提に扱う"
+title: "ADR 0015: skill-manager は gh skill を標準 backend とし段階移行を支援する"
 status: accepted
 date: 2026-04-03
-worked_at: 2026-04-03 11:45 JST
+worked_at: 2026-04-18 15:45 JST
 agent_model: GPT-5 Codex
 ---
 
@@ -14,14 +14,20 @@ agent_model: GPT-5 Codex
 しかし現在は agent の種類が増え、Claude にだけ入れる skill、Codex `.system` と衝突する skill、
 外部 ecosystem から `npx skills add` で trial install する skill など、agent ごとの差分を前提に扱う方が自然になっている。
 
-また、skills.sh と `npx skills` CLI が外部 skill の discovery / install / update の共通 backend として実用可能になった。
-この段階で remote skill の registry と installer を自前で持ち続けるより、外部 backend に寄せて、
-ローカルでは inventory、policy、adoption を扱う方が保守しやすい。
+また、skills.sh と `npx skills` CLI が外部 skill の discovery / install / update の共通 backend として実用可能になり、
+それに合わせて `skill-manager` も skills.sh 中心の整理に寄せていた。
+
+2026-04-16 には GitHub CLI `v2.90.0` で `gh skill` が public preview として追加された。
+これにより、GitHub-native な install / preview / update / publish と provenance 記録を `gh` 本体で扱えるようになった。
+一方で既存の `npx skills` / skills.sh ワークフローも既に利用されており、全リポジトリを一括では切り替えられない。
+そのため、新規導入は `gh skill` を標準にしつつ、既存資産は段階移行できる補助コマンドを併設する方針が必要になった。
 
 ## Decision
 
-- `skill-manager` の primary backend は `skills.sh` CLI とする。
-- 外部 skill の discovery / install / remove / update は原則 `SKILLS_TELEMETRY_DISABLED=1 npx --yes skills ...` を使う。
+- `skill-manager` の標準 backend は `gh skill` とする。
+- 新規の discovery / install / update / publish は、原則 `gh skill` を使う。
+- `npx skills` / skills.sh は既存 install の棚卸し、互換運用、段階移行のための legacy backend として残す。
+- 既存の `skills.sh` install から `gh skill install` への移行は、非破壊の移行コマンド生成を挟んで段階的に行う。
 - `skill-manager` は parity manager ではなく、provenance と agent 差分を扱う policy layer とする。
 - skill の状態は少なくとも次で把握する。
   - provenance: `skills-cli`, `vendored`, `manual`, `plugin`
@@ -33,7 +39,10 @@ agent_model: GPT-5 Codex
 
 ## Consequences
 
-- 外部 skill の install/update ロジックを自前実装し続ける負担が減る。
+- 外部 skill の install/update/publish を GitHub-native に寄せられる。
+- `npx skills add` と `gh skill install` を新規導入と legacy 移行で使い分ける必要がある。
+- `gh skill` により GitHub-native な provenance と publish 手順を扱える。
+- 一括移行ではなく、生成した移行コマンドを使う repo 単位の段階移行が前提になる。
 - agent ごとの差分を error ではなく inventory data として扱える。
 - vendored skill と trial install を区別しやすくなる。
 - telemetry は既定で無効化して使う運用を維持する必要がある。

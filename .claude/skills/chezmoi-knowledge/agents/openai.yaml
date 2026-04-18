@@ -1,0 +1,4 @@
+interface:
+  display_name: "Chezmoi Knowledge"
+  short_description: "Repo-specific chezmoi semantics and pitfalls"
+  default_prompt: "Consult this skill before reasoning about chezmoi source/target mapping, prefixes, ignore rules, and symlink behavior in this repository."
