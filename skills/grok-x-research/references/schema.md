@@ -1,6 +1,6 @@
 ---
 name: grok-x-research-schema
-description: Request and response artifact contract for the grok-x-research global Codex skill.
+description: Request and response artifact contract for the grok-x-research publisher skill.
 ---
 
 # Artifact Schema
@@ -24,7 +24,7 @@ Optional top-level fields:
 - `context`: supporting background that Grok should consider
 - `constraints`: array of limits or cautions
 - `deliverable`: object describing desired sections or formatting
-- `x_search`: object configuring the built-in X search tool
+- `x_search`: object configuring Grok's built-in X search tool
 
 ### Request Example
 
@@ -69,6 +69,7 @@ Optional top-level fields:
 ### `x_search` Fields
 
 These map to xAI's Responses API `x_search` tool parameters.
+The orchestrator still calls a Grok model through the bundled script; this object only constrains the tool that Grok can use inside that run.
 
 - `allowed_x_handles`: optional array, max 10
 - `excluded_x_handles`: optional array, max 10

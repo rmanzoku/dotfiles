@@ -36,6 +36,7 @@ EXPECTED_IGNORED_SOURCES=(
   "README.md"
   "scripts"
   "setup.sh"
+  "skills"
 )
 
 is_expected_ignored_source() {

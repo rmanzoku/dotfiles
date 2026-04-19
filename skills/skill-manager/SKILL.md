@@ -8,6 +8,7 @@ description: "Manage external and local agent skills across Claude Code, Codex, 
 External skill management workflow centered on `gh skill`, with `skills.sh` retained for legacy installs and staged migration.
 This skill no longer assumes that Claude Code and Codex must have the same skill set.
 Treat agent differences as normal, and track why each skill exists where it does.
+When a repository has its own skill policy in `AGENTS.md`, ADRs, or equivalent docs, follow that local policy instead of hard-coding repo-specific rules into this skill.
 
 ## Core model
 
@@ -15,7 +16,7 @@ Manage skills with three concepts:
 
 1. **Provenance**: where the skill came from
    - `skills-cli`: installed by `npx skills add`
-   - `vendored`: copied into this repo and managed by git
+   - `vendored`: copied into a git-managed repo and managed by git
    - `manual`: hand-written local skill not tied to a remote package
    - `plugin`: bundled through another plugin system
 2. **Scope**:
@@ -59,10 +60,10 @@ Prefer `npx --yes skills` when the user wants:
 
 ## What this skill manages
 
-- external skills installed via `npx skills`
-- vendored skills in `~/.claude/skills/` and `<git-root>/.claude/skills/`
+- external skills installed via `gh skill` or legacy `npx skills`
+- git-managed original skills stored in a repository
 - agent-specific differences between Claude Code, Codex, Gemini CLI, Cursor, etc.
-- adoption of a trialed external skill into git-managed dotfiles
+- inventory and policy decisions about whether a skill is repo-original, external, or out of scope
 
 ## What this skill does not treat as the same thing
 
@@ -122,12 +123,12 @@ Steps:
 1. Resolve the user’s intended source and agent targets
 2. Run `SKILLS_TELEMETRY_DISABLED=1 npx --yes skills add <source> ...`
 3. Re-run `list` to confirm installed paths and agent coverage
-4. Report whether the install is trial-only or should be adopted into git-managed dotfiles
+4. Report whether the install should remain external, and call out any repository-local policy that constrains vendoring or adoption
 
 Guidance:
 - Use agent-specific install targets when parity is not needed
 - Use this flow mainly for existing `skills.sh` workflows or explicit compatibility requests
-- Do not auto-copy a newly installed external skill into this repo unless the user asks to adopt or make it persistent
+- If the current repository forbids vendoring external skills, keep the install external and managed by `gh skill`
 
 ### `gh install <repo-or-skill> [--pin <ref>]`
 
@@ -140,12 +141,12 @@ Steps:
 2. Run `gh skill preview <repo-or-skill>` before installation when practical
 3. Run `gh skill install <repo-or-skill> [--pin <ref>]`
 4. Re-run `list` or inspect the target agent directory to confirm placement
-5. Report recorded provenance metadata and whether the install should remain trial-only or be adopted into git-managed dotfiles
+5. Report recorded provenance metadata and whether the install remains an external skill managed outside the current repository
 
 Guidance:
 - Prefer `gh skill install` over `npx skills add` when the user values provenance, pinning, and GitHub-native update/publish behavior
 - Remember that `gh skill install` copies into agent-native directories instead of using the `~/.agents` plus symlink model described by `skills.sh`
-- Do not auto-copy a newly installed skill into this repo unless the user asks to adopt or make it persistent
+- If the current repository keeps original skills in git and external skills outside the repo, preserve that boundary
 
 ### `migrate gh [--scope global|project|all]`
 
@@ -182,7 +183,7 @@ Check for updates to external skills.
 Steps:
 1. Run `SKILLS_TELEMETRY_DISABLED=1 npx --yes skills check`
 2. Summarize available updates
-3. If a skill is vendored in this repo, treat upstream updates as advisory and do not overwrite the vendored copy automatically
+3. If a skill is vendored in the current repository, treat upstream updates as advisory and do not overwrite the vendored copy automatically
 
 ### `update`
 
@@ -209,23 +210,18 @@ Guidance:
 
 ### `adopt <skill>`
 
-Promote a trialed external skill into git-managed dotfiles.
+Adopt an external skill into a git-managed repository copy when the user explicitly wants that lifecycle.
 
-Use this when the user wants persistence, reviewability, local modification, or reproducibility through this repo.
+Use this flow only when the repository policy permits git-managed adoption or when the skill is confirmed to be repo-original rather than external.
 
 Steps:
-1. Locate the installed skill directory
-2. Identify provenance and upstream source
-3. Copy the skill into the appropriate git-managed location
-   - global dotfiles: `dot_claude/skills/<name>/`
-   - project-local skill: `<git-root>/.claude/skills/<name>/`
-4. Adjust paths or instructions for local rules if needed
-5. If this repo manages Codex sharing for that skill, update the relevant sync policy or docs
-6. Record the decision in `docs/adr/` when the adoption changes long-lived workflow
+1. Confirm whether the skill is `repo-original` or `external`
+2. If it is external, check whether the current repository allows adoption into git-managed copies
+3. If the repository forbids adoption, stop and point back to `gh skill install` / `gh skill update` plus the local policy docs
+4. If it is repo-original, manage it in the appropriate git-managed location and update docs as needed
 
 Important:
-- Adoption is a review step, not a blind mirror
-- Upstream content may need local edits for `.context/`, path resolution, telemetry, or environment compatibility
+- Do not mirror upstream content into a repository just to make an install persistent unless the user wants a git-managed fork or local derivative
 
 ### `doctor`
 
@@ -260,7 +256,7 @@ When presenting inventory, classify each skill into one of these states:
 - `shared`: intentionally installed in multiple agents
 - `agent-specific`: intentionally installed in a subset of agents
 - `vendored`: repo-managed copy exists
-- `trial`: installed via `skills.sh` but not adopted
+- `trial`: installed via `skills.sh` but not promoted into repo management
 - `broken`: installed path or link is invalid
 - `system-preferred`: Codex has a `.system` skill with the same name
 
@@ -271,7 +267,7 @@ When helping the user choose a management path:
 - Prefer `gh skill install` for new installs
 - Prefer `migrate gh` to generate staged replacement commands for existing `skills.sh` installs
 - Use `npx skills add` only for explicit compatibility needs or legacy workflow support
-- Prefer vendoring into this repo for long-lived, modified, or policy-sensitive skills
+- Follow repository-local policy docs for the boundary between external installs and git-managed copies
 - Prefer reporting agent differences instead of automatically syncing them away
 - Keep marketplace plugin management separate unless the user explicitly asks about plugins
 
@@ -282,3 +278,10 @@ After updating this skill:
 1. Run `python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py <skill-dir>`
 2. If helper scripts were changed, run their simplest smoke checks
 3. Re-read the whole `SKILL.md` and remove contradictions with current tooling
+
+For this repository's publisher source, use:
+
+```bash
+python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
+  skills/skill-manager
+```

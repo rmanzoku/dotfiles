@@ -33,7 +33,7 @@ Step artifact:
 - 作業開始時に、対象 task と `source-edit` を記した artifact を `.context/` に保存する。
 
 補足:
-- repo ローカルの `.claude/skills/` 配下の skill 追加・更新は `dotfile-update` ではなく `skill-creator` の責務として扱う。
+- repo ローカルの `.claude/skills/` 配下の skill 追加・更新と、publisher source `skills/` 配下の配布 skill 追加・更新は `dotfile-update` ではなく `skill-creator` の責務として扱う。
 - source / target の対応で迷ったら `chezmoi target-path <source-path>` と `chezmoi source-path <target-path>` で確認する。
 - symlink を扱うときは、source で `symlink_` file を書いて target symlink を表現するのか、`chezmoi add --follow` で既存 symlink のリンク先実体を file として取り込むのかを先に区別する。
 - 恒久性のあるユーザー指示、再発しやすい運用判断、複数回参照しそうな手順が出たら、関連 docs、AI 別指示ファイル、必要な Skill への反映要否を同じターンで確認する。

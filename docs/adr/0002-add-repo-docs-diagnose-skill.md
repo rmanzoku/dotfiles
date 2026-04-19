@@ -1,9 +1,12 @@
-# ADR 0002: repo-docs-diagnose スキルは docs 診断と提案に留める
+---
+title: "ADR 0002: repo-docs-diagnose スキルは docs 診断と提案に留める"
+status: accepted
+date: 2026-03-12
+worked_at: 2026-04-20 00:40 JST
+agent_model: GPT-5 Codex
+---
 
-- Status: Accepted
-- Date: 2026-03-12
-- Worked At: 2026-03-12 00:00 JST
-- Agent Model: GPT-5 Codex
+# ADR 0002: repo-docs-diagnose スキルは docs 診断と提案に留める
 
 ## Context
 
@@ -18,7 +21,7 @@ AI エージェント前提のリポジトリでは、README、docs index、arch
 
 ## Decision
 
-- `dot_claude/skills/repo-docs-diagnose/` を追加する。
+- `skills/repo-docs-diagnose/` を publisher source として追加する。
 - この skill は 2 モードを持つ。
   - `diagnose`: read-only で docs 構造を診断する
   - `bootstrap`: 明示要求がある場合だけ docs/entrypoint/運用文書の雛形提案を返す

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Grok X Research"
-  short_description: "Grok delegation for X research workflows"
-  default_prompt: "Use $grok-x-research to delegate X-focused research, draft generation, and risk checks through file-based artifacts."

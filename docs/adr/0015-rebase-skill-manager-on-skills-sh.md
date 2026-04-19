@@ -2,11 +2,11 @@
 title: "ADR 0015: skill-manager は gh skill を標準 backend とし段階移行を支援する"
 status: accepted
 date: 2026-04-03
-worked_at: 2026-04-18 15:45 JST
+worked_at: 2026-04-20 00:27 JST
 agent_model: GPT-5 Codex
 ---
 
-# ADR 0015: skill-manager は skills.sh を backend にし agent 差分を前提に扱う
+# ADR 0015: skill-manager は gh skill を標準 backend とし段階移行を支援する
 
 ## Context
 
@@ -35,7 +35,9 @@ agent_model: GPT-5 Codex
   - installed agents
 - Claude と Codex の完全一致は前提にしない。
 - `sync codex` は legacy 的に残してもよいが、`mirror` したい skill だけに限定する。
-- 長期利用、ローカル修正、再現性が必要な skill は `adopt` して git-managed copy に取り込む。
+- 長期利用、ローカル修正、再現性が必要な skill は `adopt` して git-managed copy に取り込む選択肢を持つ。
+- ただし repository-specific な採用可否は、その repository の `AGENTS.md` や ADR で定義し、distributable な `skill-manager` 本体へ埋め込まない。
+- 配布する first-party skill の publisher source は repository 内の `skills/` layout で管理してよいが、`skill-manager` 自身は publisher layout と repo-local policy を分離して扱う。
 
 ## Consequences
 
