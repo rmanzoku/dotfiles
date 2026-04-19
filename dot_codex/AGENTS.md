@@ -64,8 +64,9 @@ prompt="$(cat <<'PROMPT'
 PROMPT
 )"
 
-codex exec --full-auto -m gpt-5.3-codex-spark \
+codex exec --full-auto -m gpt-5.4-mini \
   -c model_reasoning_effort="medium" \
+  -c service_tier="fast" \
   -C <project_root> \
   "$prompt"
 ```
