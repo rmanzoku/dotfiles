@@ -27,7 +27,7 @@ error() { printf '\033[1;31m[error]\033[0m %s\n' "$1" >&2; }
 EXTRA_FILES=(
   "dot_claude/CLAUDE.md:.claude/CLAUDE.md:raw"
   "dot_claude/settings.json:.claude/settings.json:raw"
-  "dot_codex/private_config.toml:.codex/config.toml:raw"
+  "dot_codex/private_config.toml:.codex/config.toml:codex_config"
 )
 
 EXPECTED_IGNORED_SOURCES=(
@@ -87,6 +87,17 @@ render_template_to_file() {
   chezmoi execute-template <"$repo_file" >"$output_file"
 }
 
+normalize_codex_config_to_file() {
+  local input_file="$1"
+  local output_file="$2"
+
+  perl -0ne '
+    s/^notify = \[.*\]\n+//mg;
+    s/\n*\z/\n/s;
+    print;
+  ' "$input_file" >"$output_file"
+}
+
 files_differ() {
   local repo_file="$1"
   local actual_file="$2"
@@ -95,6 +106,19 @@ files_differ() {
   case "$mode" in
     raw)
       ! cmp -s "$repo_file" "$actual_file"
+      ;;
+    codex_config)
+      local normalized_repo normalized_actual
+      normalized_repo="$(mktemp)"
+      normalized_actual="$(mktemp)"
+      normalize_codex_config_to_file "$repo_file" "$normalized_repo"
+      normalize_codex_config_to_file "$actual_file" "$normalized_actual"
+      if cmp -s "$normalized_repo" "$normalized_actual"; then
+        rm -f "$normalized_repo" "$normalized_actual"
+        return 1
+      fi
+      rm -f "$normalized_repo" "$normalized_actual"
+      return 0
       ;;
     template)
       local rendered_file
@@ -123,6 +147,9 @@ copy_actual_to_repo() {
     raw)
       cp "$actual_file" "$repo_file"
       ;;
+    codex_config)
+      normalize_codex_config_to_file "$actual_file" "$repo_file"
+      ;;
     template)
       perl -0pe 's/\Q$ENV{HOME}\E/\{\{ .chezmoi.homeDir \}\}/g' "$actual_file" >"$repo_file"
       ;;
@@ -136,6 +163,9 @@ copy_repo_to_actual() {
 
   case "$mode" in
     raw)
+      cp "$repo_file" "$actual_file"
+      ;;
+    codex_config)
       cp "$repo_file" "$actual_file"
       ;;
     template)
@@ -164,6 +194,32 @@ check_extra_drift() {
   $has_drift
 }
 
+report_managed_diff_paths() {
+  local repo_root="$1"
+  local diff_output="$2"
+  local has_reported=false
+  local diff_path
+
+  while IFS= read -r diff_path; do
+    [ -n "$diff_path" ] || continue
+
+    if [ "$diff_path" = "/.codex/config.toml" ]; then
+      if files_differ "${repo_root}/dot_codex/private_config.toml" "${HOME}/.codex/config.toml" "codex_config"; then
+        echo "$diff_path"
+        has_reported=true
+      fi
+      continue
+    fi
+
+    echo "$diff_path"
+    has_reported=true
+  done <<EOF
+$(echo "$diff_output" | grep -E '^(---|\+\+\+) [ab]/' | sed 's|^... [ab]/|/|' | sort -u)
+EOF
+
+  $has_reported
+}
+
 check_drift() {
   local repo_root diff_output has_drift=false
   repo_root="$(git rev-parse --show-toplevel)"
@@ -175,8 +231,9 @@ check_drift() {
   # chezmoi 管理対象
   diff_output="$(chezmoi diff -S "$repo_root" 2>/dev/null || true)"
   if [ -n "$diff_output" ]; then
-    echo "$diff_output" | grep -E '^(---|\+\+\+) [ab]/' | sed 's|^... [ab]/|/|' | sort -u
-    has_drift=true
+    if report_managed_diff_paths "$repo_root" "$diff_output"; then
+      has_drift=true
+    fi
   fi
 
   # chezmoi ignore 対象（直接比較）
