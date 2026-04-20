@@ -19,7 +19,7 @@ done
 GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 
 if ! command -v python3 >/dev/null 2>&1; then
-  printf '%s\n' '{"marketplace_plugins":[],"global_skills":[],"project_skills":[],"project_root":null,"skill_sources":null,"errors":[{"code":"NO_PYTHON3","path":"","reason":"python3 not found in PATH"}]}'
+  printf '%s\n' '{"marketplace_plugins":[],"global_skills":[],"project_skills":[],"codex_marketplaces":[],"codex_plugins":[],"codex_system_skills":[],"skills":[],"collisions":[],"project_root":null,"skill_sources":null,"errors":[{"code":"NO_PYTHON3","path":"","reason":"python3 not found in PATH"}]}'
   exit 0
 fi
 

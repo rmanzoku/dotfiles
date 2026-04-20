@@ -64,14 +64,16 @@ Prefer `npx --yes skills` when the user wants:
 - git-managed original skills stored in a repository
 - agent-specific differences between Claude Code, Codex, Gemini CLI, Cursor, etc.
 - inventory and policy decisions about whether a skill is repo-original, external, or out of scope
+- Claude marketplace plugin inventory and health checks when plugin-provided skills matter
+- Codex plugin inventory and health checks based on `~/.codex/config.toml`, marketplace metadata, and local plugin cache
 
 ## What this skill does not treat as the same thing
 
-- Claude marketplace plugins
 - MCP servers
 - Codex `.system` skills
 
 These can still be inventoried when useful, but they are not the primary package model for this skill.
+Plugins are managed as a separate layer from `gh skill` / `skills.sh` installs and should not be flattened into the same lifecycle.
 
 ## Command routing
 
@@ -101,19 +103,32 @@ Preferred steps:
    - project: `<git-root>/.claude/skills/*/SKILL.md`
    - codex global: `~/.codex/skills/*/SKILL.md` and `~/.codex/skills/*`
    - codex project: `<git-root>/.agents/skills/*`
-4. Merge the results into one inventory
+4. Scan plugin inventories separately
+   - Claude marketplace: `~/.claude/plugins/installed_plugins.json`, `known_marketplaces.json`, marketplace manifest
+   - Codex plugin config: `~/.codex/config.toml`
+   - Codex plugin cache: `~/.codex/plugins/cache/*/*/*/.codex-plugin/plugin.json`
+   - Codex bundled marketplace manifest: `~/.codex/.tmp/bundled-marketplaces/*/.agents/plugins/marketplace.json`
+5. Merge the results into one inventory
 
 Output should show:
 - skill name
+- bare skill name and display name when they differ
 - scope
 - installed agents
 - provenance
 - path
-- notes such as `vendored`, `system`, `agent-specific`, `broken-link`
+- source-aware identity fields such as `source_type`, `source_id`, and stable `identity`
+- Codex status such as `installed`, `missing`, `broken`, `system-preferred`
+- source identity without flattening plugin / user / project / system origins into one unnamed bucket
+- explicit collision records when the same bare skill name appears in multiple sources
+- Codex plugin status such as `enabled`, `configured`, `cached`, `available`
 
 Important:
 - If a skill exists in Claude but not Codex, report that as inventory data, not as an error by default.
 - If a skill name collides with Codex `.system`, mark it `system-preferred`.
+- Treat a valid `gh skill` direct install in Codex as healthy even if no legacy sync manifest entry exists.
+- Aggregate skills in a source-aware way. Preserve plugin namespace and origin metadata instead of merging entries by bare skill name.
+- Treat Codex plugin-provided skills as their own source type, separate from direct installs under `~/.codex/skills`.
 
 ### `add <source> [--skill <name>] [--agent <agent...>] [--global]`
 
@@ -230,8 +245,11 @@ Audit installed skills for drift, broken references, and policy mismatches.
 Check:
 - broken installed paths
 - broken symlinks
+- stale legacy mirror metadata
 - vendored skills missing from expected agent directories
 - agent-specific installs that appear accidental
+- broken Codex plugin cache or config entries
+- Codex plugin declarations whose `skills`, `apps`, or `mcpServers` payload is missing
 - collisions with Codex `.system`
 - legacy command-format skills still present
 
@@ -241,6 +259,8 @@ Do not rewrite state unless the user asks.
 ### `sync codex`
 
 Legacy command for repo-managed mirroring into Codex.
+Do not use this as the default way to understand whether a skill is healthy in Codex.
+The standard Codex path is a valid install under `~/.codex/skills` or `.agents/skills`, including direct copies created by `gh skill install`.
 
 Use only for skills whose policy is explicitly `mirror`.
 Do not assume all Claude skills should sync into Codex.
@@ -257,8 +277,18 @@ When presenting inventory, classify each skill into one of these states:
 - `agent-specific`: intentionally installed in a subset of agents
 - `vendored`: repo-managed copy exists
 - `trial`: installed via `skills.sh` but not promoted into repo management
-- `broken`: installed path or link is invalid
+- `installed`: valid install exists in the target agent directory
+- `missing`: no install exists in the target agent directory
+- `broken`: installed path or legacy metadata is invalid
 - `system-preferred`: Codex has a `.system` skill with the same name
+
+When multiple entries share the same bare skill name:
+
+- keep them as separate inventory entries if their sources differ
+- preserve plugin namespacing where the host exposes it
+- report the collision instead of silently collapsing entries into one
+- only apply hard preference automatically for Codex `.system`
+- Codex plugin-provided skills count as a separate source from Codex direct installs
 
 ## Prompting guidance
 
@@ -269,7 +299,8 @@ When helping the user choose a management path:
 - Use `npx skills add` only for explicit compatibility needs or legacy workflow support
 - Follow repository-local policy docs for the boundary between external installs and git-managed copies
 - Prefer reporting agent differences instead of automatically syncing them away
-- Keep marketplace plugin management separate unless the user explicitly asks about plugins
+- Keep plugin management separate from skill installs, but include Claude and Codex plugins when the user is auditing actual availability
+- For Codex plugins, treat `~/.codex/config.toml` plus marketplace metadata as the control plane and `~/.codex/plugins/cache` as the local realized state
 
 ## Validation
 
@@ -278,6 +309,7 @@ After updating this skill:
 1. Run `python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py <skill-dir>`
 2. If helper scripts were changed, run their simplest smoke checks
 3. Re-read the whole `SKILL.md` and remove contradictions with current tooling
+4. If `quick_validate.py` fails due to missing Python dependencies in the local environment, record that as an environment issue and rely on script smoke checks until the validator runtime is repaired
 
 For this repository's publisher source, use:
 
