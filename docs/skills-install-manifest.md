@@ -34,6 +34,35 @@ gh skill install . grok --from-local --agent codex --scope user
 
 third-party external skill はここへ追加で列挙する。
 
+### `gws-*`
+
+- upstream: [googleworkspace/cli `skills/`](https://github.com/googleworkspace/cli/tree/main/skills)
+- status: installed globally for Claude Code and Codex
+- install mode: direct `gh skill install` from upstream GitHub repository
+- pin: `v0.22.5`
+- reason: upstream provides official per-service gws skills; keep them external and do not vendor them into this repo
+- scope: install only `gws-shared`, `gws-drive`, and `gws-drive-upload`
+- prerequisite: `googleworkspace-cli` must be installed, currently managed by `Brewfile`
+- update note: keep the skill pin aligned with the installed `googleworkspace-cli` version
+
+#### Claude Code / Codex refresh
+
+repo root で実行する。
+
+```bash
+skills=(
+  gws-drive
+  gws-drive-upload
+  gws-shared
+)
+
+for agent in claude-code codex; do
+  for skill in "${skills[@]}"; do
+    gh skill install googleworkspace/cli "$skill" --pin v0.22.5 --agent "$agent" --scope user --force
+  done
+done
+```
+
 ### `empirical-prompt-tuning`
 
 - upstream: [mizchi/chezmoi-dotfiles `dot_claude/skills/empirical-prompt-tuning/SKILL.md`](https://github.com/mizchi/chezmoi-dotfiles/blob/main/dot_claude%2Fskills%2Fempirical-prompt-tuning%2FSKILL.md)
