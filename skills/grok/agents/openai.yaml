@@ -1,0 +1,4 @@
+interface:
+  display_name: "Grok"
+  short_description: "Call Grok through a file-based wrapper"
+  default_prompt: "Use $grok to send a request artifact to Grok through the bundled file-based wrapper."

@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+"""Call the xAI Responses API from file-based request and response artifacts."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+from urllib import error, request
+
+
+DEFAULT_BASE_URL = "https://api.x.ai/v1"
+DEFAULT_MODEL = "grok-4.20-reasoning"
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Call Grok through xAI Responses API using file-based request and response artifacts."
+    )
+    parser.add_argument("--request", required=True, help="Path to the JSON request artifact.")
+    parser.add_argument("--response", required=True, help="Path to write the JSON response artifact.")
+    parser.add_argument(
+        "--model",
+        default=os.getenv("GROK_MODEL") or os.getenv("GROK_X_RESEARCH_MODEL") or DEFAULT_MODEL,
+        help="xAI model name. Defaults to GROK_MODEL, GROK_X_RESEARCH_MODEL, or grok-4.20-reasoning.",
+    )
+    parser.add_argument(
+        "--base-url",
+        default=os.getenv("XAI_BASE_URL", DEFAULT_BASE_URL),
+        help="xAI API base URL. Defaults to XAI_BASE_URL or https://api.x.ai/v1.",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=300,
+        help="HTTP timeout in seconds. Defaults to 300.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate input and print the outbound payload without calling the API.",
+    )
+    return parser.parse_args()
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise SystemExit(f"request artifact not found: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"request artifact is not valid JSON: {path}: {exc}") from exc
+
+
+def require_string(data: dict[str, Any], key: str) -> str:
+    value = data.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise SystemExit(f"request artifact must include non-empty string '{key}'")
+    return value.strip()
+
+
+def load_request_payload(data: dict[str, Any], *, model: str) -> dict[str, Any]:
+    request_data = data.get("request")
+    if not isinstance(request_data, dict):
+        raise SystemExit("request artifact must include object 'request'")
+    payload = dict(request_data)
+    payload.setdefault("model", model)
+    if "input" not in payload:
+        raise SystemExit("request.request must include 'input'")
+    if "instructions" in payload:
+        raise SystemExit("request.request must not include 'instructions'; xAI Responses API does not support it")
+    return payload
+
+
+def api_key() -> str:
+    value = os.getenv("XAI_API_KEY")
+    if not value:
+        raise SystemExit("XAI_API_KEY is required. Premium+ access does not provide API access for this script.")
+    return value
+
+
+def post_json(url: str, payload: dict[str, Any], *, timeout: int) -> dict[str, Any]:
+    encoded = json.dumps(payload).encode("utf-8")
+    req = request.Request(
+        url,
+        data=encoded,
+        headers={
+            "Authorization": f"Bearer {api_key()}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with request.urlopen(req, timeout=timeout) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise SystemExit(f"xAI API request failed with HTTP {exc.code}: {detail}") from exc
+    except error.URLError as exc:
+        raise SystemExit(f"xAI API request failed: {exc}") from exc
+
+
+def extract_output_text(response: dict[str, Any]) -> str | None:
+    output_text = response.get("output_text")
+    if isinstance(output_text, str) and output_text.strip():
+        return output_text
+
+    for item in response.get("output", []):
+        if item.get("type") != "message":
+            continue
+        for content in item.get("content", []):
+            if content.get("type") == "output_text":
+                text = content.get("text")
+                if isinstance(text, str) and text.strip():
+                    return text
+    return None
+
+
+def build_response_artifact(
+    request_artifact: dict[str, Any], payload: dict[str, Any], response: dict[str, Any]
+) -> dict[str, Any]:
+    return {
+        "task": require_string(request_artifact, "task"),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "meta": request_artifact.get("meta"),
+        "request": payload,
+        "response": response,
+        "output_text": extract_output_text(response) if response else None,
+        "response_id": response.get("id"),
+        "model": response.get("model") or payload.get("model"),
+    }
+
+
+def write_json(path: Path, data: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def main() -> int:
+    args = parse_args()
+    request_path = Path(args.request)
+    response_path = Path(args.response)
+    request_data = load_json(request_path)
+    require_string(request_data, "task")
+    payload = load_request_payload(request_data, model=args.model)
+
+    if args.dry_run:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 0
+
+    response = post_json(f"{args.base_url.rstrip('/')}/responses", payload, timeout=args.timeout)
+    artifact = build_response_artifact(request_data, payload, response)
+    write_json(response_path, artifact)
+    print(str(response_path))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Grok X Research"
-  short_description: "Call Grok for X research workflows"
-  default_prompt: "Use $grok-x-research to call Grok through the bundled xAI API workflow, with X search used only as Grok's evidence-gathering tool."

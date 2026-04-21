@@ -1,6 +1,6 @@
 ---
 title: "Skill Install Manifest"
-updated_at: 2026-04-20
+updated_at: 2026-04-21
 ---
 
 # Skill Install Manifest
@@ -19,7 +19,7 @@ repo root を install source にして実行する。
 ```bash
 gh skill install . skill-manager --from-local --agent claude-code --scope user
 gh skill install . repo-docs-diagnose --from-local --agent claude-code --scope user
-gh skill install . grok-x-research --from-local --agent claude-code --scope user
+gh skill install . grok --from-local --agent claude-code --scope user
 ```
 
 ### Codex
@@ -27,7 +27,7 @@ gh skill install . grok-x-research --from-local --agent claude-code --scope user
 ```bash
 gh skill install . skill-manager --from-local --agent codex --scope user
 gh skill install . repo-docs-diagnose --from-local --agent codex --scope user
-gh skill install . grok-x-research --from-local --agent codex --scope user
+gh skill install . grok --from-local --agent codex --scope user
 ```
 
 ## Third-party external skills
@@ -53,4 +53,21 @@ curl -L --fail --silent --show-error \
   -o .context/skill-bootstrap/empirical-prompt-tuning/skills/empirical-prompt-tuning/SKILL.md
 gh skill install ./.context/skill-bootstrap/empirical-prompt-tuning empirical-prompt-tuning --from-local --agent claude-code --scope user --force
 gh skill install ./.context/skill-bootstrap/empirical-prompt-tuning empirical-prompt-tuning --from-local --agent codex --scope user --force
+```
+
+### `grill-me`
+
+- upstream: [mattpocock/skills `grill-me`](https://github.com/mattpocock/skills/tree/main/grill-me)
+- status: installed globally for Claude Code and Codex
+- install mode: direct `gh skill install` from upstream GitHub repository
+- reason: upstream is publisher-discoverable on GitHub, so direct external install is the standard path
+- update note: inspect changes with `gh skill preview mattpocock/skills grill-me` before running `gh skill update grill-me`
+
+#### Claude Code / Codex install
+
+repo root で実行する。
+
+```bash
+gh skill install mattpocock/skills grill-me --agent claude-code --scope user
+gh skill install mattpocock/skills grill-me --agent codex --scope user
 ```
