@@ -4,7 +4,7 @@
     "pr": ""
   },
   "permissions": {
-    "defaultMode": "auto",
+    "defaultMode": "bypassPermissions",
     "allow": [
       "mcp__pencil"
     ]
