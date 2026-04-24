@@ -85,7 +85,7 @@ Claude Code 固有ルール（`# Claude Code 固有ルール` 以降）は `dot_
 共通ルールや指示ファイルを更新したときの追加確認:
 - 恒久運用の変更なら、必要に応じて `docs/adr/` に背景判断を残す。
 - 反復手順の変更があるなら、関連 Skill の更新要否も同じターンで確認する。
-- Skill 更新が必要な場合は `skill-creator` の手順に従い、更新後に `quick_validate.py` を実行する。
+- Skill 更新が必要な場合は `skill-creator` の手順に従い、更新後に repo ローカルの `scripts/skill-quick-validate <skill-dir>` を実行する。
 
 Step artifact:
 - 共通ルール同期の結果と対象ファイル一覧を `rule-sync` artifact として `.context/` に保存する。
@@ -148,5 +148,5 @@ Step artifact:
 - pre-commit hook（`.claude/hooks/chezmoi-pre-commit-hook`）がコミット前にドリフトを自動検出する。ドリフトがあるとコミットがブロックされるため、必ず apply まで完了させること
 - chezmoi の仕様に自信がない場合は、推測で編集せず公式ドキュメントを確認してから変更すること
 - `python` のような互換コマンドが必要な場合は、まず `symlink_` source で足りるかを確認し、macOS shim の都合で不適切な場合だけ wrapper script を検討すること
-- `.claude/skills/` 配下を更新した場合は、`skill-creator` の手順に従い `scripts/quick_validate.py` で基本妥当性を確認すること
+- `.claude/skills/` 配下を更新した場合は、`skill-creator` の手順に従い repo ローカルの `scripts/skill-quick-validate <skill-dir>` で基本妥当性を確認すること
 - `dot_claude/CLAUDE.md` や `dot_codex/AGENTS.md` のような `dot_*` 配下の変更は `dotfile-update` の責務とし、hook 変更だけを先行適用しないこと

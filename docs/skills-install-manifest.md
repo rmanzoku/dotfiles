@@ -20,6 +20,7 @@ repo root を install source にして実行する。
 gh skill install . skill-manager --from-local --agent claude-code --scope user
 gh skill install . repo-docs-diagnose --from-local --agent claude-code --scope user
 gh skill install . grok --from-local --agent claude-code --scope user
+gh skill install . code-evaluator --from-local --agent claude-code --scope user
 ```
 
 ### Codex
@@ -28,6 +29,7 @@ gh skill install . grok --from-local --agent claude-code --scope user
 gh skill install . skill-manager --from-local --agent codex --scope user
 gh skill install . repo-docs-diagnose --from-local --agent codex --scope user
 gh skill install . grok --from-local --agent codex --scope user
+gh skill install . code-evaluator --from-local --agent codex --scope user
 ```
 
 ## Third-party external skills

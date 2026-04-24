@@ -1,0 +1,6 @@
+interface:
+  display_name: "Code Evaluator"
+  short_description: "Evaluate codebases and dependencies"
+  default_prompt: "Use $code-evaluator to assess this codebase and write a structured evaluation report."
+policy:
+  allow_implicit_invocation: false

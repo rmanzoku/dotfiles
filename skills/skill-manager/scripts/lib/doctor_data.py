@@ -4,7 +4,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -567,6 +566,38 @@ def count_lines(path: Path) -> int:
         return sum(1 for _ in handle)
 
 
+def validate_project_skill(skill_dir: Path) -> tuple[bool, str]:
+    skill_md = skill_dir / "SKILL.md"
+    if not skill_md.exists():
+        return False, "SKILL.md not found"
+
+    frontmatter, warnings = parse_frontmatter(skill_md, add_error)
+    if not frontmatter:
+        return False, "No YAML frontmatter found"
+    unexpected_keys = set(frontmatter) - {"name", "description", "license", "allowed-tools", "metadata"}
+    if unexpected_keys:
+        unexpected = ", ".join(sorted(unexpected_keys))
+        return False, f"Unexpected key(s) in SKILL.md frontmatter: {unexpected}"
+
+    name = frontmatter.get("name", "").strip()
+    description = frontmatter.get("description", "").strip()
+    if not name:
+        return False, "Missing 'name' in frontmatter"
+    if not description:
+        return False, "Missing 'description' in frontmatter"
+    if not all(part for part in name.split("-")) or not name.replace("-", "").isalnum() or name.lower() != name:
+        return False, f"Name '{name}' should be hyphen-case (lowercase letters, digits, and hyphens only)"
+    if len(name) > 64:
+        return False, f"Name is too long ({len(name)} characters). Maximum is 64 characters."
+    if "<" in description or ">" in description:
+        return False, "Description cannot contain angle brackets (< or >)"
+    if len(description) > 1024:
+        return False, f"Description is too long ({len(description)} characters). Maximum is 1024 characters."
+    if warnings:
+        return False, "; ".join(str(warning.get("reason", warning)) for warning in warnings)
+    return True, "Skill is valid!"
+
+
 def check_project_skill_format() -> None:
     if not GIT_ROOT:
         return
@@ -574,31 +605,13 @@ def check_project_skill_format() -> None:
     if not skills_dir.exists():
         add_check("project_skill_format", "pass", "NO_PROJECT_SKILLS", skills_dir, "no project skills present", "project-skills", "project")
         return
-    validator = SKILL_CREATOR_HOME / "scripts" / "quick_validate.py"
-    if not validator.exists():
-        add_check(
-            "project_skill_format",
-            "fail",
-            "VALIDATOR_NOT_FOUND",
-            validator,
-            "quick_validate.py not found",
-            "quick_validate.py",
-            "project",
-        )
-        return
     for skill_dir in sorted(skills_dir.iterdir()):
         if not skill_dir.is_dir():
             continue
         subject = skill_dir.name
-        proc = subprocess.run(
-            ["python3", str(validator), str(skill_dir)],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        status = "pass" if proc.returncode == 0 else "fail"
-        reason = (proc.stdout or proc.stderr).strip() or "quick_validate.py returned no message"
-        add_check("project_skill_format", status, "QUICK_VALIDATE", skill_dir / "SKILL.md", reason, subject, "project")
+        valid, reason = validate_project_skill(skill_dir)
+        status = "pass" if valid else "fail"
+        add_check("project_skill_format", status, "SKILL_VALIDATE", skill_dir / "SKILL.md", reason, subject, "project")
         skill_md = skill_dir / "SKILL.md"
         if skill_md.exists() and count_lines(skill_md) > 500:
             add_check("project_skill_format", "warn", "SKILL_MD_TOO_LONG", skill_md, "SKILL.md exceeds 500 lines", subject, "project")
@@ -607,7 +620,7 @@ def check_project_skill_format() -> None:
             add_check("project_skill_format", "warn", "OPENAI_YAML_NOT_VALIDATED", agent_yaml, "agents/openai.yaml exists but is not auto-validated", subject, "project")
         frontmatter, warnings = parse_frontmatter(skill_md, add_error)
         if "compatibility" in frontmatter:
-            add_check("project_skill_format", "fail", "COMPATIBILITY_UNSUPPORTED", skill_md, "compatibility is not allowed by quick_validate.py", subject, "project")
+            add_check("project_skill_format", "fail", "COMPATIBILITY_UNSUPPORTED", skill_md, "compatibility is not allowed by the skill validator", subject, "project")
         for warning in warnings:
             add_check("project_skill_format", "warn", warning["code"], warning["path"], warning["reason"], subject, "project")
 

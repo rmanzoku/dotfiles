@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+"""Validate a skill without requiring third-party Python packages."""
+
+from __future__ import annotations
+
+import re
+import sys
+from pathlib import Path
+
+MAX_SKILL_NAME_LENGTH = 64
+ALLOWED_PROPERTIES = {"name", "description", "license", "allowed-tools", "metadata"}
+
+
+def split_header_value(line: str) -> tuple[str, str] | None:
+    if ":" not in line:
+        return None
+    key, value = line.split(":", 1)
+    return key.strip(), value.strip()
+
+
+def consume_block(lines: list[str], start: int, indicator: str) -> tuple[str, int]:
+    folded = indicator.startswith(">")
+    idx = start + 1
+    chunks: list[str] = []
+    while idx < len(lines):
+        line = lines[idx]
+        if line.strip() == "---":
+            break
+        if line and not line.startswith((" ", "\t")):
+            break
+        stripped = line.lstrip(" \t")
+        chunks.append(stripped.strip() if folded else stripped.rstrip("\n"))
+        idx += 1
+    if folded:
+        return " ".join(part for part in chunks if part).strip(), idx
+    return "\n".join(chunks).strip(), idx
+
+
+def parse_frontmatter(skill_md: Path) -> tuple[dict[str, str], list[str], str | None]:
+    try:
+        text = skill_md.read_text(encoding="utf-8")
+    except OSError as exc:
+        return {}, [], f"Could not read SKILL.md: {exc}"
+
+    if not text.startswith("---\n"):
+        return {}, [], "No YAML frontmatter found"
+
+    lines = text.splitlines()
+    frontmatter: dict[str, str] = {}
+    warnings: list[str] = []
+    idx = 1
+    while idx < len(lines):
+        line = lines[idx]
+        if line.strip() == "---":
+            return frontmatter, warnings, None
+        if not line.strip():
+            idx += 1
+            continue
+        if line.startswith((" ", "\t")):
+            idx += 1
+            continue
+
+        parsed = split_header_value(line)
+        if parsed is None:
+            warnings.append(f"unsupported frontmatter line: {line}")
+            idx += 1
+            continue
+
+        key, value = parsed
+        if value in {">", ">-", ">+", "|", "|-", "|+"}:
+            frontmatter[key], idx = consume_block(lines, idx, value)
+            continue
+        if value.startswith(('"', "'")) and value.endswith(('"', "'")) and len(value) >= 2:
+            value = value[1:-1]
+        frontmatter[key] = value
+        idx += 1
+
+    return frontmatter, warnings, "Invalid frontmatter format"
+
+
+def validate_skill(skill_path: Path) -> tuple[bool, str]:
+    skill_md = skill_path / "SKILL.md"
+    if not skill_md.exists():
+        return False, "SKILL.md not found"
+
+    frontmatter, warnings, error = parse_frontmatter(skill_md)
+    if error:
+        return False, error
+
+    unexpected_keys = set(frontmatter) - ALLOWED_PROPERTIES
+    if unexpected_keys:
+        allowed = ", ".join(sorted(ALLOWED_PROPERTIES))
+        unexpected = ", ".join(sorted(unexpected_keys))
+        return False, f"Unexpected key(s) in SKILL.md frontmatter: {unexpected}. Allowed properties are: {allowed}"
+
+    if "name" not in frontmatter:
+        return False, "Missing 'name' in frontmatter"
+    if "description" not in frontmatter:
+        return False, "Missing 'description' in frontmatter"
+
+    name = frontmatter.get("name", "").strip()
+    description = frontmatter.get("description", "").strip()
+    if not name:
+        return False, "Name must be a non-empty string"
+    if not re.match(r"^[a-z0-9-]+$", name):
+        return False, f"Name '{name}' should be hyphen-case (lowercase letters, digits, and hyphens only)"
+    if name.startswith("-") or name.endswith("-") or "--" in name:
+        return False, f"Name '{name}' cannot start/end with hyphen or contain consecutive hyphens"
+    if len(name) > MAX_SKILL_NAME_LENGTH:
+        return False, f"Name is too long ({len(name)} characters). Maximum is {MAX_SKILL_NAME_LENGTH} characters."
+
+    if not description:
+        return False, "Description must be a non-empty string"
+    if "<" in description or ">" in description:
+        return False, "Description cannot contain angle brackets (< or >)"
+    if len(description) > 1024:
+        return False, f"Description is too long ({len(description)} characters). Maximum is 1024 characters."
+
+    if warnings:
+        return False, "; ".join(warnings)
+    return True, "Skill is valid!"
+
+
+def main() -> int:
+    if len(sys.argv) != 2:
+        print("Usage: scripts/skill-quick-validate <skill_directory>")
+        return 1
+    valid, message = validate_skill(Path(sys.argv[1]))
+    print(message)
+    return 0 if valid else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

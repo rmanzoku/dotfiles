@@ -306,14 +306,13 @@ When helping the user choose a management path:
 
 After updating this skill:
 
-1. Run `python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py <skill-dir>`
+1. Run `scripts/skill-quick-validate <skill-dir>` from this repository
 2. If helper scripts were changed, run their simplest smoke checks
 3. Re-read the whole `SKILL.md` and remove contradictions with current tooling
-4. If `quick_validate.py` fails due to missing Python dependencies in the local environment, record that as an environment issue and rely on script smoke checks until the validator runtime is repaired
+4. If the repo-local validator is unavailable, use the `skill-creator` validator as a fallback and record any runtime dependency issue
 
 For this repository's publisher source, use:
 
 ```bash
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
-  skills/skill-manager
+scripts/skill-quick-validate skills/skill-manager
 ```

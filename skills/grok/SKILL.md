@@ -53,6 +53,5 @@ The current backend is xAI Responses API. If an official Grok CLI becomes usable
 ## Validation
 
 ```bash
-python3 /Users/rmanzoku/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
-  skills/grok
+scripts/skill-quick-validate skills/grok
 ```

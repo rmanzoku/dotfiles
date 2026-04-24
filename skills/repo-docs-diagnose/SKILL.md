@@ -104,6 +104,5 @@ JSON の `report_section` を使って次の並びで返す:
 ## Validation
 
 ```bash
-python3 /Users/rmanzoku/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
-  skills/repo-docs-diagnose
+scripts/skill-quick-validate skills/repo-docs-diagnose
 ```
