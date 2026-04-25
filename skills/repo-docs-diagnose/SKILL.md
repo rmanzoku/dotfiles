@@ -66,13 +66,13 @@ python3 <skill-dir>/scripts/executable_repo_docs_diagnose.py \
 ## Mode Rules
 
 `diagnose`:
-- `bootstrap_candidates` には path、reason、priority、required sections だけを載せる。
+- `bootstrap_candidates` には `path`、`reason`、`priority`、`required_sections` だけを載せる。既存 docs の再利用候補がある場合だけ `source_paths` を追加してよい。
 - 既存 docs が見つかった場合は、`source_paths` を添えて「推奨パスへ寄せる」提案にする。
 - starter paragraph、Markdown 本文、ready-to-paste block は出さない。
 - zip 由来の診断制約を適用する。対象 repo 診断では新 Skill 提案や Skill 体系変更提案をしない。
 
 `bootstrap`:
-- `bootstrap_candidates` に starter snippet と section outline を含めてよい。
+- `bootstrap_candidates` に `starter_snippet`、`starter_content_type`、`report_section`、section outline を含めてよい。
 - 提案対象は README、docs index、agent entrypoint、architecture overview、service index、design-system index、operational docs/ADR に限定する。
 - repo 設定変更、CI 変更、code scaffolding、skill system 変更は提案しない。
 

@@ -22,6 +22,7 @@ The current backend is xAI Responses API. If an official Grok CLI becomes usable
 
 - Put the actual xAI Responses API body under the `request` key.
 - Prefer `request.input` as a string or a messages array that Grok can consume directly.
+- For schema-constrained JSON, put the schema under `request.response_format` and validate the returned `output_text` in the orchestrator.
 - Set `request.model` only when the default model is not enough.
 - Add tools such as `web_search` or `x_search` only when the task actually needs them.
 - Keep one API job per artifact.
@@ -29,7 +30,7 @@ The current backend is xAI Responses API. If an official Grok CLI becomes usable
 ## Execution Rules
 
 - Require `XAI_API_KEY` in the environment. Premium+ access alone is not enough for API-driven delegation.
-- Use `--dry-run` first when checking a new request shape or debugging schema changes.
+- Use `--dry-run` first when checking a new request shape or debugging schema changes. The CLI still requires `--response`, but dry-run prints the outbound payload and does not write a response artifact.
 - The script defaults to `GROK_MODEL`, then `GROK_X_RESEARCH_MODEL`, then `grok-4.20-reasoning` when `request.model` is omitted.
 - The bundled script currently calls xAI's `/responses` endpoint and should avoid adding orchestration logic beyond minimal validation and artifact handling.
 - If the backend is later swapped to a Grok CLI, preserve the request and response artifact contract unless there is a compelling migration reason.
@@ -37,7 +38,7 @@ The current backend is xAI Responses API. If an official Grok CLI becomes usable
 ## Output Rules
 
 - Expect the response artifact to preserve the outbound payload, the raw API response, and extracted convenience fields such as `output_text` when available.
-- If you need structured JSON from Grok, request it in `request.text` and validate the returned artifact in the orchestrator.
+- If you need structured JSON from Grok, request it with `request.response_format` and validate the returned `output_text` in the orchestrator.
 - Verify high-stakes claims separately when they affect reputation, compliance, or irreversible actions.
 
 ## Boundaries

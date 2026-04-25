@@ -256,6 +256,21 @@ def discover_docs_candidates(base: Path, keywords: tuple[str, ...], excluded_pre
     return sorted(set(results))
 
 
+def discover_sibling_sources(repo: Path, target_path: str) -> list[str]:
+    target = repo / target_path
+    parent = target.parent
+    if not parent.exists() or not parent.is_dir():
+        return []
+    sources = []
+    for path in parent.rglob("*"):
+        if not path.is_file() or path == target:
+            continue
+        if path.suffix.lower() not in TEXT_EXTENSIONS:
+            continue
+        sources.append(safe_rel(path, repo))
+    return sorted(set(sources))
+
+
 def scan_large_docs(base: Path) -> list[dict]:
     findings = []
     for path in base.rglob("*"):
@@ -464,6 +479,26 @@ def detect(repo: Path, mode: str, reference_repo: Path | None) -> dict:
                 evidence={"items": bad_specs[:5]},
                 suggested_fix="各 feature に SPEC.md / ACCEPTANCE.md / TASKS.md を揃えてください。",
             )
+    root_specs_dir = repo / "specs"
+    docs_specs_dir = repo / "docs" / "specs"
+    if root_specs_dir.exists() and not docs_specs_dir.exists():
+        spec_sources = [
+            safe_rel(path, repo)
+            for path in root_specs_dir.rglob("*")
+            if path.is_file() and path.suffix.lower() in TEXT_EXTENSIONS
+        ]
+        if spec_sources:
+            add_missing(
+                findings,
+                severity="medium",
+                category="spec-structure",
+                message="spec 相当の docs はありますが、docs 配下の spec 入口に正規化されていません。",
+                evidence={
+                    "detected_paths": sorted(spec_sources)[:5],
+                    "recommended_paths": ["docs/specs/"],
+                },
+                suggested_fix="既存 spec docs を docs/specs/ へ寄せるか、docs index から正本として参照してください。",
+            )
 
     findings.extend(scan_large_docs(repo))
 
@@ -500,14 +535,14 @@ def build_bootstrap_candidates(repo: Path, mode: str) -> list[dict]:
             "path": path,
             "reason": spec["reason"],
             "priority": spec["priority"],
-            "sections": spec["sections"],
-            "starter_content_type": spec["starter_content_type"],
-            "report_section": spec["report_section"],
+            "required_sections": spec["sections"],
         }
         if existing_sources:
             candidate["reason"] = f"{spec['reason']} 既存 docs を推奨パスへ正規化する候補があります。"
             candidate["source_paths"] = existing_sources[:5]
         if mode == "bootstrap":
+            candidate["starter_content_type"] = spec["starter_content_type"]
+            candidate["report_section"] = spec["report_section"]
             candidate["starter_snippet"] = starter_snippet_for(path)
         candidates.append(candidate)
     candidates.sort(key=lambda item: ({"high": 0, "medium": 1, "low": 2}[item["priority"]], item["path"]))
@@ -528,18 +563,32 @@ def starter_snippet_for(path: str) -> str:
 
 
 def discover_bootstrap_sources(repo: Path, target_path: str) -> list[str]:
+    def unique(items: list[str]) -> list[str]:
+        return sorted(set(items))
+
     mapping = {
         "docs/architecture/overview.md": discover_docs_candidates(
             repo, AREA_CONFIG["architecture"]["search_keywords"], AREA_CONFIG["architecture"]["canonical_prefixes"]
         ),
-        "docs/services/README.md": discover_docs_candidates(
-            repo, AREA_CONFIG["services"]["search_keywords"], AREA_CONFIG["services"]["canonical_prefixes"]
+        "docs/services/README.md": unique(
+            discover_sibling_sources(repo, target_path)
+            + discover_docs_candidates(
+                repo, AREA_CONFIG["services"]["search_keywords"], AREA_CONFIG["services"]["canonical_prefixes"]
+            )
         ),
-        "docs/design-system/README.md": discover_docs_candidates(
-            repo, AREA_CONFIG["design-system"]["search_keywords"], AREA_CONFIG["design-system"]["canonical_prefixes"]
+        "docs/design-system/README.md": unique(
+            discover_sibling_sources(repo, target_path)
+            + discover_docs_candidates(
+                repo,
+                AREA_CONFIG["design-system"]["search_keywords"],
+                AREA_CONFIG["design-system"]["canonical_prefixes"],
+            )
         ),
-        "docs/adr/0001-record-docs-bootstrap-rules.md": discover_docs_candidates(
-            repo, AREA_CONFIG["operational"]["search_keywords"], AREA_CONFIG["operational"]["canonical_prefixes"]
+        "docs/adr/0001-record-docs-bootstrap-rules.md": unique(
+            discover_sibling_sources(repo, target_path)
+            + discover_docs_candidates(
+                repo, AREA_CONFIG["operational"]["search_keywords"], AREA_CONFIG["operational"]["canonical_prefixes"]
+            )
         ),
         "AGENTS.md": ["README.md"] if (repo / "README.md").exists() else [],
         "docs/README.md": ["README.md"] if (repo / "README.md").exists() else [],
