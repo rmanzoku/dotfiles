@@ -1,0 +1,6 @@
+interface:
+  display_name: "Opus 4.7 Tuning"
+  short_description: "Audit docs/skills/prompts for Opus 4.7 readiness"
+  default_prompt: "Use $opus-4-7-tuning to audit this repo's docs, skills, and prompts for Opus 4.7 readiness and propose replacements."
+policy:
+  allow_implicit_invocation: false
