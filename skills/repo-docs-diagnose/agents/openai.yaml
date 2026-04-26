@@ -1,4 +1,0 @@
-interface:
-  display_name: "Repo Docs Diagnose"
-  short_description: "Diagnose repo docs for AI agents"
-  default_prompt: "Use $repo-docs-diagnose to review this repository's docs structure for AI agents or propose bootstrap doc skeletons."

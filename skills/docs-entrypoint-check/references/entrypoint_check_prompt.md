@@ -1,11 +1,11 @@
-# AI Repo Diagnostic Prompt
+# Docs Entrypoint Check Prompt
 
-この reference は `diagnose` モード専用の基準である。
-target repo の docs 設計を評価するときだけ、この制約を強く適用する。
+この reference は `check` モード専用の基準である。
+target repo の docs entrypoint と読み始めの導線を確認するときだけ、この制約を強く適用する。
 
 ## Hard Constraints
 
-- 対象は診断対象 repo の内部に限定する。
+- 対象はチェック対象 repo の内部に限定する。
 - 外部サービスや他 repo には言及しない。
 - Skill Creator が既に導入されている前提で診断する。
 - Skill 体系を変更する提案をしない。

@@ -105,6 +105,7 @@ BOOTSTRAP_TARGETS = {
 }
 
 TEXT_EXTENSIONS = {".md", ".txt", ".rst"}
+DEFAULT_EXCLUDED_PARTS = {".git", ".context", "node_modules", "dist", "build", ".next", "coverage"}
 
 AREA_CONFIG = {
     "architecture": {
@@ -155,17 +156,17 @@ AREA_CONFIG = {
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Diagnose repo docs for AI-agent readability.")
+    parser = argparse.ArgumentParser(description="Check repo documentation entrypoints for AI-agent readability.")
     parser.add_argument("--target-repo", default=".", help="Target repository path. Defaults to current directory.")
     parser.add_argument("--reference-repo", default=None, help="Optional reference repository path.")
     parser.add_argument(
         "--request-text",
         default="",
-        help="Original user request used for diagnose/bootstrap mode routing.",
+        help="Original user request used for check/bootstrap mode routing.",
     )
     parser.add_argument(
         "--mode",
-        choices=("auto", "diagnose", "bootstrap"),
+        choices=("auto", "check", "bootstrap"),
         default="auto",
         help="Mode override. Default is auto.",
     )
@@ -179,7 +180,7 @@ def choose_mode(mode: str, request_text: str) -> str:
     for keyword in BOOTSTRAP_KEYWORDS:
         if keyword.lower() in lowered:
             return "bootstrap"
-    return "diagnose"
+    return "check"
 
 
 def ensure_repo(path_str: str) -> Path:
@@ -256,6 +257,10 @@ def discover_docs_candidates(base: Path, keywords: tuple[str, ...], excluded_pre
     return sorted(set(results))
 
 
+def exclude_historical_sources(paths: list[str]) -> list[str]:
+    return [path for path in paths if not path.startswith("docs/adr/")]
+
+
 def discover_sibling_sources(repo: Path, target_path: str) -> list[str]:
     target = repo / target_path
     parent = target.parent
@@ -275,6 +280,9 @@ def scan_large_docs(base: Path) -> list[dict]:
     findings = []
     for path in base.rglob("*"):
         if not path.is_file():
+            continue
+        rel_parts = path.relative_to(base).parts
+        if any(part in DEFAULT_EXCLUDED_PARTS for part in rel_parts):
             continue
         if path.suffix.lower() not in TEXT_EXTENSIONS:
             continue
@@ -428,6 +436,8 @@ def detect(repo: Path, mode: str, reference_repo: Path | None) -> dict:
         if canonical_matches:
             continue
         discovered = discover_docs_candidates(repo, config["search_keywords"], config["canonical_prefixes"])
+        if category != "operational":
+            discovered = exclude_historical_sources(discovered)
         if discovered:
             add_missing(
                 findings,
@@ -567,21 +577,27 @@ def discover_bootstrap_sources(repo: Path, target_path: str) -> list[str]:
         return sorted(set(items))
 
     mapping = {
-        "docs/architecture/overview.md": discover_docs_candidates(
-            repo, AREA_CONFIG["architecture"]["search_keywords"], AREA_CONFIG["architecture"]["canonical_prefixes"]
+        "docs/architecture/overview.md": exclude_historical_sources(
+            discover_docs_candidates(
+                repo, AREA_CONFIG["architecture"]["search_keywords"], AREA_CONFIG["architecture"]["canonical_prefixes"]
+            )
         ),
         "docs/services/README.md": unique(
             discover_sibling_sources(repo, target_path)
-            + discover_docs_candidates(
-                repo, AREA_CONFIG["services"]["search_keywords"], AREA_CONFIG["services"]["canonical_prefixes"]
+            + exclude_historical_sources(
+                discover_docs_candidates(
+                    repo, AREA_CONFIG["services"]["search_keywords"], AREA_CONFIG["services"]["canonical_prefixes"]
+                )
             )
         ),
         "docs/design-system/README.md": unique(
             discover_sibling_sources(repo, target_path)
-            + discover_docs_candidates(
-                repo,
-                AREA_CONFIG["design-system"]["search_keywords"],
-                AREA_CONFIG["design-system"]["canonical_prefixes"],
+            + exclude_historical_sources(
+                discover_docs_candidates(
+                    repo,
+                    AREA_CONFIG["design-system"]["search_keywords"],
+                    AREA_CONFIG["design-system"]["canonical_prefixes"],
+                )
             )
         ),
         "docs/adr/0001-record-docs-bootstrap-rules.md": unique(

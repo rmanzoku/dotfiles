@@ -1,0 +1,4 @@
+interface:
+  display_name: "Docs Entrypoint Check"
+  short_description: "Check AI docs entrypoints"
+  default_prompt: "Use $docs-entrypoint-check to check this repository's AI documentation entrypoints or propose bootstrap skeletons."

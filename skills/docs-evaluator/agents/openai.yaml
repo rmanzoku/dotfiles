@@ -1,0 +1,6 @@
+interface:
+  display_name: "Docs Evaluator"
+  short_description: "Audit repository documentation systems"
+  default_prompt: "Use $docs-evaluator to audit this repository documentation system and write an evidence-backed report."
+policy:
+  allow_implicit_invocation: false

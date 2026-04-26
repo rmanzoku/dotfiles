@@ -1,6 +1,6 @@
 ---
 title: "Skill Install Manifest"
-updated_at: 2026-04-25
+updated_at: 2026-04-26
 ---
 
 # Skill Install Manifest
@@ -18,7 +18,8 @@ repo root を install source にして実行する。
 
 ```bash
 gh skill install . skill-manager --from-local --agent claude-code --scope user
-gh skill install . repo-docs-diagnose --from-local --agent claude-code --scope user
+gh skill install . docs-entrypoint-check --from-local --agent claude-code --scope user
+gh skill install . docs-evaluator --from-local --agent claude-code --scope user
 gh skill install . grok --from-local --agent claude-code --scope user
 gh skill install . code-evaluator --from-local --agent claude-code --scope user
 gh skill install . opus-4-7-tuning --from-local --agent claude-code --scope user
@@ -28,7 +29,8 @@ gh skill install . opus-4-7-tuning --from-local --agent claude-code --scope user
 
 ```bash
 gh skill install . skill-manager --from-local --agent codex --scope user
-gh skill install . repo-docs-diagnose --from-local --agent codex --scope user
+gh skill install . docs-entrypoint-check --from-local --agent codex --scope user
+gh skill install . docs-evaluator --from-local --agent codex --scope user
 gh skill install . grok --from-local --agent codex --scope user
 gh skill install . code-evaluator --from-local --agent codex --scope user
 gh skill install . opus-4-7-tuning --from-local --agent codex --scope user

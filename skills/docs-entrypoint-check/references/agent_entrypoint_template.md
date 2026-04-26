@@ -65,5 +65,5 @@
 
 ## Usage Rule
 
-- `diagnose` モードでは path と heading 候補だけ返し、本文は返さない。
+- `check` モードでは path と heading 候補だけ返し、本文は返さない。
 - `bootstrap` モードでのみ starter snippet を返す。
