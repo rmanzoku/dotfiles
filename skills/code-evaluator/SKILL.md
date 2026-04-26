@@ -18,15 +18,16 @@ Produce an evidence-backed evaluation report. Do not create patches, edit target
 - Separate general engineering findings from project-specific compliance. If repo docs define local rules, evaluate against them, but do not confuse "matches current policy" with "ideal design".
 - Use confidence labels. Do not make whole-repo claims from narrow sampling without marking them provisional.
 - When the target is large, create and save a sampling plan before deep dives.
+- If the user asks for fixes, edits, upgrades, commits, or PR work during an evaluation, keep the current output report-only and propose a separate implementation handoff.
 
 ## Mode Selection
 
 Select the narrowest mode that matches the request:
 
 - `whole-codebase-evaluation`: Health check for a repository, package, or subsystem. Use summary-first output with pillar scores, sampling plan, coverage, positive signals, prioritized issues, and ideal-state recommendations.
-- `change-review`: Review a diff/PR/patch in a broader evaluator style. Use findings-first output with severity, file/line references, missing tests, and summary last.
+- `change-review`: Review a diff/PR/patch in a broader evaluator style. Use findings-first output with severity, file/line references, missing tests, and summary last. Stay limited to the diff and directly coupled boundaries; do not drift into unrelated whole-repo critique.
 - `license-audit`: Focus on dependency licenses, distribution context, prior accepted signals, unknown/no-license blockers, and remediation evidence.
-- `framework-best-practice-review`: Focus on idiomatic use of a named framework or library while still checking tests, boundaries, and dependency necessity.
+- `framework-best-practice-review`: Focus on idiomatic use of a named framework or library while still checking tests, boundaries, and dependency necessity. Record framework/library name, detected version, primary references consulted, and reviewer confidence for idiom claims.
 
 If the user gives no mode, infer it from the target and wording. If a normal PR review is requested without a broad assessment, prefer the environment's normal review workflow instead of this skill.
 
@@ -39,7 +40,7 @@ If the user gives no mode, infer it from the target and wording. If a normal PR 
 2. **Acquire efficient context**
    - Read high-level docs first when present: `AGENTS.md`, `README*`, `docs/`, architecture/rules docs, package readmes.
    - Inventory the source tree while excluding generated/vendor/cache paths for source-quality review.
-   - Read manifests, lockfiles, dependency overrides, license/notice files, test/lint/typecheck config, and core source directories.
+   - Read manifests, lockfiles, dependency overrides, license/notice files, test/lint/typecheck config, CI/CD workflows, build/deployment config such as Dockerfiles, and core source directories.
    - For license audits, also inspect scope-adjacent native/link/bundle config when it can place third-party code or assets into distributed outputs.
    - Save inventory notes to `.context/code-evaluator/<task>/inventory.md`.
 
@@ -47,6 +48,7 @@ If the user gives no mode, infer it from the target and wording. If a normal PR 
    - For large repos/subsystems, choose representative samples across core logic, boundaries, high-risk areas, tests, dependency surfaces, and docs.
    - Save `.context/code-evaluator/<task>/sampling-plan.md`.
    - Report files inspected and important areas not inspected.
+   - If sampling cannot support a meaningful whole-repo score, narrow the scope or downgrade the deliverable to scoped findings instead of emitting an overbroad low-confidence score.
 
 4. **Load references as needed**
    - Read `references/evaluation-rubric.md` for general evaluation pillars, scoring, dependency triage, and issue format.
@@ -57,9 +59,11 @@ If the user gives no mode, infer it from the target and wording. If a normal PR 
    - Save raw notes/findings under `.context/code-evaluator/<task>/raw-findings.md`.
    - Each issue must include evidence, impact, recommended next action, and confidence.
    - Include `What I Would Not Preserve` when existing abstractions or dependencies should not constrain a best-state redesign.
+   - Tag security findings as `static-review-only` when no scanner, dynamic test, or targeted security tool was run.
 
 6. **Run non-mutating checks when reasonable**
    - Run tests/lint/typecheck/build only when they are expected to be non-destructive and useful for the requested scope.
+   - Treat cache writes in ignored output directories as acceptable, but do not run commands expected to write tracked source, configs, lockfiles, generated artifacts, or dependency installation state.
    - Do not run install, upgrade, formatter-write, autofix, codegen-write, migration, or dependency-changing commands unless the user explicitly asks.
    - Save commands, exit status, and skipped checks to `.context/code-evaluator/<task>/checks.md`.
 
@@ -79,6 +83,7 @@ If the user gives no mode, infer it from the target and wording. If a normal PR 
 ## Boundaries
 
 - This skill provides engineering triage, not legal advice.
+- This skill reports visible security hygiene and reliability risks; it does not certify that a system is secure or compliant.
 - Do not declare a license safe only because a name looks familiar. Consider distribution context, notice/source obligations, prior accepted signals, and remediation evidence.
 - Do not declare GPL/LGPL/MPL automatically forbidden. Evaluate use context and whether the license obligations can be met.
 - Treat no-license, unclear-license, non-commercial-only, commercial-use-prohibited, and field-of-use-restricted dependencies as blockers or strong needs-confirmation items.

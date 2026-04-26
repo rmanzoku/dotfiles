@@ -14,11 +14,11 @@ Use this rubric to evaluate code quality while keeping the final report evidence
    - Pattern fit: avoid both under-structured coupling and unnecessary architecture.
 
 2. **Implementation quality and maintainability**
-   - Readability, simple control flow, robust error handling, observability, validation, security hygiene, performance hygiene, and testability.
+   - Readability, simple control flow, robust error handling, observability, validation, security hygiene, performance hygiene, operational readiness signals, and testability.
    - Prefer idiomatic use of language/framework features over custom abstractions without clear benefit.
 
 3. **Tests and verification**
-   - Critical behavior coverage, edge cases, deterministic tests, test isolation, useful fixtures, and checks that can run in CI.
+   - Critical behavior coverage, edge cases, deterministic tests, test isolation, useful fixtures, checks that can run in CI, and local/CI parity.
    - Report checks not run and how that affects confidence.
 
 4. **Documentation and project knowledge**
@@ -30,10 +30,12 @@ Use this rubric to evaluate code quality while keeping the final report evidence
    - Prefer standard APIs or small internal code for commodity behavior when safe.
 
 6. **Security and reliability**
-   - Secrets handling, input trust boundaries, auth, data validation, logging of sensitive values, graceful degradation, idempotency, and supply-chain exposure.
+   - Secrets handling, input trust boundaries, auth, data validation, logging of sensitive values, graceful degradation, idempotency, supply-chain exposure, deployment reproducibility, runtime configuration, observability, and runbook/on-call posture when visible.
+   - Do not declare the system secure. Report visible hygiene failures and label findings `static-review-only` when no scanner, dynamic test, or targeted security tool was run.
 
 7. **AI/LLM ergonomics**
    - Clear structure, chunkable files, explicit interfaces/types, predictable naming, low boilerplate, focused modules, and tests/docs that let future agents reason with limited context.
+   - Treat this as supplementary to human readability, domain idiom, and maintainability; do not reward AI convenience at their expense.
 
 ## Dependency Triage
 
@@ -60,6 +62,8 @@ Use `0-10` scores for the overall assessment and each pillar.
 
 - Mark scores `provisional` when sampling is narrow or checks were not run.
 - Attach `confidence: high | medium | low`.
+- Cap confidence by evidence coverage: use `low` for narrow sampling or missing core areas, `medium` when representative areas were inspected but important checks or surfaces were skipped, and `high` only when sampling, docs/manifests, high-risk paths, and relevant checks support the claim.
+- If evidence cannot support an overall score, report scoped findings instead of forcing a whole-repo score.
 - Let prioritized issues and next actions drive decisions; scores are a summary, not the main deliverable.
 
 ## Issue Format
@@ -103,4 +107,4 @@ Call out existing structures that should not constrain future improvement:
 - Duplicate libraries for one purpose.
 - Design choices that match current code but conflict with ideal architecture.
 
-Do not apply this to product behavior, public APIs, data migrations, or legal obligations without explicit caution.
+This section is design opinion, not a deletion or refactor mandate. Do not apply it to product behavior, public APIs, data migrations, security boundaries, or legal obligations without explicit caution.

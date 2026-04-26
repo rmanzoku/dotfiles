@@ -5,7 +5,7 @@ description: License, distribution context, and dependency remediation guidance 
 
 # License Triage
 
-This is engineering triage, not legal advice. Evaluate whether the observed dependency use appears compatible with the stated commercial/service context and whether follow-up is needed.
+This is engineering triage, not legal advice or compliance clearance. Evaluate whether the observed dependency use appears compatible with the stated commercial/service context and whether follow-up is needed.
 
 ## Core Approach
 
@@ -38,6 +38,8 @@ In license-audit mode, include scope-adjacent vendored/native assets when they c
 ## Previously Accepted License Signals
 
 These license strings were previously accepted in the user's commercial-service context. Treat exact matches as `accepted-signal`, not unconditional approval. Still verify distribution context, notices, source/modification obligations, dual-license selection, and remediation evidence.
+
+This list is an internal heuristic, not policy of record. If the repository or user supplies organization-specific license policy, use that policy as the authority and cite the accepted-signal list only as supporting evidence.
 
 - `(AFL-2.1 OR BSD-3-Clause) License`
 - `(Apache-2.0 AND MIT) License`

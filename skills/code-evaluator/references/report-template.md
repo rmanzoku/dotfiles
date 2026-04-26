@@ -23,8 +23,10 @@ Use these structures as output contracts. Keep reports concise enough to act on,
 
 - Target:
 - Mode:
+- Mode trigger:
 - Distribution context assumptions:
 - Project-specific rules considered:
+- Framework/library versions and references consulted, if applicable:
 
 ## Sampling Plan
 
@@ -38,6 +40,7 @@ Use these structures as output contracts. Keep reports concise enough to act on,
 
 - Files/directories inspected:
 - Manifests/lockfiles inspected:
+- CI/CD, build, and deployment config inspected:
 - Docs inspected:
 - Commands run:
 - Areas not inspected:
@@ -64,6 +67,8 @@ Use these structures as output contracts. Keep reports concise enough to act on,
 | Dependency necessity | X/10 | high/medium/low | |
 | Security and reliability | X/10 | high/medium/low | |
 | AI/LLM ergonomics | X/10 | high/medium/low | |
+
+Confidence must reflect evidence coverage: use `low` for narrow sampling or missing core areas, `medium` for representative but incomplete evidence, and `high` only when inspected evidence and relevant checks support the claim.
 
 ## Positive Signals
 
@@ -105,6 +110,8 @@ Confidence:
 
 ## What I Would Not Preserve
 
+Design opinion only; not a deletion/refactor mandate.
+
 - ...
 
 ## Recommended Next Actions
@@ -144,6 +151,13 @@ Confidence:
 ## Missing Tests
 
 - ...
+
+## Evidence Coverage
+
+- Diff files inspected:
+- Directly coupled files inspected:
+- Areas intentionally not inspected:
+- Confidence impact:
 
 ## Open Questions
 
