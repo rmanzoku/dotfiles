@@ -16,6 +16,20 @@ BOOTSTRAP_KEYWORDS = (
     "ひな形",
     "叩き台を作る",
 )
+BOOTSTRAP_NEGATION_MARKERS = (
+    "不要",
+    "いらない",
+    "要らない",
+    "なし",
+    "しない",
+    "作らない",
+    "作成しない",
+    "出さない",
+    "見ない",
+    "no ",
+    "not ",
+    "without ",
+)
 
 CATEGORY_VALUES = (
     "docs-index",
@@ -178,9 +192,19 @@ def choose_mode(mode: str, request_text: str) -> str:
         return mode
     lowered = request_text.lower()
     for keyword in BOOTSTRAP_KEYWORDS:
-        if keyword.lower() in lowered:
+        lowered_keyword = keyword.lower()
+        if lowered_keyword in lowered and not is_negated_keyword(lowered, lowered_keyword):
             return "bootstrap"
     return "check"
+
+
+def is_negated_keyword(text: str, keyword: str) -> bool:
+    start = text.find(keyword)
+    if start == -1:
+        return False
+    end = start + len(keyword)
+    window = text[max(0, start - 16) : min(len(text), end + 24)]
+    return any(marker in window for marker in BOOTSTRAP_NEGATION_MARKERS)
 
 
 def ensure_repo(path_str: str) -> Path:

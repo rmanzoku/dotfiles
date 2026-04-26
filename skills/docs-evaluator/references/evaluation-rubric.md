@@ -64,6 +64,8 @@ Use this rubric to score the documentation system as a graph of active guidance,
 - Skills include valid `name` and `description` front matter and keep UI metadata in `agents/openai.yaml`.
 - Body text does not carry stale metadata blocks that should be machine-readable.
 - Metadata findings are limited to repo-declared requirements and active documentation contracts.
+- Legacy or older documents are only violations when current canonical policy clearly applies to them. Otherwise, report uncertainty or grandfathering risk.
+- Absence of front matter is only a finding for document types with declared required metadata, such as ADRs or `SKILL.md`. Generic README, AGENTS, or docs pages do not need front matter unless the repo explicitly requires it.
 
 ## Scoring
 

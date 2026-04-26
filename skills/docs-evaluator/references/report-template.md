@@ -33,6 +33,7 @@ Use this shape for `.context/docs-evaluator/<task>/report.md`.
 - Files deeply inspected:
 - Exclusions:
 - Sampling limits:
+- Standalone evidence artifact: optional; note path only if created.
 
 ## Inventory Summary
 

@@ -73,6 +73,7 @@ If the user gives no mode, infer it from the target and wording. If the request 
 7. **Write final report**
    - Read `references/report-template.md`.
    - Save the full report to `.context/docs-evaluator/<task>/report.md`.
+   - Include `Evidence Coverage` in `report.md`. A standalone evidence-coverage artifact is optional, not required.
    - Return a concise chat summary with the report path, top risks, score/confidence, and checks run/not run.
 
 ## Required Report Properties
@@ -94,6 +95,8 @@ If the user gives no mode, infer it from the target and wording. If the request 
 - Do not expand into prose style proofreading, SEO/readability formulas, code example execution, secrets/PII scanning, auto-fixes, pull requests, or document deletion.
 - Do not verify whether code implements a documented contract; only evaluate whether docs identify the relevant specs, contracts, manifests, or implementation references clearly enough for a later code review.
 - Treat instruction-strength drift, terminology consistency, metadata hygiene, and reading burden as evidence-based docs risks, not style nitpicks or exact quantitative scores.
+- For metadata/front matter and other policy hygiene, apply current canonical repo rules. If it is unclear whether a rule applies retroactively to older ADRs or legacy docs, record the uncertainty as residual risk or an open question instead of declaring a violation.
+- Do not treat every Markdown file without front matter as a violation by default. Missing front matter is a finding only when the repo declares required metadata for that document type, such as ADRs or `SKILL.md`. For generic README, AGENTS, or docs pages, evaluate misplaced body metadata only when metadata is actually present or explicitly required.
 
 ## References
 
