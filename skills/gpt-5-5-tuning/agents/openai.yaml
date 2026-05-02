@@ -1,0 +1,6 @@
+interface:
+  display_name: "GPT-5.5 Tuning"
+  short_description: "Audit docs and prompts for GPT-5.5 readiness"
+  default_prompt: "Use $gpt-5-5-tuning to audit this repo's docs, skills, prompts, and agent rules for GPT-5.5 readiness and propose replacements."
+policy:
+  allow_implicit_invocation: false

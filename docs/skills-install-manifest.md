@@ -1,6 +1,6 @@
 ---
 title: "Skill Install Manifest"
-updated_at: 2026-04-26
+updated_at: 2026-05-02
 ---
 
 # Skill Install Manifest
@@ -23,6 +23,7 @@ gh skill install . docs-evaluator --from-local --agent claude-code --scope user
 gh skill install . grok --from-local --agent claude-code --scope user
 gh skill install . code-evaluator --from-local --agent claude-code --scope user
 gh skill install . opus-4-7-tuning --from-local --agent claude-code --scope user
+gh skill install . gpt-5-5-tuning --from-local --agent claude-code --scope user
 ```
 
 ### Codex
@@ -34,6 +35,7 @@ gh skill install . docs-evaluator --from-local --agent codex --scope user
 gh skill install . grok --from-local --agent codex --scope user
 gh skill install . code-evaluator --from-local --agent codex --scope user
 gh skill install . opus-4-7-tuning --from-local --agent codex --scope user
+gh skill install . gpt-5-5-tuning --from-local --agent codex --scope user
 ```
 
 ## Third-party external skills
