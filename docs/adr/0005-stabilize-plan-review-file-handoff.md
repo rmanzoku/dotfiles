@@ -1,9 +1,15 @@
+---
+title: "ADR 0005: Plan レビューは `.context/` の実ファイル経由で渡す"
+status: superseded
+date: 2026-03-12
+worked_at: 2026-03-12 23:46 JST
+agent_model: GPT-5 Codex
+superseded_by: "ADR 0031"
+---
+
 # ADR 0005: Plan レビューは `.context/` の実ファイル経由で渡す
 
-- Status: Accepted
-- Date: 2026-03-12
-- Worked At: 2026-03-12 23:46 JST
-- Agent Model: GPT-5 Codex
+> Superseded by [ADR 0031](./0031-remove-plan-auto-review.md). Plan 提示前の自動レビュー必須化は削除済み。任意で Codex CLI によるレビューや検証を行う場合は、固定テンプレートを復活させず `codex-cli-runner` の artifact 契約に従う。
 
 ## Context
 

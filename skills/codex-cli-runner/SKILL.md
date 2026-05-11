@@ -1,11 +1,11 @@
 ---
 name: codex-cli-runner
-description: Run Codex CLI subprocesses with observable JSONL event logs, timeouts, config-preserving model controls, prompt profiles, and artifact-based failure handling. Use when Claude Code needs to invoke `codex exec`, call Codex from the CLI, CodexをCLIで呼ぶ, Codex CLIをサブプロセス実行する, or delegate long-running research, review, generation, or file work to Codex while distinguishing real hangs from silent execution.
+description: Run Codex CLI subprocesses with observable JSONL event logs, timeouts, config-preserving model controls, prompt profiles, and artifact-based failure handling. Use when an orchestrating agent needs to invoke `codex exec`, call Codex from the CLI, CodexをCLIで呼ぶ, Codex CLIをサブプロセス実行する, or delegate long-running research, review, generation, or file work to Codex while distinguishing real hangs from silent execution.
 ---
 
 # Codex CLI Runner
 
-Use this skill from Claude Code when delegating work to Codex CLI through `codex exec`. Keep the source prompt, launch prompt, JSONL events, final message, stderr, summary, and failure notes under `.context/<task>/`.
+Use this skill when an orchestrating agent delegates work to Codex CLI through `codex exec`. Keep the source prompt, launch prompt, JSONL events, final message, stderr, summary, and failure notes under `.context/<task>/`.
 
 Frame each delegation as an outcome-first contract: source prompt, expected artifacts, timeout, success criteria, allowed side effects, and failure handling. Let caller-provided model, effort, profile, and Codex config do model selection and permission policy.
 
