@@ -25,6 +25,7 @@
 - `*.md` ファイルのメタデータは本文に書かず、必ず Front Matter で管理すること
 - アーキテクチャ、運用方針、永続設定、複数ファイルにまたがるワークフロー変更などの大きめの変更では、作業リポジトリの `docs/adr/` に ADR を作成または更新すること
 - ADR には、少なくとも作業日時と作業した Agent のモデル名を記載すること
+- Codex / Claude Desktop などの自動実行定義は、再現可能な宣言的設定だけを chezmoi 配下で管理し、lock、jitter salt、highwatermark、実行ログ、セッション履歴、UUID ごとの task 実行状態は machine-local state として管理対象外にすること
 
 # Plan 共通ルール
 
@@ -42,3 +43,9 @@
 - project-scoped `.codex/config.toml` を読む必要がある repo / worktree だけ、例外として対応する `trust_level = "trusted"` を追加すること
 - 例外追加前に、その repo に project 固有の Codex 設定が本当に必要か確認すること
 - 通常運用で権限不足が出た場合は、恒久設定を緩めず、その実行時だけ `danger-full-access` を使うこと
+
+## Automations 運用
+
+- Codex Desktop の automation は `~/.codex/automations/<automation-id>/automation.toml` を実行設定として扱い、secret を含まないものだけ dotfiles の source で管理すること
+- `~/.codex/automations/<automation-id>/memory.md` は Desktop が更新する運用 state として扱い、管理対象にしないこと
+- `~/.codex/automations/.run-jitter-salt` は machine-local state として管理しないこと

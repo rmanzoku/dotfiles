@@ -25,6 +25,7 @@
 - `*.md` ファイルのメタデータは本文に書かず、必ず Front Matter で管理すること
 - アーキテクチャ、運用方針、永続設定、複数ファイルにまたがるワークフロー変更などの大きめの変更では、作業リポジトリの `docs/adr/` に ADR を作成または更新すること
 - ADR には、少なくとも作業日時と作業した Agent のモデル名を記載すること
+- Codex / Claude Desktop などの自動実行定義は、再現可能な宣言的設定だけを chezmoi 配下で管理し、lock、jitter salt、highwatermark、実行ログ、セッション履歴、UUID ごとの task 実行状態は machine-local state として管理対象外にすること
 
 # Plan 共通ルール
 
@@ -42,3 +43,7 @@
 - `sed` を使う場合は `-e` で式をまとめるか script file を使い、複数変更を 1 回の実行に集約すること
 - 複雑なパターンは `perl`、JSON / TS / AST などの構造化データは専用 parser / tool を使うこと
 - 複数ファイルの一括処理は `xargs` や `git ls-files` などでまとめ、不必要なプロセス spawn と file I/O を避けること
+
+## Desktop 自動実行 state
+
+- Claude Desktop / Claude Code の `~/.claude/tasks` は、UUID ごとの実行ログ、lock、highwatermark を含む runtime state として扱い、安定した宣言的 schedule であることを確認できる場合を除いて dotfiles 管理へ追加しないこと

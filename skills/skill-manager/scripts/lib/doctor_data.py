@@ -255,9 +255,9 @@ def check_deprecated_commands() -> None:
     global_commands = sorted((CLAUDE_HOME / "commands").glob("*.md")) if (CLAUDE_HOME / "commands").exists() else []
     if global_commands:
         for command in global_commands:
-            add_check("deprecated_commands", "warn", "DEPRECATED_COMMAND", command, "legacy command format detected", command.stem, "global")
+            add_check("deprecated_commands", "warn", "DEPRECATED_COMMAND", command, "deprecated command format detected", command.stem, "global")
     else:
-        add_check("deprecated_commands", "pass", "NO_DEPRECATED_COMMANDS", CLAUDE_HOME / "commands", "no global legacy commands", "global-commands", "global")
+        add_check("deprecated_commands", "pass", "NO_DEPRECATED_COMMANDS", CLAUDE_HOME / "commands", "no global deprecated commands", "global-commands", "global")
 
     if not GIT_ROOT:
         return
@@ -266,9 +266,9 @@ def check_deprecated_commands() -> None:
     project_commands = sorted(project_commands_dir.glob("*.md")) if project_commands_dir.exists() else []
     if project_commands:
         for command in project_commands:
-            add_check("deprecated_commands", "warn", "DEPRECATED_COMMAND", command, "legacy command format detected", command.stem, "project")
+            add_check("deprecated_commands", "warn", "DEPRECATED_COMMAND", command, "deprecated command format detected", command.stem, "project")
     else:
-        add_check("deprecated_commands", "pass", "NO_DEPRECATED_COMMANDS", project_commands_dir, "no project legacy commands", "project-commands", "project")
+        add_check("deprecated_commands", "pass", "NO_DEPRECATED_COMMANDS", project_commands_dir, "no project deprecated commands", "project-commands", "project")
 
 
 def add_codex_presence_check(category: str, subject: str, scope: str, path: Path) -> None:
@@ -280,7 +280,7 @@ def add_codex_presence_check(category: str, subject: str, scope: str, path: Path
         add_check(category, "pass", "CODEX_SYSTEM_PREFERRED", path, "Codex .system skill takes precedence", subject, scope)
         return
     if status == "missing":
-        add_check(category, "fail", "CODEX_MISSING", path, "legacy mirror metadata exists but Codex install is missing", subject, scope)
+        add_check(category, "fail", "CODEX_MISSING", path, "mirror metadata exists but Codex install is missing", subject, scope)
         return
     add_check(category, "fail", "CODEX_BROKEN", path, "Codex skill install exists but is invalid", subject, scope)
 
@@ -362,7 +362,7 @@ def check_agents_integrity() -> None:
         if valid_skill_target(path):
             status = "pass" if manifest_has else "warn"
             code = "AGENT_INSTALL_OK" if manifest_has else "AGENT_INSTALL_UNMANIFESTED"
-            reason = "skill install is valid" if manifest_has else "valid install not recorded in legacy manifest"
+            reason = "skill install is valid" if manifest_has else "valid install not recorded in mirror manifest"
             add_check("agents_integrity", status, code, path, reason, path.name, "project")
             continue
         if not path.is_symlink():
@@ -376,7 +376,7 @@ def check_agents_integrity() -> None:
         if valid_skill_target(resolved):
             status = "pass" if manifest_has else "warn"
             code = "AGENT_INSTALL_OK" if manifest_has else "AGENT_INSTALL_UNMANIFESTED"
-            reason = "symlink target is valid" if manifest_has else "valid symlink not recorded in legacy manifest"
+            reason = "symlink target is valid" if manifest_has else "valid symlink not recorded in mirror manifest"
             add_check("agents_integrity", status, code, path, reason, path.name, "project")
         else:
             add_check("agents_integrity", "fail", "AGENT_LINK_INVALID_TARGET", path, "symlink target is not a valid skill", path.name, "project")

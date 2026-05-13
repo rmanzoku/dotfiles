@@ -1,11 +1,11 @@
 ---
 name: skill-manager
-description: "Manage external and local agent skills across Claude Code, Codex, and other supported agents. Use when the user wants to find, install, remove, update, migrate, audit, adopt, or inventory skills, especially with `gh skill`, `npx skills` / skills.sh, agent-specific installs, vendored skills, or cross-agent differences."
+description: "Manage external and local agent skills across Claude Code, Codex, and other supported agents. Use when the user wants to find, install, remove, update, audit, adopt, or inventory skills, especially with `gh skill`, Codex `.system/skill-installer`, agent-specific installs, vendored skills, or cross-agent differences."
 ---
 
 # Skill Manager
 
-External skill management workflow centered on `gh skill`, with `skills.sh` retained for legacy installs and staged migration.
+External skill management workflow centered on `gh skill`, with Codex `.system/skill-installer` recognized as a Codex-only helper.
 This skill no longer assumes that Claude Code and Codex must have the same skill set.
 Treat agent differences as normal, and track why each skill exists where it does.
 When a repository has its own skill policy in `AGENTS.md`, ADRs, or equivalent docs, follow that local policy instead of hard-coding repo-specific rules into this skill.
@@ -15,7 +15,7 @@ When a repository has its own skill policy in `AGENTS.md`, ADRs, or equivalent d
 Manage skills with three concepts:
 
 1. **Provenance**: where the skill came from
-   - `skills-cli`: installed by `npx skills add`
+   - `codex-installer`: installed into Codex by the Codex `.system/skill-installer` helper
    - `vendored`: copied into a git-managed repo and managed by git
    - `manual`: hand-written local skill not tied to a remote package
    - `plugin`: bundled through another plugin system
@@ -34,18 +34,12 @@ A skill may intentionally exist only in Claude, only in Codex, or in both.
 
 Use `gh skill` as the default backend for external skill discovery, installation, update, and publishing when `gh >= 2.90.0` is available.
 
-Run commands with telemetry disabled unless the user explicitly wants default telemetry behavior:
-
-```bash
-SKILLS_TELEMETRY_DISABLED=1 npx --yes skills <subcommand> ...
-```
-
 When `gh` is version `2.90.0` or newer, `gh skill` is available in public preview as an official GitHub CLI subcommand.
 
 Treat the tools like this:
 
 - `gh skill`: GitHub-native preview/install/update/publish flow with provenance metadata and agent-host aware placement
-- `npx --yes skills`: legacy workflow compatibility, existing trial installs, and migration source inventory
+- Codex `.system/skill-installer`: Codex-only helper for listing OpenAI curated/experimental skills or copying a GitHub repo path into `$CODEX_HOME/skills`
 
 Prefer `gh skill` when the user wants:
 - install provenance recorded into `SKILL.md`
@@ -53,14 +47,14 @@ Prefer `gh skill` when the user wants:
 - `gh skill publish` validation against agentskills.io and GitHub release-based publishing
 - a new install path going forward
 
-Prefer `npx --yes skills` when the user wants:
-- compatibility with an existing `skills.sh`-based workflow
-- to inspect or migrate already-installed `skills.sh` entries
-- behavior on machines where `gh < 2.90.0`
+Use Codex `.system/skill-installer` only when the user specifically wants the Codex curated/experimental skill list or a quick Codex-only install from `openai/skills` or a GitHub path.
+After such an install, inventory it as a Codex direct install and document stable external dependencies in the repository manifest when the install should be reproducible.
+Do not treat `skill-installer` as the long-term cross-agent lifecycle backend.
 
 ## What this skill manages
 
-- external skills installed via `gh skill` or legacy `npx skills`
+- external skills installed via `gh skill`
+- Codex direct installs created by `.system/skill-installer`, as inventory entries and reproducibility follow-up
 - git-managed original skills stored in a repository
 - agent-specific differences between Claude Code, Codex, Gemini CLI, Cursor, etc.
 - inventory and policy decisions about whether a skill is repo-original, external, or out of scope
@@ -73,7 +67,7 @@ Prefer `npx --yes skills` when the user wants:
 - Codex `.system` skills
 
 These can still be inventoried when useful, but they are not the primary package model for this skill.
-Plugins are managed as a separate layer from `gh skill` / `skills.sh` installs and should not be flattened into the same lifecycle.
+Plugins are managed as a separate layer from `gh skill` installs and should not be flattened into the same lifecycle.
 
 ## Command routing
 
@@ -89,26 +83,22 @@ Steps:
 2. Summarize the candidate skills
 3. If the user is choosing between candidates, call out supported agents and likely fit
 
-If the user explicitly wants the old registry view or is comparing against legacy `skills.sh` results, also run `SKILLS_TELEMETRY_DISABLED=1 npx --yes skills find [query]` and note which backend each result came from.
-
 ### `list [--global] [--json]`
 
 Inventory installed skills, grouped by agent and provenance.
 
 Preferred steps:
-1. Run `SKILLS_TELEMETRY_DISABLED=1 npx --yes skills ls --json`
-2. Run `SKILLS_TELEMETRY_DISABLED=1 npx --yes skills ls -g --json`
-3. Scan vendored/manual skill directories that may not have been installed by `skills.sh`
+1. Scan vendored/manual and directly installed skill directories
    - global: `~/.claude/skills/*/SKILL.md`
    - project: `<git-root>/.claude/skills/*/SKILL.md`
    - codex global: `~/.codex/skills/*/SKILL.md` and `~/.codex/skills/*`
    - codex project: `<git-root>/.agents/skills/*`
-4. Scan plugin inventories separately
+2. Scan plugin inventories separately
    - Claude marketplace: `~/.claude/plugins/installed_plugins.json`, `known_marketplaces.json`, marketplace manifest
    - Codex plugin config: `~/.codex/config.toml`
    - Codex plugin cache: `~/.codex/plugins/cache/*/*/*/.codex-plugin/plugin.json`
    - Codex bundled marketplace manifest: `~/.codex/.tmp/bundled-marketplaces/*/.agents/plugins/marketplace.json`
-5. Merge the results into one inventory
+3. Merge the results into one inventory
 
 Output should show:
 - skill name
@@ -126,24 +116,9 @@ Output should show:
 Important:
 - If a skill exists in Claude but not Codex, report that as inventory data, not as an error by default.
 - If a skill name collides with Codex `.system`, mark it `system-preferred`.
-- Treat a valid `gh skill` direct install in Codex as healthy even if no legacy sync manifest entry exists.
+- Treat valid direct installs in Codex as healthy even if no mirror manifest entry exists.
 - Aggregate skills in a source-aware way. Preserve plugin namespace and origin metadata instead of merging entries by bare skill name.
 - Treat Codex plugin-provided skills as their own source type, separate from direct installs under `~/.codex/skills`.
-
-### `add <source> [--skill <name>] [--agent <agent...>] [--global]`
-
-Install an external skill via `skills.sh`.
-
-Steps:
-1. Resolve the user’s intended source and agent targets
-2. Run `SKILLS_TELEMETRY_DISABLED=1 npx --yes skills add <source> ...`
-3. Re-run `list` to confirm installed paths and agent coverage
-4. Report whether the install should remain external, and call out any repository-local policy that constrains vendoring or adoption
-
-Guidance:
-- Use agent-specific install targets when parity is not needed
-- Use this flow mainly for existing `skills.sh` workflows or explicit compatibility requests
-- If the current repository forbids vendoring external skills, keep the install external and managed by `gh skill`
 
 ### `gh install <repo-or-skill> [--pin <ref>]`
 
@@ -159,35 +134,30 @@ Steps:
 5. Report recorded provenance metadata and whether the install remains an external skill managed outside the current repository
 
 Guidance:
-- Prefer `gh skill install` over `npx skills add` when the user values provenance, pinning, and GitHub-native update/publish behavior
-- Remember that `gh skill install` copies into agent-native directories instead of using the `~/.agents` plus symlink model described by `skills.sh`
+- Prefer `gh skill install` when the user values provenance, pinning, and GitHub-native update/publish behavior
 - If the current repository keeps original skills in git and external skills outside the repo, preserve that boundary
 
-### `migrate gh [--scope global|project|all]`
+### `codex install <skill-or-github-path>`
 
-Generate staged migration commands from legacy `skills.sh` installs to `gh skill`.
+Install into Codex through the Codex `.system/skill-installer` helper only when the user explicitly wants that path.
 
-Use this when the user wants to make `gh skill` the new standard but cannot migrate every existing skill or repository immediately.
-
-Steps:
-1. Run `bash scripts/executable_plan_gh_migration.sh [--scope ...]`
-2. Review the generated commands and unmappable entries
-3. Apply global migrations first
-4. Leave project-scoped migrations as queued commands until each repository is ready
-5. Only remove legacy `skills.sh` installs after the corresponding `gh skill install` has been verified
+Use this when:
+- the target is Codex only
+- the source is `openai/skills` curated or experimental skills
+- the user provides a GitHub repo/path and does not need `gh skill` provenance or cross-agent lifecycle
 
 Guidance:
-- The migration command must be reviewable and non-destructive by default
-- Prefer emitting one `gh skill preview ...` and one `gh skill install ...` command per skill
-- If the legacy metadata cannot be mapped to a GitHub repository, report it as manual follow-up instead of guessing
-- Do not batch-apply project-scoped migrations across unrelated repositories automatically
+- Prefer `gh skill install` for durable external installs, pinning, update checks, and multi-agent installs.
+- Treat installed results as Codex direct installs under `$CODEX_HOME/skills`, not as `gh skill`-managed installs.
+- If the skill becomes part of the user's reproducible setup, record the repo, path, ref, and reason in the local install manifest instead of relying on Codex state alone.
+- Do not use `skill-installer` for Codex `.system` skills; they are preinstalled system capabilities.
 
 ### `remove <skill> [--agent <agent...>] [--global]`
 
-Remove a `skills.sh`-managed installation.
+Remove a `gh skill`-managed installation.
 
 Steps:
-1. Run `SKILLS_TELEMETRY_DISABLED=1 npx --yes skills remove <skill> ...`
+1. Run `gh skill remove <skill> ...`
 2. Re-run `list`
 3. If the skill still appears because it is vendored/manual, explain that the external install was removed but a git-managed copy remains
 
@@ -196,21 +166,19 @@ Steps:
 Check for updates to external skills.
 
 Steps:
-1. Run `SKILLS_TELEMETRY_DISABLED=1 npx --yes skills check`
+1. Run `gh skill update --dry-run`
 2. Summarize available updates
 3. If a skill is vendored in the current repository, treat upstream updates as advisory and do not overwrite the vendored copy automatically
 
 ### `update`
 
-Update `skills.sh`-managed external skills.
+Update `gh skill`-managed external skills.
 
 Steps:
-1. Run `SKILLS_TELEMETRY_DISABLED=1 npx --yes skills update`
+1. Run `gh skill update`
 2. Re-run `list`
 3. Report which installs changed
 4. If the updated skill is also vendored here, explicitly note that the repo copy did not change
-
-If the skill was installed through `gh skill`, use `gh skill update` instead and report whether the pinned ref or recorded provenance changed.
 
 ### `publish`
 
@@ -245,20 +213,20 @@ Audit installed skills for drift, broken references, and policy mismatches.
 Check:
 - broken installed paths
 - broken symlinks
-- stale legacy mirror metadata
+- stale mirror metadata
 - vendored skills missing from expected agent directories
 - agent-specific installs that appear accidental
 - broken Codex plugin cache or config entries
 - Codex plugin declarations whose `skills`, `apps`, or `mcpServers` payload is missing
 - collisions with Codex `.system`
-- legacy command-format skills still present
+- deprecated command-format skills still present
 
 Detection-first only.
 Do not rewrite state unless the user asks.
 
 ### `sync codex`
 
-Legacy command for repo-managed mirroring into Codex.
+Compatibility command for repo-managed mirroring into Codex.
 Do not use this as the default way to understand whether a skill is healthy in Codex.
 The standard Codex path is a valid install under `~/.codex/skills` or `.agents/skills`, including direct copies created by `gh skill install`.
 
@@ -276,10 +244,10 @@ When presenting inventory, classify each skill into one of these states:
 - `shared`: intentionally installed in multiple agents
 - `agent-specific`: intentionally installed in a subset of agents
 - `vendored`: repo-managed copy exists
-- `trial`: installed via `skills.sh` but not promoted into repo management
+- `trial`: installed directly for evaluation but not promoted into repo management
 - `installed`: valid install exists in the target agent directory
 - `missing`: no install exists in the target agent directory
-- `broken`: installed path or legacy metadata is invalid
+- `broken`: installed path or metadata is invalid
 - `system-preferred`: Codex has a `.system` skill with the same name
 
 When multiple entries share the same bare skill name:
@@ -295,8 +263,7 @@ When multiple entries share the same bare skill name:
 When helping the user choose a management path:
 
 - Prefer `gh skill install` for new installs
-- Prefer `migrate gh` to generate staged replacement commands for existing `skills.sh` installs
-- Use `npx skills add` only for explicit compatibility needs or legacy workflow support
+- Use Codex `.system/skill-installer` only as a Codex-only convenience path for curated/experimental OpenAI skills or one-off GitHub-path installs
 - Follow repository-local policy docs for the boundary between external installs and git-managed copies
 - Prefer reporting agent differences instead of automatically syncing them away
 - Keep plugin management separate from skill installs, but include Claude and Codex plugins when the user is auditing actual availability

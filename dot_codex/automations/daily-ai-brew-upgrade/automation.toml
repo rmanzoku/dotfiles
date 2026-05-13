@@ -1,0 +1,13 @@
+version = 1
+id = "daily-ai-brew-upgrade"
+kind = "cron"
+name = "Daily AI Brew Upgrade"
+prompt = "Homebrew でインストール済みの AI 関連ツール `codex` `claude-code` `gemini-cli` `qwen-code` `copilot-cli` `gh` の更新有無を確認し、古いものだけ更新してください。formula と cask の区別に合わせて安全に実行し、更新されたものについては更新前後のバージョン、パッケージ種別、失敗があれば原因を整理して inbox に報告してください。変更点は可能な範囲で各ツールの公式リリースノートや公開リリース情報を確認し、機能追加を中心に差分を表示してください。報告フォーマットは CLI ごとのセクション構成に固定し、各セクションに `種別` `バージョン` `結果` `変更点` `参照` を含め、`変更点` は bullet list で書いてください。先頭には `概要` として更新あり件数、更新なし件数、失敗件数を置いてください。更新がなければ、更新なしとだけ簡潔に報告してください。"
+status = "ACTIVE"
+rrule = "RRULE:FREQ=WEEKLY;BYHOUR=8;BYMINUTE=0;BYDAY=SU,MO,TU,WE,TH,FR,SA"
+model = "gpt-5.4"
+reasoning_effort = "medium"
+execution_environment = "local"
+cwds = ["/Users/rmanzoku/.local/share/chezmoi"]
+created_at = 1774573182979
+updated_at = 1776642571180

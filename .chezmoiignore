@@ -43,6 +43,8 @@ skills
 .codex/auth.json
 .codex/.codex-global-state.json
 .codex/.personality_migration
+.codex/automations/.run-jitter-salt
+.codex/automations/*/memory.md
 .codex/archived_sessions
 .codex/history.jsonl
 .codex/log
