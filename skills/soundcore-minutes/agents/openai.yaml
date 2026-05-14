@@ -1,0 +1,4 @@
+interface:
+  display_name: "Soundcore Minutes"
+  short_description: "Retrieve Soundcore AI meeting minutes"
+  default_prompt: "Use $soundcore-minutes to retrieve meeting minutes from Soundcore AI with an authenticated browser session."
