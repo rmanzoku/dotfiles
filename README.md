@@ -6,18 +6,44 @@
 
 ## セットアップ (新しいマシン)
 
+git も Homebrew も入っていない完全に新しい Mac では、Terminal で以下を実行します。
+Homebrew の installer が必要に応じて Command Line Tools を要求します。
+
 ```bash
-# chezmoi をインストール
-brew install chezmoi
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && \
+if [ -x /opt/homebrew/bin/brew ]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [ -x /usr/local/bin/brew ]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+else
+  echo "Homebrew が見つかりません" >&2
+  exit 1
+fi && \
+brew install git chezmoi && \
+mkdir -p "$HOME/.local/share" && \
+git clone https://github.com/rmanzoku/dotfiles.git "$HOME/.local/share/chezmoi" && \
+chezmoi apply && \
+brew bundle --file="$HOME/.local/share/chezmoi/Brewfile"
+```
+
+既に Homebrew が入っている場合は、以下だけで復元できます。
+
+```bash
+# git と chezmoi をインストール
+brew install git chezmoi
+
+# dotfiles repo を chezmoi の標準 source path に clone
+mkdir -p "$HOME/.local/share"
+git clone https://github.com/rmanzoku/dotfiles.git "$HOME/.local/share/chezmoi"
 
 # dotfiles を適用
-chezmoi init --apply rmanzoku
+chezmoi apply
 
 # 必要ならシークレットを設定 (~/.zshenv.local は手動管理)
 echo 'export GEMINI_API_KEY="your-key-here"' > ~/.zshenv.local
 
 # Homebrew パッケージを復元
-brew bundle --file=$(chezmoi source-path)/Brewfile
+brew bundle --file="$HOME/.local/share/chezmoi/Brewfile"
 ```
 
 配布 skill と third-party external skill の復元は script を持たず、[docs/skills-install-manifest.md](/Users/rmanzoku/.local/share/chezmoi/docs/skills-install-manifest.md) に記録した `gh skill install` 一覧を使います。
