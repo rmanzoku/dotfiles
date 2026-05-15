@@ -17,6 +17,9 @@ args = [ "--app", "desktop" ]
 [projects."/Users/rmanzoku/conductor/repos"]
 trust_level = "trusted"
 
+[projects."/Users/rmanzoku/ghq"]
+trust_level = "trusted"
+
 [projects."/Users/rmanzoku/conductor/repos/ow-management-v1"]
 trust_level = "trusted"
 

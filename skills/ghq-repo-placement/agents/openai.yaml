@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ghq Repo Placement"
+  short_description: "Place git repos under ghq roots"
+  default_prompt: "Use $ghq-repo-placement to decide where to clone this Git repository and run the ghq-based command."
