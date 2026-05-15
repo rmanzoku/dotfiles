@@ -35,7 +35,9 @@
       }
     }
   },
+  "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
+  "skipDangerousModePermissionPrompt": true,
   "hooks": {
     "PreToolUse": [
       {

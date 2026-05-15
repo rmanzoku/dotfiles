@@ -1,14 +1,17 @@
-model = "gpt-5.4"
+model = "gpt-5.5"
 model_reasoning_effort = "medium"
 personality = "pragmatic"
 service_tier = "fast"
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
 
+notify = ["/Users/rmanzoku/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
+
 [features]
 codex_hooks = true
 collaboration_modes = true
 multi_agent = true
+goals = true
 
 [mcp_servers.pencil]
 command = "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64"
@@ -20,6 +23,9 @@ trust_level = "trusted"
 [projects."/Users/rmanzoku/ghq"]
 trust_level = "trusted"
 
+[projects."/Users/rmanzoku/.local/share/chezmoi"]
+trust_level = "trusted"
+
 [projects."/Users/rmanzoku/conductor/repos/ow-management-v1"]
 trust_level = "trusted"
 
@@ -27,4 +33,31 @@ trust_level = "trusted"
 trust_level = "trusted"
 
 [plugins."github@openai-curated"]
+enabled = true
+
+[plugins."computer-use@openai-bundled"]
+enabled = true
+
+[plugins."documents@openai-primary-runtime"]
+enabled = true
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = true
+
+[plugins."presentations@openai-primary-runtime"]
+enabled = true
+
+[plugins."slack@openai-curated"]
+enabled = true
+
+[plugins."google-calendar@openai-curated"]
+enabled = true
+
+[plugins."gmail@openai-curated"]
+enabled = true
+
+[plugins."browser@openai-bundled"]
+enabled = true
+
+[plugins."chrome@openai-bundled"]
 enabled = true
