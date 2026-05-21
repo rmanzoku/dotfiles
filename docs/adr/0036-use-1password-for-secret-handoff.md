@@ -28,14 +28,14 @@ op run --env-file "$OP_DOTFILES_ENV_FILE" -- <command>
 
 When `OP_DOTFILES_ENV_FILE` is unset, it defaults to `~/.config/op/dotfiles.env`.
 
-Secret-backed files that must exist on disk are declared in a 1Password Document item named `Secrets Manifest` and restored with `~/.local/bin/opmaterialize`.
+Secret-backed files that must exist on disk are declared in a 1Password Document item named `Secrets Manifest` and restored with the `opmaterialize` script bundled in the `onepassword-secret-materialize` skill.
 The manifest is not managed by this repository because it can reveal individual secret item names and local file destinations.
 Generated files remain ignored.
 The default 1Password vault for this workflow is `Dotfiles Secrets`.
 `opmaterialize add <file>` is the standard way to upload a local secret-backed file as a 1Password Document and add or update its manifest row.
 Use `--vault <vault>` only when overriding the default.
 `opmaterialize diff` checks whether manifest-declared files are missing or changed before restore without printing secret contents.
-AI agents working in this repository use the repo-local skill `.claude/skills/onepassword-secret-materialize/` as the workflow entrypoint.
+AI agents use the `onepassword-secret-materialize` skill as the workflow entrypoint. The `~/.local/bin/opmaterialize` command is only a convenience wrapper that delegates to the installed skill script.
 
 # Consequences
 

@@ -14,8 +14,8 @@ The repository owns the generic tool and policy. 1Password owns the sensitive ma
 - Account selector: `my.1password.com`
 - Vault: `Dotfiles Secrets`
 - Manifest item: `Secrets Manifest`
-- Managed restore tool source: `dot_local/bin/executable_opmaterialize`
-- Deployed command after `chezmoi apply`: `~/.local/bin/opmaterialize`
+- Managed restore tool source: `scripts/opmaterialize` inside this skill
+- Optional deployed wrapper after `chezmoi apply`: `~/.local/bin/opmaterialize`
 - Generated local files remain ignored by `.chezmoiignore`
 
 Do not print secret file contents. Do not add materialized files, manifest rows, VPN configs, API keys, tokens, private keys, or real `op://...` references to git.
@@ -38,12 +38,12 @@ Use this when the user says a file is ready and should be saved for other PCs.
    opmaterialize add <path>
    ```
 
-   If the deployed command is not available in the current shell, run the source script:
+   If the deployed command is not available in the current shell, run the bundled script:
 
    ```bash
    OP_ACCOUNT=my.1password.com \
    OP_DOTFILES_MATERIALIZE_VAULT="Dotfiles Secrets" \
-   sh dot_local/bin/executable_opmaterialize add <path>
+   sh ~/.codex/skills/onepassword-secret-materialize/scripts/opmaterialize add <path>
    ```
 
 3. Report only the created/updated item name and manifest status from command output. Do not show file contents.
@@ -104,7 +104,7 @@ Use this when setting up a new machine or rehydrating ignored local config files
 After editing the workflow implementation or docs, run:
 
 ```bash
-shellcheck dot_local/bin/executable_opmaterialize dot_local/bin/executable_oprun
+shellcheck skills/onepassword-secret-materialize/scripts/opmaterialize dot_local/bin/executable_opmaterialize dot_local/bin/executable_oprun
 git diff --check -- . ':(exclude).context'
 scripts/chezmoi-drift --check-ignore
 scripts/skill-quick-validate .claude/skills/onepassword-secret-materialize
