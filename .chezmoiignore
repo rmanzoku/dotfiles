@@ -15,9 +15,13 @@ skills
 .config/op/materialize.tsv
 .config/op/injected
 .config/op/injected/**
-.config/changer/*.env
-.config/wireguard/*.conf
-.ssh/id_ed25519_github_sqex
+.config/**/*.env
+.config/**/*.conf
+.config/**/*.p8
+.ssh/id_*
+ghq/**/*.env
+ghq/**/*.conf
+ghq/**/*.p8
 
 # History files
 .zsh_history

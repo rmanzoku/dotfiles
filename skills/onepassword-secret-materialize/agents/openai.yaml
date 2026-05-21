@@ -1,0 +1,4 @@
+interface:
+  display_name: "1Password Secret Files"
+  short_description: "Restore secret-backed config files via 1Password"
+  default_prompt: "Use $onepassword-secret-materialize to register or restore secret-backed dotfiles through 1Password."

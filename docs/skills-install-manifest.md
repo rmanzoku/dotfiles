@@ -30,6 +30,7 @@ gh skill install . copilot-cli-runner --from-local --agent claude-code --scope u
 gh skill install . agent-orchestration-evaluator --from-local --agent claude-code --scope user
 gh skill install . soundcore-minutes --from-local --agent claude-code --scope user
 gh skill install . ghq-repo-placement --from-local --agent claude-code --scope user
+gh skill install . onepassword-secret-materialize --from-local --agent claude-code --scope user
 ```
 
 ### Codex
@@ -47,6 +48,7 @@ gh skill install . gemini-cli-runner --from-local --agent codex --scope user
 gh skill install . copilot-cli-runner --from-local --agent codex --scope user
 gh skill install . soundcore-minutes --from-local --agent codex --scope user
 gh skill install . ghq-repo-placement --from-local --agent codex --scope user
+gh skill install . onepassword-secret-materialize --from-local --agent codex --scope user
 ```
 
 ## Third-party external skills
