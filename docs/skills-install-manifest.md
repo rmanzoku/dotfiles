@@ -23,6 +23,7 @@ gh skill install . docs-evaluator --from-local --agent claude-code --scope user
 gh skill install . grok-cli-runner --from-local --agent claude-code --scope user
 gh skill install . code-evaluator --from-local --agent claude-code --scope user
 gh skill install . opus-4-7-tuning --from-local --agent claude-code --scope user
+gh skill install . opus-4-8-tuning --from-local --agent claude-code --scope user
 gh skill install . gpt-5-5-tuning --from-local --agent claude-code --scope user
 gh skill install . codex-cli-runner --from-local --agent claude-code --scope user
 gh skill install . gemini-cli-runner --from-local --agent claude-code --scope user
@@ -42,6 +43,7 @@ gh skill install . docs-evaluator --from-local --agent codex --scope user
 gh skill install . grok-cli-runner --from-local --agent codex --scope user
 gh skill install . code-evaluator --from-local --agent codex --scope user
 gh skill install . opus-4-7-tuning --from-local --agent codex --scope user
+gh skill install . opus-4-8-tuning --from-local --agent codex --scope user
 gh skill install . gpt-5-5-tuning --from-local --agent codex --scope user
 gh skill install . claude-cli-runner --from-local --agent codex --scope user
 gh skill install . gemini-cli-runner --from-local --agent codex --scope user

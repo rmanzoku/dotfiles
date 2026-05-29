@@ -20,7 +20,8 @@ ERROR_RE = re.compile(
     re.IGNORECASE,
 )
 
-OPUS_4_7_MODEL_RE = re.compile(r"(^|[-_./])opus($|[-_./])|opus.*4[-_.]?7|4[-_.]?7.*opus", re.IGNORECASE)
+OPUS_4_7_MODEL_RE = re.compile(r"opus.*4[-_.]?7|4[-_.]?7.*opus", re.IGNORECASE)
+OPUS_4_8_MODEL_RE = re.compile(r"opus.*4[-_.]?8|4[-_.]?8.*opus", re.IGNORECASE)
 
 OPUS_4_7_ADAPTER = """\
 ## Claude Opus 4.7 Prompt Adapter
@@ -30,6 +31,19 @@ Execute the source prompt literally and completely.
 - Treat the source prompt's outcome, constraints, tool limits, artifact paths, and completion criteria as the contract.
 - Do not add fixed progress-update scaffolding. Report progress only if the source prompt asks for it or a real blocker requires it.
 - Prefer direct completion over unnecessary subagents or tool calls. Use tools when needed to satisfy the source prompt, and respect explicit WebSearch/WebFetch, timeout, and output limits.
+- If scope is ambiguous, resolve only what is explicitly supported by the source prompt and mark genuinely missing inputs as blocked.
+- Do not emulate effort with phrases like "think hard"; rely on the CLI effort setting supplied by the caller.
+"""
+
+OPUS_4_8_ADAPTER = """\
+## Claude Opus 4.8 Prompt Adapter
+
+Execute the source prompt literally and completely.
+
+- Treat the source prompt's outcome, constraints, tool limits, artifact paths, and completion criteria as the contract.
+- Do not add fixed progress-update scaffolding. Report progress only if the source prompt asks for it or a real blocker requires it.
+- Prefer direct completion over unnecessary subagents or tool calls. Use tools when needed to satisfy the source prompt, and respect explicit WebSearch/WebFetch, timeout, and output limits.
+- For review or finding tasks, do not silently filter findings by importance unless the source prompt explicitly asks for filtering at that phase.
 - If scope is ambiguous, resolve only what is explicitly supported by the source prompt and mark genuinely missing inputs as blocked.
 - Do not emulate effort with phrases like "think hard"; rely on the CLI effort setting supplied by the caller.
 """
@@ -88,9 +102,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--prompt-profile",
-        choices=("auto", "opus-4-7", "none"),
+        choices=("auto", "opus-4-7", "opus-4-8", "none"),
         default="auto",
-        help="Prompt adapter profile. Auto applies the Opus 4.7 adapter for explicit opus/opus-4.7 models.",
+        help="Prompt adapter profile. Auto applies an Opus adapter for explicit opus-4.7 or opus-4.8 models.",
     )
     return parser.parse_args()
 
@@ -137,6 +151,8 @@ def resolve_prompt_profile(requested: str, model: str | None) -> str:
         return requested
     if model and OPUS_4_7_MODEL_RE.search(model):
         return "opus-4-7"
+    if model and OPUS_4_8_MODEL_RE.search(model):
+        return "opus-4-8"
     return "none"
 
 
@@ -151,6 +167,8 @@ def write_launch_prompt(path: Path, source_prompt: Path, profile: str) -> None:
     ]
     if profile == "opus-4-7":
         sections.extend([OPUS_4_7_ADAPTER, ""])
+    elif profile == "opus-4-8":
+        sections.extend([OPUS_4_8_ADAPTER, ""])
     sections.extend(
         [
             "## Source Prompt",

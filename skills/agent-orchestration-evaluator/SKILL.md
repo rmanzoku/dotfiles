@@ -48,6 +48,9 @@ Flag or fix violations of these invariants:
 12. Every fallback from subagent delegation must be explicit. Do not silently fall back to parent execution for delegated AI roles.
 13. Delegated agents must not perform synthesis, final report editing, or orchestration decisions unless their role explicitly says so.
 14. Execution-only roles such as `creator`, `apply_consensus`, formatter, or renderer should default to lightweight model settings such as low effort unless the resolver documents an eval-backed reason for a heavier setting.
+15. Review and finding roles should not filter findings by vague importance bars during the discovery phase. Prefer coverage-first finding prompts, then rank, dedupe, or verify in a separate role or phase.
+16. Tool-use policy should be explicit enough for required evidence gathering, but should not force fixed tool-call counts or stale progress scaffolds that fight newer model tool-triggering behavior.
+17. Long-running delegated work must leave enough artifacts, summaries, and failure reports for the parent orchestrator to recover after context compaction or a runner restart.
 
 ## Audit Workflow
 
@@ -69,11 +72,14 @@ Flag or fix violations of these invariants:
    - Look for subagent fallbacks that silently become direct parent execution.
    - Look for delegated prompts that allow Phase C/D synthesis, final edits, or reading other workers' outputs without an explicit reason.
    - Look for skills that hard-code concrete model names, provider names, effort settings, timeout defaults, or CLI flags that should come from a resolver/registry or runner skill.
+   - Look for code-review prompts that tell finding roles to report only high-severity, important, or certain issues before a separate ranking or verification phase.
+   - Look for fixed tool-call quotas, forced progress checkpoints, or stale "always use tools" language that should be replaced by outcome/evidence-based tool guidance.
 
 4. **Evaluate model and effort policy**
    - Check whether skills only name logical roles and resolver paths, not concrete model IDs.
    - Check whether the resolver assigns lightweight settings to execution-only roles that mainly follow an existing plan.
    - Require a documented reason, eval result, or risk argument before `creator`-like roles use high/xhigh/deep reasoning by default.
+   - For review, researcher, and judge roles, check whether effort escalation is tied to task risk, evidence needs, or eval results rather than prompt magic words.
    - Keep model allocation changes in the resolver/registry, not scattered across skill text.
 
 5. **Evaluate execution contracts**
@@ -81,6 +87,7 @@ Flag or fix violations of these invariants:
    - CLI runner calls should preserve observability: stream logs, stderr, summary, failure artifact, elapsed time, and expected artifact checks.
    - Check Claude, Codex, Gemini, and Grok roles for available runner skills before accepting raw `claude`, `codex`, `gemini`, `grok`, direct API, or ad hoc wrapper calls inside skill text.
    - Same-provider subagents should have a bounded responsibility and a clear return artifact or final report shape.
+   - Long-running roles should write summaries, blocked-state reports, and expected artifacts in stable paths so compaction does not make the work unrecoverable.
 
 6. **Report or tune**
    - In `audit` mode, produce findings first with path references and recommended wording.
@@ -183,6 +190,27 @@ Expected runner mapping:
 
 Prefer runners that provide prompt-file handoff, timeout control, expected artifact checks, summary, and failure reporting. Keep the skill text at the level of "use the runner skill"; do not inline runner command details.
 
+### Separate Finding From Filtering
+
+For review harnesses and bug-finding roles, check whether the prompt separates broad discovery from downstream ranking:
+
+```text
+Finding role: report every plausible issue with confidence and estimated severity.
+Verifier/ranker role: dedupe, rank, and decide what meets the final reporting bar.
+```
+
+Avoid vague discovery-phase filters such as "only important issues" or "be conservative" unless the role is explicitly a final reporting filter.
+
+### Use Outcome-Based Tool Guidance
+
+Tool guidance should describe the evidence or state required, not a fixed number of calls:
+
+```text
+Use repository search before claiming a symbol is unused. Use web fetch only for cited current external docs.
+```
+
+Avoid stale scaffolds such as mandatory progress updates every N tool calls or unconditional tool use when the task can be completed directly.
+
 ### Delegated Prompt Contract
 
 Subagent or runner prompts should include:
@@ -194,6 +222,7 @@ Subagent or runner prompts should include:
 - Success criteria and blocked-state reporting.
 - Allowed side effects.
 - Evidence rules.
+- Compaction/restart recovery expectations for long-running work.
 - Prohibition on orchestration, synthesis, final response editing, and reading sibling worker outputs unless explicitly allowed.
 
 ## Output Format
@@ -236,4 +265,6 @@ Stop only when:
 - Execution-only roles such as `creator` use lightweight defaults unless a documented reason says otherwise.
 - Fallbacks are explicit and do not silently assign worker roles to the parent orchestrator.
 - Dependent skills/prompts no longer contradict the canonical resolver.
+- Review/finding roles preserve discovery coverage before final filtering.
+- Long-running runner or subagent roles leave recoverable artifacts for compaction or restart.
 - Durable architectural changes are recorded in the target repo's ADR or equivalent long-lived documentation when the repo requires it.

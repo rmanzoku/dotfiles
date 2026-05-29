@@ -64,11 +64,15 @@ The wrapper writes a short launch prompt at `.context/<task>/run.prompt.md`, the
 Default behavior:
 
 - `--prompt-profile auto` is the default.
-- When `--model` explicitly looks like Opus or Opus 4.7 (`opus`, `claude-opus-4-7`, `opus-4.7`), `auto` applies the Opus 4.7 adapter to `run.prompt.md`.
-- When `--model` is omitted, `auto` cannot know the Claude CLI configured default. If the configured default is Opus 4.7, pass `--prompt-profile opus-4-7` explicitly.
+- When `--model` explicitly looks like Opus 4.7 (`claude-opus-4-7`, `opus-4.7`), `auto` applies the Opus 4.7 adapter to `run.prompt.md`.
+- When `--model` explicitly looks like Opus 4.8 (`claude-opus-4-8`, `opus-4.8`), `auto` applies the Opus 4.8 adapter to `run.prompt.md`.
+- `auto` does not treat a bare `opus` alias as either version; pass an explicit prompt profile when the CLI default is known.
+- When `--model` is omitted, `auto` cannot know the Claude CLI configured default. If the configured default is Opus 4.7 or Opus 4.8, pass `--prompt-profile opus-4-7` or `--prompt-profile opus-4-8` explicitly.
 - Pass `--prompt-profile none` to suppress model-specific prompt adaptation.
 
 The Opus 4.7 adapter is intentionally short and positive. It tells Claude to execute the source prompt literally, avoid fixed progress scaffolding, avoid unnecessary subagents/tool calls, respect explicit tool/output limits, and rely on the CLI `--effort` setting instead of prompt magic words.
+
+The Opus 4.8 adapter is intentionally short and positive. It tells Claude to execute the source prompt literally, avoid fixed progress scaffolding, avoid unnecessary subagents/tool calls, preserve coverage in review/finding phases, respect explicit tool/output limits, and rely on the CLI `--effort` setting instead of prompt magic words.
 
 ## Success Criteria
 
@@ -120,7 +124,7 @@ For Claude researcher roles, include:
 - Pass `--cwd <project-root>` when Claude should run from a specific repository.
 - Omit `--model` and `--effort` by default so Claude CLI uses its configured defaults.
 - Pass `--model <model>` and `--effort <level>` from the caller when a model registry, role, or task explicitly requires overrides.
-- Use `--prompt-profile opus-4-7` when the caller knows the CLI default model is Opus 4.7 but does not pass `--model`.
+- Use `--prompt-profile opus-4-7` or `--prompt-profile opus-4-8` when the caller knows the CLI default model is that Opus version but does not pass `--model`.
 - Pass each expected output as `--expected-artifact`; use an absolute path or a path relative to the wrapper output directory.
 - Use `--extra-claude-arg` for narrow additions such as `--tools` or `--add-dir` when needed.
 - Keep final orchestration in Codex. This skill only runs Claude and records observable artifacts.
