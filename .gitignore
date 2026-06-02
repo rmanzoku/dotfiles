@@ -3,3 +3,6 @@
 dot_codex/automations/*
 !dot_codex/automations/daily-ai-brew-upgrade/
 !dot_codex/automations/daily-ai-brew-upgrade/automation.toml
+dot_claude/agents/
+dot_codex/agents/
+dot_config/private_private-secretary/
