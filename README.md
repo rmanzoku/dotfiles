@@ -58,6 +58,34 @@ opmaterialize restore
 
 配布 skill と third-party external skill の復元は script を持たず、[docs/skills-install-manifest.md](docs/skills-install-manifest.md) に記録した `gh skill install` 一覧を使います。
 
+### サブエージェントの復元
+
+`private-secretary` や `senior-engineer` などのサブエージェントは skill ではなく、Claude Code / Codex の private agent 定義として管理します。
+定義ファイルや private secretary の facts / assets は git に入れず、1Password の `Secrets Manifest` から `opmaterialize restore` で復元します。
+
+新しいマシンでは 1Password にサインインして `opmaterialize restore` を実行した後、サブエージェント関連 target を再 apply します。
+
+```bash
+opmaterialize restore
+
+chezmoi apply --parent-dirs \
+  ~/.claude/agents \
+  ~/.codex/agents \
+  ~/.config/private-secretary
+```
+
+復元確認:
+
+```bash
+test -r ~/.claude/agents/private-secretary.md
+test -r ~/.claude/agents/senior-engineer.md
+test -r ~/.codex/agents/private-secretary.toml
+test -r ~/.codex/agents/senior-engineer.toml
+test -r ~/.config/private-secretary/facts.jsonl
+```
+
+更新手順と source / target 対応は [docs/adr/0039-restore-private-agent-definitions-from-1password.md](docs/adr/0039-restore-private-agent-definitions-from-1password.md) を参照してください。
+
 `scripts/bootstrap-workspace` は `ghq` が利用できる場合は `ghq root` 配下に
 `rmanzoku/workspace` を clone / fast-forward pull します。
 `ghq` がない場合は `~/workspace/github.com/rmanzoku/workspace` を fallback とします。
