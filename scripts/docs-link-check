@@ -1,0 +1,346 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+import urllib.parse
+from dataclasses import dataclass
+from pathlib import Path
+
+DOC_EXTENSIONS = {".md", ".mdx"}
+EXCLUDED_FALLBACK_DIRS = {
+    ".git",
+    ".context",
+    "node_modules",
+    "dist",
+    "build",
+    ".next",
+    "coverage",
+}
+EXIT_OK = 0
+EXIT_LINK_ERRORS = 1
+EXIT_USAGE = 2
+
+INLINE_LINK_RE = re.compile(r"(?<!!)\[[^\]\n]+\]\(([^)\n]+)\)")
+REFERENCE_LINK_RE = re.compile(r"^\s*\[[^\]]+\]:\s*(\S+)")
+HEADING_RE = re.compile(r"^\s{0,3}#{1,6}\s+(.+?)\s*$")
+
+
+@dataclass(frozen=True)
+class Link:
+    source: Path
+    line: int
+    target: str
+
+
+@dataclass(frozen=True)
+class Finding:
+    level: str
+    source: Path
+    line: int
+    target: str
+    message: str
+
+
+def run_command(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        args,
+        cwd=cwd,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
+def find_repo_root(cwd: Path) -> tuple[Path, bool]:
+    result = run_command(["git", "rev-parse", "--show-toplevel"], cwd)
+    if result.returncode == EXIT_OK:
+        return Path(result.stdout.strip()).resolve(), True
+    return cwd.resolve(), False
+
+
+def is_inside(path: Path, root: Path) -> bool:
+    try:
+        path.resolve(strict=False).relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def to_display_path(path: Path, root: Path) -> str:
+    try:
+        return path.resolve(strict=False).relative_to(root).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def normalize_scope_args(raw_paths: list[str], root: Path) -> tuple[list[str], list[str]]:
+    scopes: list[str] = []
+    errors: list[str] = []
+    for raw_path in raw_paths:
+        candidate = Path(raw_path)
+        absolute = candidate if candidate.is_absolute() else root / candidate
+        resolved = absolute.resolve(strict=False)
+        if not is_inside(resolved, root):
+            errors.append(f"scope escapes repository root: {raw_path}")
+            continue
+        scopes.append(resolved.relative_to(root).as_posix())
+    return scopes, errors
+
+
+def list_git_files(root: Path, scopes: list[str]) -> list[Path]:
+    command = ["git", "ls-files"]
+    if scopes:
+        command.extend(["--", *scopes])
+    result = run_command(command, root)
+    if result.returncode != EXIT_OK:
+        return []
+    return [
+        root / line
+        for line in result.stdout.splitlines()
+        if Path(line).suffix.lower() in DOC_EXTENSIONS
+    ]
+
+
+def list_rg_files(root: Path, scopes: list[str]) -> tuple[list[Path], bool]:
+    command = ["rg", "--files", "-g", "*.md", "-g", "*.mdx"]
+    if scopes:
+        command.extend(scopes)
+    result = run_command(command, root)
+    if result.returncode not in {EXIT_OK, EXIT_LINK_ERRORS}:
+        return [], False
+    return [root / line for line in result.stdout.splitlines()], True
+
+
+def list_walk_files(root: Path, scopes: list[str]) -> list[Path]:
+    starts = [root / scope for scope in scopes] if scopes else [root]
+    files: list[Path] = []
+    for start in starts:
+        if start.is_file() and start.suffix.lower() in DOC_EXTENSIONS:
+            files.append(start)
+            continue
+        if not start.is_dir():
+            continue
+        for current_root, dirs, names in os.walk(start):
+            dirs[:] = [name for name in dirs if name not in EXCLUDED_FALLBACK_DIRS]
+            current = Path(current_root)
+            files.extend(
+                current / name
+                for name in names
+                if Path(name).suffix.lower() in DOC_EXTENSIONS
+            )
+    return files
+
+
+def list_candidate_files(root: Path, scopes: list[str], is_git_worktree: bool) -> tuple[list[Path], list[str]]:
+    warnings: list[str] = []
+    if is_git_worktree:
+        return sorted(set(list_git_files(root, scopes))), warnings
+
+    rg_files, used_rg = list_rg_files(root, scopes)
+    if used_rg:
+        return sorted(set(rg_files)), warnings
+
+    warnings.append("rg unavailable; used directory walk fallback without full .gitignore semantics")
+    return sorted(set(list_walk_files(root, scopes))), warnings
+
+
+def iter_document_lines(path: Path):
+    in_fence = False
+    fence_marker = ""
+    with path.open("r", encoding="utf-8", errors="replace") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            stripped = line.lstrip()
+            marker = stripped[:3]
+            if marker in {"```", "~~~"}:
+                if not in_fence:
+                    in_fence = True
+                    fence_marker = marker
+                    continue
+                if marker == fence_marker:
+                    in_fence = False
+                    fence_marker = ""
+                    continue
+            if not in_fence:
+                yield line_number, line.rstrip("\n")
+
+
+def parse_destination(raw_destination: str) -> str:
+    destination = raw_destination.strip()
+    if destination.startswith("<") and ">" in destination:
+        return destination[1 : destination.index(">")].strip()
+    return destination.split()[0].strip() if destination else ""
+
+
+def extract_links(path: Path) -> list[Link]:
+    links: list[Link] = []
+    for line_number, line in iter_document_lines(path):
+        for match in INLINE_LINK_RE.finditer(line):
+            destination = parse_destination(match.group(1))
+            if destination:
+                links.append(Link(path, line_number, destination))
+
+        reference_match = REFERENCE_LINK_RE.match(line)
+        if reference_match:
+            destination = parse_destination(reference_match.group(1))
+            if destination:
+                links.append(Link(path, line_number, destination))
+    return links
+
+
+def clean_heading_text(text: str) -> str:
+    text = re.sub(r"\s+#+\s*$", "", text.strip())
+    text = re.sub(r"!\[([^\]]*)\]\([^)]+\)", r"\1", text)
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    text = re.sub(r"<[^>]+>", "", text)
+    return text.replace("`", "").replace("*", "").replace("_", "").replace("~", "")
+
+
+def github_style_slug(text: str) -> str:
+    cleaned = clean_heading_text(text).lower()
+    chars: list[str] = []
+    for char in cleaned:
+        if char.isalnum():
+            chars.append(char)
+        elif char.isspace() or char == "-":
+            chars.append("-")
+    return re.sub(r"-+", "-", "".join(chars)).strip("-")
+
+
+def heading_anchors(path: Path) -> set[str]:
+    anchors: set[str] = set()
+    counts: dict[str, int] = {}
+    for _, line in iter_document_lines(path):
+        match = HEADING_RE.match(line)
+        if not match:
+            continue
+        base = github_style_slug(match.group(1))
+        count = counts.get(base, 0)
+        slug = base if count == 0 else f"{base}-{count}"
+        counts[base] = count + 1
+        anchors.add(slug)
+    return anchors
+
+
+def should_skip_scheme(target: str) -> bool:
+    parsed = urllib.parse.urlsplit(target)
+    if target.startswith("//"):
+        return True
+    return bool(parsed.scheme and parsed.scheme != "file")
+
+
+def check_link(link: Link, root: Path, anchor_cache: dict[Path, set[str]]) -> list[Finding]:
+    findings: list[Finding] = []
+    if should_skip_scheme(link.target):
+        return findings
+
+    parsed = urllib.parse.urlsplit(link.target)
+    if parsed.scheme == "file":
+        findings.append(
+            Finding("ERROR", link.source, link.line, link.target, "file:// links are not reproducible repository-local references")
+        )
+        return findings
+
+    raw_path = urllib.parse.unquote(parsed.path)
+    fragment = urllib.parse.unquote(parsed.fragment)
+    if raw_path.startswith("/") or raw_path.startswith("~"):
+        findings.append(
+            Finding("ERROR", link.source, link.line, link.target, "absolute or home-relative paths are outside the local docs-link contract")
+        )
+        return findings
+
+    target_path = link.source if raw_path == "" else link.source.parent / raw_path
+    lexical_target = target_path.resolve(strict=False)
+    if not is_inside(lexical_target, root):
+        findings.append(
+            Finding("ERROR", link.source, link.line, link.target, "link escapes the repository root")
+        )
+        return findings
+
+    if target_path.exists() and not is_inside(target_path.resolve(), root):
+        findings.append(
+            Finding("ERROR", link.source, link.line, link.target, "link resolves through a symlink outside the repository root")
+        )
+        return findings
+
+    if raw_path and not target_path.exists():
+        findings.append(
+            Finding("ERROR", link.source, link.line, link.target, "target path does not exist")
+        )
+        return findings
+
+    if not fragment:
+        return findings
+
+    if target_path.is_dir():
+        findings.append(
+            Finding("ERROR", link.source, link.line, link.target, "directory links cannot be checked for anchors")
+        )
+        return findings
+
+    if target_path.suffix.lower() not in DOC_EXTENSIONS:
+        findings.append(
+            Finding("WARNING", link.source, link.line, link.target, "anchor on a non-Markdown target was not checked")
+        )
+        return findings
+
+    anchors = anchor_cache.setdefault(target_path.resolve(strict=False), heading_anchors(target_path))
+    if fragment not in anchors and fragment.lower() not in anchors:
+        findings.append(
+            Finding("ERROR", link.source, link.line, link.target, "target anchor was not found")
+        )
+    return findings
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Check local Markdown links and GitHub-style best-effort anchors."
+    )
+    parser.add_argument(
+        "paths",
+        nargs="*",
+        help="Optional files or directories to check. Defaults to tracked .md/.mdx files.",
+    )
+    args = parser.parse_args()
+
+    root, is_git_worktree = find_repo_root(Path.cwd())
+    scopes, scope_errors = normalize_scope_args(args.paths, root)
+    if scope_errors:
+        for error in scope_errors:
+            print(f"ERROR: {error}", file=sys.stderr)
+        return EXIT_USAGE
+
+    files, listing_warnings = list_candidate_files(root, scopes, is_git_worktree)
+    links: list[Link] = []
+    findings: list[Finding] = []
+    anchor_cache: dict[Path, set[str]] = {}
+
+    for path in files:
+        links.extend(extract_links(path))
+
+    for link in links:
+        findings.extend(check_link(link, root, anchor_cache))
+
+    for warning in listing_warnings:
+        print(f"WARNING: {warning}")
+
+    for finding in findings:
+        location = f"{to_display_path(finding.source, root)}:{finding.line}"
+        print(f"{finding.level}: {location}: {finding.target} - {finding.message}")
+
+    error_count = sum(1 for finding in findings if finding.level == "ERROR")
+    warning_count = sum(1 for finding in findings if finding.level == "WARNING")
+    print(
+        "docs-link-check: "
+        f"checked {len(files)} file(s), {len(links)} link(s), "
+        f"{error_count} error(s), {warning_count} warning(s)"
+    )
+    return EXIT_LINK_ERRORS if error_count else EXIT_OK
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

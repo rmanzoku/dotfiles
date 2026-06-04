@@ -22,6 +22,7 @@ from urllib import error, request
 DEFAULT_BASE_URL = "https://api.x.ai/v1"
 DEFAULT_MODEL = "grok-4.3"
 DEFAULT_X_SEARCH_TIMEOUT_SECONDS = 120
+DEFAULT_RESPONSE_WATCHDOG_SECONDS = 180
 X_URL_RE = re.compile(
     r"https?://(?:www\.|mobile\.)?(?:x\.com|twitter\.com)/[^\s<>()\"']+|"
     r"https?://nitter\.[^\s/]+/[^\s<>()\"']+",
@@ -44,7 +45,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--response-artifact",
         default="grok-response.json",
-        help="Response artifact path. Relative paths resolve from --output-dir.",
+        help="Response artifact path. Relative paths resolve from --output-dir; use absolute paths for artifacts outside it.",
     )
     parser.add_argument(
         "--model",
@@ -121,6 +122,12 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=int(os.getenv("GROK_X_SEARCH_TIMEOUT_SECONDS", str(DEFAULT_X_SEARCH_TIMEOUT_SECONDS))),
         help="Per-query timeout for direct Hermes x_search_tool calls. Defaults to GROK_X_SEARCH_TIMEOUT_SECONDS or 120.",
+    )
+    parser.add_argument(
+        "--response-watchdog-seconds",
+        type=int,
+        default=int(os.getenv("GROK_RESPONSE_WATCHDOG_SECONDS", str(DEFAULT_RESPONSE_WATCHDOG_SECONDS))),
+        help="Maximum Hermes final-response wait after direct X search produced an artifact. Use 0 to disable.",
     )
     return parser.parse_args()
 
@@ -798,8 +805,20 @@ def run_backend_subprocess(args: argparse.Namespace, timeout_bin: str, response_
     if args.confirm_api_cost:
         command.append("--confirm-api-cost")
     with stderr_path.open("wb") as stderr_fh:
-        proc = subprocess.run(command, cwd=str(Path(args.cwd).expanduser().resolve()), stderr=stderr_fh, check=False)
+        proc = subprocess.run(
+            command,
+            cwd=str(Path(args.cwd).expanduser().resolve()),
+            stdin=subprocess.DEVNULL,
+            stderr=stderr_fh,
+            check=False,
+        )
     return proc.returncode
+
+
+def hermes_final_timeout_seconds(args: argparse.Namespace, x_search_result: dict[str, Any] | None) -> int:
+    if x_search_result and args.response_watchdog_seconds > 0:
+        return min(args.timeout_seconds, args.response_watchdog_seconds)
+    return args.timeout_seconds
 
 
 def run_hermes_backend(
@@ -827,9 +846,10 @@ def run_hermes_backend(
                 "Use the direct x_search artifact as primary evidence for engagement counts, thread context, replies, quote posts, and reactions.",
             ]
         )
+    final_timeout_seconds = hermes_final_timeout_seconds(args, x_search_result)
     command = [
         timeout_bin,
-        str(args.timeout_seconds),
+        str(final_timeout_seconds),
         args.hermes_bin,
         "--oneshot",
         prompt,
@@ -841,15 +861,21 @@ def run_hermes_backend(
     hermes_toolsets = effective_hermes_toolsets(payload, args.hermes_toolsets)
     if hermes_toolsets:
         command.extend(["--toolsets", hermes_toolsets])
+    log_progress(
+        f"starting Hermes final response timeout_seconds={final_timeout_seconds} "
+        f"x_search_artifact={'yes' if x_search_result else 'no'}"
+    )
     with stderr_path.open("wb") as stderr_fh:
         proc = subprocess.run(
             command,
             cwd=str(Path(args.cwd).expanduser().resolve()),
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=stderr_fh,
             check=False,
         )
     if proc.returncode != 0:
+        log_progress(f"Hermes final response failed exit_code={proc.returncode}")
         return proc.returncode
     output_text = proc.stdout.decode("utf-8", errors="replace").strip()
     artifact = {
@@ -869,6 +895,7 @@ def run_hermes_backend(
         "backend": "hermes",
     }
     write_json(response_path, artifact)
+    log_progress(f"completed Hermes final response bytes={len(proc.stdout)}")
     return 0
 
 
@@ -954,6 +981,8 @@ def classify_failure_reasons(
     reasons: list[str] = []
     if exit_code == 124:
         reasons.append("timeout")
+        if x_search_result and args.response_watchdog_seconds > 0:
+            reasons.append("hermes_response_watchdog_timeout")
     elif exit_code != 0:
         reasons.append("nonzero_exit")
     if api_error:
@@ -985,6 +1014,8 @@ def classify_failure_reasons(
 
 def recommended_next_action(args: argparse.Namespace, failure_reasons: list[str]) -> str:
     if "timeout" in failure_reasons:
+        if "hermes_response_watchdog_timeout" in failure_reasons:
+            return "Direct X search completed but Hermes final-answer materialization exceeded the response watchdog; use existing x-search-results.json and let the caller materialize a blocked artifact."
         return "Inspect request size and backend status, then rerun with a smaller request or larger timeout."
     if "missing_api_key" in failure_reasons:
         return "Set XAI_API_KEY for direct API calls, use --backend hermes after Hermes xAI OAuth setup, or use --dry-run for request validation only."
@@ -1015,6 +1046,8 @@ def write_failure(path: Path, summary: dict[str, Any]) -> None:
         f"- Exit code: `{summary['exit_code']}`",
         f"- Elapsed seconds: `{summary['elapsed_seconds']}`",
         f"- Request bytes: `{summary['request_bytes']}`",
+        f"- Response artifact: `{summary['response_artifact']}`",
+        f"- Response non-empty: `{summary['response_non_empty']}`",
         f"- Response bytes: `{summary['response_bytes']}`",
         f"- Stderr bytes: `{summary['stderr_bytes']}`",
         f"- Failure reasons: {', '.join(reasons) if reasons else 'unknown'}",
@@ -1075,6 +1108,7 @@ def main() -> int:
     if args.hermes_toolsets:
         command.extend(["--hermes-toolsets", args.hermes_toolsets])
     command.extend(["--x-search-timeout-seconds", str(args.x_search_timeout_seconds)])
+    command.extend(["--response-watchdog-seconds", str(args.response_watchdog_seconds)])
 
     start = time.monotonic()
     failure_reasons: list[str] = []
@@ -1150,6 +1184,8 @@ def main() -> int:
         "x_search_available": x_search_result.get("available") if x_search_result else None,
         "x_search_successful_query_count": successful_x_search_query_count(x_search_result),
         "x_search_timeout_seconds": args.x_search_timeout_seconds,
+        "response_watchdog_seconds": args.response_watchdog_seconds,
+        "hermes_final_timeout_seconds": hermes_final_timeout_seconds(args, x_search_result),
         "dry_run": args.dry_run,
         "dry_run_payload": dry_run_payload,
         "exit_code": exit_code,

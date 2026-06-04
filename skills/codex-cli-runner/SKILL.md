@@ -19,14 +19,15 @@ Frame each delegation as an outcome-first contract: source prompt, expected arti
 - Do not force `--sandbox`, `--ask-for-approval`, or bypass flags by default. Let Codex config/profile decide unless the caller explicitly requests an override via extra args.
 - Do not treat 0-byte `run.events.jsonl` or `run.err` as a hang by itself.
 
-## Claude Caller Checklist
+## Caller Checklist
 
 Before running Codex, make these decisions explicitly:
 
 - Task directory: choose `.context/<task>/`.
-- Source prompt: write `.context/<task>/prompt.md` with the outcome, artifact paths, success criteria, allowed side effects, evidence rules, and stop condition.
+- Source prompt: write `.context/<task>/prompt.md` with the outcome, artifact paths, success criteria, allowed side effects, evidence rules, and stop condition. If an expected artifact path is absolute, put that same absolute path in the source prompt; `--expected-artifact` only verifies materialization.
 - Working directory: pass `--cwd <project-root>` when the target repository matters.
 - Expected artifacts: pass every required output with `--expected-artifact`; relative paths resolve from `--output-dir`, so use absolute paths for artifacts that must be written outside `.context/<task>/`.
+- When `--output-dir .context/<task>` is used, pass `--expected-artifact result.md`, not `--expected-artifact .context/<task>/result.md`; the latter resolves under `.context/<task>/.context/<task>/`.
 - Defaults: omit `--model`, `--effort`, and `--profile` unless the caller, model registry, or role explicitly requires an override.
 - Timeout: rely on the 600-second wrapper default unless the task contract says otherwise.
 - Prompt profile: rely on `--prompt-profile auto` when passing an explicit GPT-5.5 model; use `--prompt-profile gpt-5-5` only when the CLI default is GPT-5.5 and `--model` is omitted.
@@ -60,7 +61,7 @@ The wrapper writes:
 - `run.events.jsonl`: Codex JSONL stdout events
 - `run.err`: stderr
 - `last-message.md`: final Codex message from `--output-last-message`
-- `summary.json`: command, exit code, elapsed time, byte counts, parsed errors, prompt profile, `failure_reasons`, `recommended_next_action`, and `expected_artifacts`
+- `summary.json`: command, resolved `cwd`, exit code, elapsed time, byte counts, parsed errors, prompt profile, `failure_reasons`, `recommended_next_action`, and `expected_artifacts`
 - `failure.md`: only when the wrapper run fails
 
 ## Prompt Profiles
@@ -87,6 +88,8 @@ Require all applicable checks:
 - JSONL events do not contain obvious error records.
 - `summary.json.success` is `true`, `summary.json.failure_reasons` is empty, and every item in `summary.json.expected_artifacts` has `exists=true` and `non_empty=true`.
 
+These checks prove runner execution and non-empty artifact materialization only. The caller must still evaluate task-specific artifact quality against the source prompt.
+
 ## Failure Criteria
 
 Treat any of these as failure:
@@ -101,6 +104,7 @@ Treat any of these as failure:
 On failure, inspect `.context/<task>/summary.json` first:
 
 - `command`
+- `cwd`
 - `exit_code`
 - `elapsed_seconds`
 - `events_bytes`, `stderr_bytes`, and `last_message_bytes`
@@ -108,6 +112,8 @@ On failure, inspect `.context/<task>/summary.json` first:
 - `last_error_event` or `last_event`
 - `expected_artifacts`
 - `recommended_next_action`
+
+If a higher-level workflow needs a downstream blocked artifact, create it in the caller using that workflow's schema or template. Do not invent a downstream schema in this runner and do not modify runner evidence artifacts. If no caller schema was supplied, report the runner as blocked with links to `summary.json` and `failure.md` instead of fabricating an artifact format.
 
 The wrapper also writes `.context/<task>/failure.md` with:
 
@@ -125,6 +131,8 @@ Use these patterns when testing the wrapper itself without spending Codex API bu
 
 - For command-construction checks only, pass `--timeout-bin /usr/bin/true`. This bypasses Codex entirely and should fail wrapper success checks because no JSONL events, final message, or expected artifact are produced.
 - For end-to-end wrapper success without API spend, create a small fake Codex executable under `.context/<task>/bin/` and pass it with `--codex-bin <path-to-fake-codex>`. The fake CLI must write JSONL stdout, honor `-o <last-message>`, and create the expected artifact.
+- Minimal fake behavior: exit `0`, print one non-error JSON object such as `{"type":"event","status":"ok"}`, parse `-o <path>` and write a non-empty final message there, then write the requested expected artifact such as `result.md`.
+- Prefer an absolute `--codex-bin` path for fake CLIs unless you have verified the relative path resolves from `--cwd`.
 - Keep fake CLIs under `.context/<task>/bin/` and use them only in validation. Do not use `--codex-bin` for real Codex delegation.
 - Do not hand-edit `summary.json`, `run.events.jsonl`, `run.err`, `last-message.md`, or `failure.md`. If a controlled test needs explanation, write a separate `notes.md`.
 
@@ -132,12 +140,13 @@ Use these patterns when testing the wrapper itself without spending Codex API bu
 
 - Resolve `<skill-dir>` from the location of this `SKILL.md`.
 - Pass `--cwd <project-root>` when Codex should run from a specific repository.
+- `summary.json.cwd` records the resolved `--cwd`; the shell directory that launched the wrapper is not recorded as a separate field.
 - Omit `--model`, `--effort`, and `--profile` by default so Codex CLI uses its configured defaults.
 - Pass `--model <model>` and `--effort <level>` from the caller when a model registry, role, or task explicitly requires overrides.
 - Use `--prompt-profile gpt-5-5` when the caller knows the CLI default model is GPT-5.5 but does not pass `--model`.
 - Pass each expected output as `--expected-artifact`; use an absolute path or a path relative to the wrapper output directory.
 - Use `--extra-codex-arg` for narrow additions when explicitly required. Pass one Codex CLI token per wrapper argument, for example `--extra-codex-arg=--sandbox --extra-codex-arg=read-only`, `--extra-codex-arg=--ask-for-approval --extra-codex-arg=never`, or `--extra-codex-arg=--config --extra-codex-arg=key=value`.
-- Keep final orchestration in Claude. This skill only runs Codex and records observable artifacts.
+- Keep final orchestration in the caller. This skill only runs Codex and records observable artifacts.
 
 ## Validation
 

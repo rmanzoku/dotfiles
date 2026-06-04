@@ -1,6 +1,6 @@
 ---
 name: report-template
-description: Report templates for whole-codebase evaluation and change review modes.
+description: Report templates for code-evaluator modes.
 ---
 
 # Report Template
@@ -174,3 +174,143 @@ Confidence:
 ```
 
 If there are no findings, state that clearly and still report checks, coverage, and residual risk.
+
+## License Audit Mode
+
+```md
+# Code Evaluation License Audit
+
+## Executive Summary
+
+- Verdict: accepted-signal | accepted-with-remediation-evidence | needs-confirmation | blocker
+- Confidence: high | medium | low
+- Distribution context:
+- Top blockers or needs-confirmation items:
+
+## Scope and Assumptions
+
+- Target:
+- Mode trigger:
+- Distribution context assumptions:
+- Project-specific license policy considered:
+- Areas intentionally not inspected:
+
+## Evidence Coverage
+
+- Manifests/lockfiles inspected:
+- License/notice files inspected:
+- Vendored/native/bundled assets inspected:
+- Build/link/bundle config inspected:
+- Remediation evidence inspected:
+- Confidence impact:
+
+## Checks Run / Not Run
+
+- ...
+
+## Dependency Triage
+
+| Dependency | Class | Evidence | Concern | Recommendation | Confidence |
+|---|---|---|---|---|---|
+
+## License / Distribution Triage
+
+| Component | Distribution context | License signal | Evidence | Status | Confidence |
+|---|---|---|---|---|---|
+
+## Remediation Evidence
+
+- ...
+
+## Blockers and Needs-Confirmation Items
+
+### [P0/P1/P2/P3] Title
+
+Evidence:
+- ...
+
+Impact:
+- ...
+
+Recommended next action:
+- ...
+
+Confidence:
+- High | Medium | Low
+
+## Recommended Next Actions
+
+1. [P0/P1/P2/P3] ...
+
+## Known Limitations
+
+- This is engineering triage, not legal advice.
+```
+
+## Framework Best-Practice Review Mode
+
+```md
+# Code Evaluation Framework Best-Practice Review
+
+## Executive Summary
+
+- Framework/library:
+- Detected version:
+- Reviewer confidence for idiom claims: high | medium | low
+- Overall risk:
+- Top risks:
+
+## Scope and Assumptions
+
+- Target:
+- Mode trigger:
+- Primary references consulted:
+- Project-specific rules considered:
+- Areas intentionally not inspected:
+
+## Evidence Coverage
+
+- Framework entrypoints inspected:
+- Core usage patterns inspected:
+- Tests/checks inspected:
+- Dependency surfaces inspected:
+- Commands run:
+- Confidence impact:
+
+## Checks Run / Not Run
+
+- ...
+
+## Findings
+
+### [P0/P1/P2/P3] Title
+
+Evidence:
+- `path/file.ext:line`
+
+Impact:
+- ...
+
+Recommended next action:
+- ...
+
+Confidence:
+- High | Medium | Low
+
+## Dependency Necessity
+
+| Dependency | Role | Evidence | Concern | Recommendation | Confidence |
+|---|---|---|---|---|---|
+
+## Positive Signals
+
+- ...
+
+## Recommended Next Actions
+
+1. [P0/P1/P2/P3] ...
+
+## Known Limitations
+
+- ...
+```

@@ -2,6 +2,8 @@
 title: "Restore Private Agent Definitions From 1Password"
 date: 2026-06-01
 agent_model: "GPT-5 Codex"
+updated_at: 2026-06-03
+updated_by_agent_model: "GPT-5 Codex"
 ---
 
 # ADR 0039: Restore Private Agent Definitions From 1Password
@@ -28,6 +30,34 @@ The files are restored through the existing 1Password-backed `opmaterialize` wor
 - deploy them to the target home directories with `chezmoi apply`.
 
 The 1Password `Secrets Manifest` owns the concrete file list and document item names. Git only stores the generic workflow, ignore rules, and this rationale.
+
+## Update Procedure
+
+Update private agent-related files from the chezmoi source tree, not from their deployed home-directory targets.
+
+Primary source and target pairs:
+
+| Purpose | Source | Target |
+|---|---|---|
+| Claude Code private agents | `dot_claude/agents/private_<agent>.md` | `~/.claude/agents/<agent>.md` |
+| Codex private agents | `dot_codex/agents/private_<agent>.toml` | `~/.codex/agents/<agent>.toml` |
+| Private secretary facts | `dot_config/private_private-secretary/private_facts.jsonl` | `~/.config/private-secretary/facts.jsonl` |
+| Private secretary bank facts | `dot_config/private_private-secretary/private_bank-accounts.jsonl` | `~/.config/private-secretary/bank-accounts.jsonl` |
+| Private secretary assets | `dot_config/private_private-secretary/private_assets/private_<name>` | `~/.config/private-secretary/assets/<name>` |
+
+For a normal update:
+
+1. Edit the source file in this repository.
+2. If the same agent exists for multiple AI tools, check whether the corresponding source file needs the same semantic update.
+3. Validate structured files before saving them. For JSONL fact stores, parse every non-empty line as JSON and check duplicate IDs.
+4. Register each changed private source file with `opmaterialize add <source-path>`.
+5. Run `scripts/chezmoi-drift --check-ignore`.
+6. Apply only the changed target paths with `chezmoi apply`. Use `--parent-dirs` when adding a new nested target path.
+7. Confirm the changed source and target files match, and run the relevant drift check.
+
+Do not print private agent definitions, private secretary facts, bank-account facts, or profile assets in command output or review notes. Report only paths, record counts, IDs, validation status, and 1Password manifest status.
+
+When updating private secretary facts, treat the current user instruction as an approved save boundary only for durable, reusable facts. Keep secrets, credentials, tokens, raw confidential documents, detailed customer financials, and bank-account details out of the general fact store.
 
 ## Consequences
 

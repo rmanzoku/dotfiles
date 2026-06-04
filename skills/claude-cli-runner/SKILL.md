@@ -26,6 +26,17 @@ Frame each delegation as an outcome-first contract: source prompt, expected arti
 - For research tasks, explicitly limit WebSearch/WebFetch counts, timeout, and output lines in the prompt.
 - Do not treat `stdout` or `stderr` being 0 bytes as a hang by itself.
 
+## Caller Checklist
+
+Before running Claude, make these decisions explicitly:
+
+- Task directory: choose `.context/<task>/`.
+- Source prompt: write `.context/<task>/prompt.md` with the outcome, artifact paths, success criteria, allowed side effects, evidence rules, and stop condition. If an expected artifact path is absolute, put that same absolute path in the source prompt; `--expected-artifact` only verifies materialization.
+- Working directory: pass `--cwd <project-root>` when the target repository matters.
+- Expected artifacts: pass every required output with `--expected-artifact`; relative paths resolve from `--output-dir`, so use absolute paths for artifacts that must be written outside `.context/<task>/`.
+- When `--output-dir .context/<task>` is used, pass `--expected-artifact result.md`, not `--expected-artifact .context/<task>/result.md`; the latter resolves under `.context/<task>/.context/<task>/`.
+- Timeout and budget: rely on the 600-second timeout default and omit `--budget-usd` unless the caller explicitly needs a budget guard.
+
 ## Standard Command Shape
 
 Use this form, with `<prompt>` kept short and pointing to the prompt file:
@@ -54,7 +65,7 @@ The wrapper writes:
 - `run.prompt.md`: launch prompt sent to Claude, including any model-specific adapter
 - `run.stream.jsonl`: Claude stream-json stdout
 - `run.err`: stderr
-- `summary.json`: command, exit code, elapsed time, byte counts, parsed result/error status, and artifact checks
+- `summary.json`: command, resolved `cwd`, exit code, elapsed time, byte counts, parsed result/error status, and artifact checks
 - `failure.md`: only when the run fails
 
 ## Prompt Profiles
@@ -82,6 +93,8 @@ Require all applicable checks:
 - Every expected artifact file exists and is non-empty.
 - The process exits without timeout or CLI-level failure.
 
+These checks prove runner execution and non-empty artifact materialization only. The caller must still evaluate task-specific artifact quality against the source prompt.
+
 ## Failure Criteria
 
 Treat any of these as failure:
@@ -92,15 +105,18 @@ Treat any of these as failure:
 - Expected artifact files are missing or empty.
 - The process exits non-zero for any reason other than an explicitly accepted test case.
 
-On failure, write `.context/<task>/failure.md` with:
+On failure, inspect `.context/<task>/summary.json` first, then use `.context/<task>/failure.md` for the expanded evidence:
 
 - executed command
+- resolved cwd
 - exit code
 - elapsed time
 - stdout/stderr sizes
 - last stream-json result or error
 - expected artifact status
 - recommended next action
+
+If a higher-level workflow needs a downstream blocked artifact, create it in the caller using that workflow's schema or template. Do not invent a downstream schema in this runner and do not modify runner evidence artifacts. If no caller schema was supplied, report the runner as blocked with links to `summary.json` and `failure.md` instead of fabricating an artifact format.
 
 ## Prompt Pattern
 
@@ -122,12 +138,13 @@ For Claude researcher roles, include:
 
 - Resolve `<skill-dir>` from the location of this `SKILL.md`.
 - Pass `--cwd <project-root>` when Claude should run from a specific repository.
+- `summary.json.cwd` records the resolved `--cwd`; the shell directory that launched the wrapper is not recorded as a separate field.
 - Omit `--model` and `--effort` by default so Claude CLI uses its configured defaults.
 - Pass `--model <model>` and `--effort <level>` from the caller when a model registry, role, or task explicitly requires overrides.
 - Use `--prompt-profile opus-4-7` or `--prompt-profile opus-4-8` when the caller knows the CLI default model is that Opus version but does not pass `--model`.
 - Pass each expected output as `--expected-artifact`; use an absolute path or a path relative to the wrapper output directory.
 - Use `--extra-claude-arg` for narrow additions such as `--tools` or `--add-dir` when needed.
-- Keep final orchestration in Codex. This skill only runs Claude and records observable artifacts.
+- Keep final orchestration in the caller. This skill only runs Claude and records observable artifacts.
 
 ## No-API Validation
 
@@ -135,6 +152,8 @@ Use these patterns when testing the wrapper itself without spending Claude API b
 
 - For command-construction checks only, pass `--timeout-bin /usr/bin/true`. This bypasses Claude entirely and should be expected to fail wrapper success checks because no stream-json success result or expected artifact is produced.
 - For end-to-end wrapper success without API spend, create a small fake Claude executable under the task directory and pass it with `--claude-bin <path-to-fake-claude>`. The fake CLI must write stream-json stdout ending with `{"type":"result","subtype":"success"}` and create the expected artifact.
+- Minimal fake behavior: exit `0`, print `{"type":"result","subtype":"success"}` as the final stdout line, and write the requested expected artifact such as `result.md`.
+- Prefer an absolute `--claude-bin` path for fake CLIs unless you have verified the relative path resolves from `--cwd`.
 - Keep fake CLIs under `.context/<task>/bin/` and use them only in validation. Do not use `--claude-bin` for real Claude delegation.
 - Do not hand-edit `summary.json`, `run.stream.jsonl`, `run.err`, or `failure.md`. If a controlled test needs explanation, write a separate `notes.md` next to the wrapper artifacts.
 
@@ -143,7 +162,7 @@ Use these patterns when testing the wrapper itself without spending Claude API b
 Validate the skill and wrapper after changes:
 
 ```bash
-python3 /Users/rmanzoku/.codex/skills/.system/skill-creator/scripts/quick_validate.py <skill-dir>
+scripts/skill-quick-validate skills/claude-cli-runner
 python3 <skill-dir>/scripts/run_claude_cli.py --help
 ```
 

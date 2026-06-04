@@ -13,13 +13,14 @@ Use `docs-entrypoint-check` instead when the user only wants a lightweight check
 
 - Treat this skill as report-only. Provide findings, risks, scores, inventories, and recommended directions; do not implement them.
 - Prefer CLI inspection (`rg`, `find`, `git`, link extraction commands) over MCP unless the user explicitly asks for MCP.
-- Do not mutate the evaluated source tree. Evaluation artifacts may be written under `.context/docs-evaluator/<task>/`.
+- Do not mutate the evaluated source tree except for evaluation artifacts written under `.context/docs-evaluator/<task>/`. Treat this artifact directory as the only planned target-local mutation allowed by this skill; ignored cache/output writes from checks must be recorded as observed side effects, not silently assumed harmless.
 - Exclude generated/vendor/cache outputs by default: `.git/`, `.context/`, `node_modules/`, `dist/`, `build/`, `.next/`, `coverage/`, generated API docs, vendored docs, package caches, and binary artifacts.
+- Exclude gitignored, private, secret, and machine-local files from normal documentation review by default. Do not inspect or quote ignored secret/private content unless the user explicitly asks or a documentation-governance question requires path-level confirmation; even then report only paths, labels, key names, record counts, redacted excerpts, validation status, and risk categories.
 - Include repository documentation text broadly: `README*`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `QWEN.md`, `SKILL.md`, `docs/`, `specs/`, `skills/`, workbench/planning docs, and text-like files such as `.md`, `.mdx`, `.txt`, `.rst`, `.adoc`, `.html`, `.htm`, `.yaml`, `.yml`, `.json`, and `.toml` when they function as documentation or policy.
-- If the user asks for every text file, include all non-generated text files in the inventory, then mark code/config files that are not documentation as out of scoring scope.
-- Separate current canonical instructions from historical records. ADRs, dated workbench notes, `.context/`, and migration notes are evidence/history unless an active entrypoint explicitly promotes them to canonical policy.
+- If the user asks for every text file, include all non-generated, non-ignored text files in the inventory, then mark code/config files that are not documentation as out of scoring scope. Include ignored files only when explicitly requested, and keep private/secret output redacted.
+- Separate current canonical instructions from historical records. ADRs, dated workbench notes, `.context/`, and migration notes are evidence/history unless an active entrypoint explicitly promotes them to canonical policy. Keep `.context/` excluded from normal inventory, but sample it when the user asks about temporary-to-canonical gaps, task-memory governance, or an active entrypoint explicitly references it. `.context/` sampling defaults to path-level inventory for relevant task directories plus limited deep reads of the latest or directly related artifacts; broad `.context/` traversal requires an explicit user request.
 - Use confidence labels. Do not make whole-repo claims from narrow sampling without marking them provisional.
-- For large repositories, create and save a sampling plan before deep dives.
+- For large repositories or any review that will not deep-read all relevant docs, create and save a sampling plan before deep dives. Do not use fixed numeric thresholds as the definition of "large"; explain the scope factors, prioritize entrypoints, canonical docs, and mode-relevant docs, sample remaining classes intentionally, and report unread ranges in `Evidence Coverage` and confidence impact.
 
 ## Mode Selection
 
@@ -37,14 +38,22 @@ Select the narrowest mode that matches the request:
 
 If the user gives no mode, infer it from the target and wording. If the request is only a lightweight entrypoint/bootstrap check, prefer `docs-entrypoint-check`.
 
+Mode decision order:
+
+1. Use an explicitly requested mode when present.
+2. If the request is only a lightweight README/docs index/agent-entrypoint check or bootstrap skeleton request, use `docs-entrypoint-check` instead of this skill.
+3. If the user asks for a broad docs audit, contradiction/gap analysis across multiple doc types, or multiple narrow concerns at once, use `documentation-system-evaluation`.
+4. If multiple narrow modes are primary concerns and no explicit mode is provided, use `documentation-system-evaluation`. Keep a narrow mode only when the request has a clear primary target, and record secondary concerns in `Residual Gaps`.
+5. Otherwise choose the narrow mode matching the primary risk: navigation/linking -> `reachability-audit`; competing first-read claims -> `entrypoint-conflict-review`; current truth vs history -> `source-of-truth-review`; stale/deprecated active docs -> `stale-docs-review`; TODO/follow-up governance -> `todo-governance-review`; instruction drift or agent-specific separation -> `guidance-consistency-review`; front matter/schema issues -> `metadata-hygiene-review`; external reference/spec traceability -> `reference-integrity-review`.
+
 ## Workflow
 
 1. **Set task and artifact directory**
-   - Create `.context/docs-evaluator/<task>/`.
+   - Create `.context/docs-evaluator/<task>/`. Use `<YYYYMMDD>-<target-slug>` when no task name is given; if the directory already exists, append `-2`, `-3`, and so on instead of overwriting prior artifacts.
    - Record target, mode, requested scope, exclusions, assumptions, and whether the user requested all text files or documentation-like files.
 
 2. **Inventory documentation text**
-   - Enumerate candidate text documents with `find` or `rg --files`, applying default exclusions.
+   - Enumerate candidate text documents with `rg --files` or `find`, applying default exclusions and honoring `.gitignore` by default. Use `rg --files -uuu` or equivalent only when the user explicitly asks to include ignored files or a path-level governance question requires it, and keep private/secret output redacted.
    - Classify each relevant file as `entrypoint`, `index`, `canonical`, `policy`, `spec`, `skill`, `historical`, `temporary`, `task-tracking`, `deprecated`, `generated`, or `out-of-scope`.
    - Save `.context/docs-evaluator/<task>/inventory.md`.
 
@@ -66,8 +75,14 @@ If the user gives no mode, infer it from the target and wording. If the request 
    - Check reachability, entrypoint conflicts, AI readability, necessity/sufficiency, contradictions, instruction-strength drift, stale/deprecated docs or skills, freshness governance, knowledge-system structure, primary-home/resolver clarity, current-truth-vs-history separation, provenance/confidence/freshness, typed entity and relationship hygiene, raw-source-vs-curated-synthesis boundaries, privacy/data-boundary clarity, TODO/deferred work governance, duplicated policy, agent-specific guidance separation, skill contract precedence, metadata/front matter hygiene, external reference clarity, documented dependency clarity, spec/contract traceability, canonical-vs-temporary separation, unreflected gaps, terminology consistency, and qualitative reading burden.
    - Save raw evidence to `.context/docs-evaluator/<task>/raw-findings.md`.
 
-6. **Run non-mutating checks when reasonable**
-   - Run link checks, markdown lint/readability checks, or custom inventory scripts only when they are available and non-mutating.
+6. **Run checks with mutation guard**
+   - Run link checks, markdown lint/readability checks, or custom inventory scripts only when useful for the requested scope and available without formatters, autofixers, generators, installers, or dependency changes.
+   - When the evaluated repository provides `scripts/docs-link-check`, prefer it for local Markdown link and anchor checks, passing the target path for narrow reviews when appropriate. If it is absent, fall back to best-effort CLI extraction and clearly mark the lower confidence.
+   - Treat a non-zero `scripts/docs-link-check` exit caused by broken local docs links or anchors as evaluation evidence, not as skill failure.
+   - Do not check external URL reachability by default. For `reference-integrity-review`, evaluate whether external references document their purpose, freshness signal, and verification responsibility. Perform web verification only when the user explicitly asks, or when external freshness is the primary review risk and primary-source confirmation is needed; then record `verified_at` and verification scope.
+   - If the target is inside a git worktree, record `git status --short` before and after checks in `checks.md`. Treat pre-existing dirtiness as baseline context, not your own change.
+   - Do not run commands expected to write tracked docs, configs, generated docs, snapshots, or dependency installation state.
+   - If a check writes ignored cache/output files, record the path category and reason in `checks.md`. If a check writes tracked or review-relevant files, stop running further checks and report the mutation; do not clean up or revert it unless the user explicitly asks.
    - Do not run formatters, autofixers, generators, installers, or commands that rewrite docs unless the user explicitly asks.
    - Save commands, exit status, and skipped checks to `.context/docs-evaluator/<task>/checks.md`.
 
@@ -79,9 +94,9 @@ If the user gives no mode, infer it from the target and wording. If the request 
 
 ## Required Report Properties
 
-- Include `Executive Summary`, `Overall Score`, `Pillar Scores`, `Evidence Coverage`, `Inventory Summary`, `Entrypoint Conflicts`, `Reachability`, `Source-of-Truth Boundaries`, `Instruction Strength Drift`, `Agent-Specific Guidance`, `Skill Contract Precedence`, `Metadata / Front Matter Hygiene`, `Reference Integrity`, `AI Readability`, `Positive Signals`, `Contradictions & Drift`, `TODO / Deferred Work`, `Deprecated or Stale Docs`, `Temporary-to-Canonical Gaps`, `Checks Run`, `Checks Not Run`, `Issues & Risks`, and `Recommended Next Actions`.
-- For `documentation-system-evaluation`, start with summary and scores.
-- For narrower modes, start with findings ordered by severity, then include mode-specific coverage and residual gaps.
+- For `documentation-system-evaluation`, include `Executive Summary`, `Overall Score`, `Pillar Scores`, `Evidence Coverage`, `Inventory Summary`, `Entrypoint Conflicts`, `Reachability`, `Source-of-Truth Boundaries`, `Instruction Strength Drift`, `Agent-Specific Guidance`, `Skill Contract Precedence`, `Metadata / Front Matter Hygiene`, `Reference Integrity`, `AI Readability`, `Positive Signals`, `Contradictions & Drift`, `TODO / Deferred Work`, `Deprecated or Stale Docs`, `Temporary-to-Canonical Gaps`, `Checks Run`, `Checks Not Run`, `Issues & Risks`, and `Recommended Next Actions`. Start with summary and scores.
+- For narrower modes, include `Findings`, `Evidence Coverage`, mode-specific sections, `Checks Run / Not Run`, `Residual Gaps`, and `Summary`. Start with findings ordered by severity.
+- Include these mode-specific sections when applicable: `Source-of-Truth Boundaries` and `Temporary-to-Canonical Gaps` for `source-of-truth-review`; `Reachability` and `Entrypoint Conflicts` for `reachability-audit` and `entrypoint-conflict-review`; `Deprecated or Stale Docs` and `Freshness Governance` for `stale-docs-review`; `TODO / Deferred Work` for `todo-governance-review`; `Instruction Strength Drift`, `Agent-Specific Guidance`, `Skill Contract Precedence`, and `Contradictions & Drift` for `guidance-consistency-review`; `Metadata / Front Matter Hygiene` for `metadata-hygiene-review`; `Reference Integrity` for `reference-integrity-review`.
 - Use priority by documentation-system risk: `P0` blocker, `P1` high risk, `P2` meaningful maintainability or AI-readability risk, `P3` optional cleanup.
 - Each issue must include evidence, impact, recommended next action, and confidence.
 - Distinguish "missing canonical doc" from "canonical doc exists but is not linked" and from "historical note contains unreflected policy".
@@ -110,3 +125,5 @@ If the user gives no mode, infer it from the target and wording. If the request 
 ```bash
 scripts/skill-quick-validate skills/docs-evaluator
 ```
+
+Run validation from the publisher source repository root, not from the installed skill directory.

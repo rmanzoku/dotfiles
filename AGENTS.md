@@ -3,7 +3,7 @@
 - このリポジトリ（dotfiles）の管理責任は Codex が持つ
 - `dot_*` 配下のファイルは chezmoi により環境へ配置される成果物として扱う
 - `dot_*` 配下の変更時は必ず `dotfile-update` スキルを使用すること
-- dotfile 変更前に [chezmoi-knowledge/SKILL.md](/Users/rmanzoku/.local/share/chezmoi/.claude/skills/chezmoi-knowledge/SKILL.md) と [semantics.md](/Users/rmanzoku/.local/share/chezmoi/.claude/skills/chezmoi-knowledge/references/semantics.md) を確認し、source / target / ignore の前提を外さないこと
+- dotfile 変更前に [chezmoi-knowledge/SKILL.md](.claude/skills/chezmoi-knowledge/SKILL.md) と [semantics.md](.claude/skills/chezmoi-knowledge/references/semantics.md) を確認し、source / target / ignore の前提を外さないこと
 - `chezmoi apply` の前とドリフト確認時は `scripts/chezmoi-drift --check-ignore` 相当の `.chezmoiignore` 整合確認を行い、意図せず無効化された source がないことを確認すること
 - secret 実値は 1Password に保存し、CLI では `op run --env-file` / `op read` と `op://...` secret reference 経由で受け渡すこと
 - `~/.config/op/dotfiles.env` は管理外の secret reference 置き場とし、実値を書かないこと

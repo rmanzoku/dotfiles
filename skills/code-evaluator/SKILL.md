@@ -11,8 +11,9 @@ Produce an evidence-backed evaluation report. Do not create patches, edit target
 
 - Treat this skill as report-only. Provide findings, risks, scores, and recommended directions; do not implement them.
 - Prefer CLI inspection (`rg`, `find`, package manager metadata, test commands) over MCP unless the user explicitly asks for MCP.
-- Do not mutate the evaluated source tree. Evaluation artifacts may be written under `.context/code-evaluator/<task>/`.
+- Do not mutate the evaluated source tree except for evaluation artifacts written under `.context/code-evaluator/<task>/`. Treat this artifact directory as the only planned target-local mutation allowed by this skill; ignored cache/output writes from checks must be recorded as observed side effects, not silently assumed harmless.
 - Exclude generated/vendor/cache outputs from source-quality review by default: `node_modules/`, `dist/`, `build/`, `.next/`, `coverage/`, generated code, binary artifacts, and previous `.context/` runs.
+- Exclude gitignored files from normal source-quality review by default. Do not inspect or quote ignored secret/private files unless the user explicitly asks or a license/security/distribution question requires path-level confirmation; even then report only paths, key names, record counts, redacted excerpts, validation status, and risk categories.
 - In `license-audit` mode, do not ignore vendored/native third-party assets that can enter distributed artifacts. Inventory `vendor/`, `third_party/`, linked native libraries, bundled sample assets, and build-config references without deeply reviewing their source unless needed.
 - Still read manifests, lockfiles, license files, notice files, and remediation evidence: `package.json`, lockfiles, `go.mod`, `Cargo.lock`, `LICENSE`, `NOTICE`, `patches/`, `overrides`, `resolutions`, forks, and vendored patch notes.
 - Separate general engineering findings from project-specific compliance. If repo docs define local rules, evaluate against them, but do not confuse "matches current policy" with "ideal design".
@@ -39,7 +40,7 @@ If the user gives no mode, infer it from the target and wording. If a normal PR 
 
 2. **Acquire efficient context**
    - Read high-level docs first when present: `AGENTS.md`, `README*`, `docs/`, architecture/rules docs, package readmes.
-   - Inventory the source tree while excluding generated/vendor/cache paths for source-quality review.
+   - Inventory the source tree while excluding generated/vendor/cache paths and gitignored files for source-quality review.
    - Read manifests, lockfiles, dependency overrides, license/notice files, test/lint/typecheck config, CI/CD workflows, build/deployment config such as Dockerfiles, and core source directories.
    - For license audits, also inspect scope-adjacent native/link/bundle config when it can place third-party code or assets into distributed outputs.
    - Save inventory notes to `.context/code-evaluator/<task>/inventory.md`.
@@ -61,9 +62,11 @@ If the user gives no mode, infer it from the target and wording. If a normal PR 
    - Include `What I Would Not Preserve` when existing abstractions or dependencies should not constrain a best-state redesign.
    - Tag security findings as `static-review-only` when no scanner, dynamic test, or targeted security tool was run.
 
-6. **Run non-mutating checks when reasonable**
-   - Run tests/lint/typecheck/build only when they are expected to be non-destructive and useful for the requested scope.
-   - Treat cache writes in ignored output directories as acceptable, but do not run commands expected to write tracked source, configs, lockfiles, generated artifacts, or dependency installation state.
+6. **Run checks with mutation guard**
+   - Run tests/lint/typecheck/build only when useful for the requested scope and available without install, upgrade, codegen, migration, autofix, or dependency changes.
+   - If the target is inside a git worktree, record `git status --short` before and after checks in `checks.md`. Treat pre-existing dirtiness as baseline context, not your own change.
+   - Do not run commands expected to write tracked source, configs, lockfiles, generated artifacts, snapshots, or dependency installation state.
+   - If a check writes ignored cache/output files, record the path category and reason in `checks.md`. If a check writes tracked or review-relevant files, stop running further checks and report the mutation; do not clean up or revert it unless the user explicitly asks.
    - Do not run install, upgrade, formatter-write, autofix, codegen-write, migration, or dependency-changing commands unless the user explicitly asks.
    - Save commands, exit status, and skipped checks to `.context/code-evaluator/<task>/checks.md`.
 
@@ -73,9 +76,10 @@ If the user gives no mode, infer it from the target and wording. If a normal PR 
 
 ## Required Report Properties
 
-- Include `Executive Summary`, `Overall Score`, `Pillar Scores`, `Evidence Coverage`, `Checks Run`, `Checks Not Run`, `Positive Signals`, `Issues & Risks`, `Dependency Triage`, `License / Distribution Triage` when applicable, `What I Would Not Preserve`, and `Recommended Next Actions`.
-- For `whole-codebase-evaluation`, start with summary and scores.
-- For `change-review`, start with findings ordered by severity and include file/line references when available.
+- For `whole-codebase-evaluation`, include `Executive Summary`, `Overall Score`, `Pillar Scores`, `Evidence Coverage`, `Checks Run`, `Checks Not Run`, `Positive Signals`, `Issues & Risks`, `Dependency Triage`, `License / Distribution Triage` when applicable, `What I Would Not Preserve`, and `Recommended Next Actions`. Start with summary and scores.
+- For `change-review`, include `Findings`, `Missing Tests`, `Evidence Coverage`, `Open Questions`, `Checks Run / Not Run`, and `Summary`. Start with findings ordered by severity and include file/line references when available.
+- For `license-audit`, include dependency and license/distribution matrices, distribution context assumptions, accepted or unresolved license signals, remediation evidence, blockers or needs-confirmation items, and recommended next actions.
+- For `framework-best-practice-review`, include framework/library name, detected version, primary references consulted, reviewer confidence for idiom claims, findings, tests/checks coverage, dependency necessity, and recommended next actions.
 - Use priority by risk/design importance, not human work phasing: `P0` blocker, `P1` high design/security/license risk, `P2` meaningful maintainability or dependency risk, `P3` optional cleanup.
 - Treat recommendations as ideal-state directions. Do not split recommendations into short/medium/long solely because humans would need phased work.
 - Add migration cautions only for destructive data changes, public API compatibility, product behavior changes, security boundaries, or license/legal review.

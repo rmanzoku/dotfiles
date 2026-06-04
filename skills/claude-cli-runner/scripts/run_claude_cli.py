@@ -76,7 +76,7 @@ def parse_args() -> argparse.Namespace:
         "--expected-artifact",
         action="append",
         default=[],
-        help="Expected non-empty artifact. Relative paths resolve from --output-dir.",
+        help="Expected non-empty artifact. Relative paths resolve from --output-dir; use absolute paths for artifacts outside it.",
     )
     parser.add_argument("--cwd", default=os.getcwd(), help="Working directory for claude.")
     parser.add_argument(

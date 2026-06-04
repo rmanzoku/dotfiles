@@ -55,6 +55,14 @@
 - 例外追加前に、その repo に project 固有の Codex 設定が本当に必要か確認すること
 - 通常運用で権限不足が出た場合は、恒久設定を緩めず、その実行時だけ `danger-full-access` を使うこと
 
+## Subagents / Custom Agents 運用
+
+- Codex の custom agent は親スレッドの全コンテキストを暗黙に継承する前提で使わないこと
+- `agent_type="senior_engineer"` と `fork_context=true` を同時に使えない runtime 制約が観測された場合、親 Codex が必要な repo context、依頼内容、対象ファイル、関連 `AGENTS.md`、ADR、docs、検証ログ、既知の制約を明示的に渡すこと
+- `senior_engineer` へ委譲するときは、少なくともビジネス前提、規模、フェーズ、体制、不可逆リスク、既存 ADR の有無、参照してほしい evaluator / skill を親 prompt に含めること
+- `senior_engineer` のレビューでは、`if`、デフォルト値、マジックナンバー、Boolean 引数、sentinel value、文字列モード、単位のない値、暗黙 fallback、深い層での env/config 参照を、仕様判断・責任・単位・状態が匿名で埋もれていないかの観測点として確認すること。ドメイン上の意味を持つ値や分岐は、名前付き定数、型、enum、policy、明示入力、境界での検証に寄せ、コメントは背景・制約・トレードオフを補うために使い、コード上の意図不足を埋める代替にしないこと
+- custom agent からの判断は、渡された context に基づく限定判断として扱い、親 Codex は最終判断前に実リポジトリのコード・設定・テスト・docs へ戻って確認すること
+
 ## Automations 運用
 
 - Codex Desktop の automation は `~/.codex/automations/<automation-id>/automation.toml` を実行設定として扱い、secret を含まないものだけ dotfiles の source で管理すること

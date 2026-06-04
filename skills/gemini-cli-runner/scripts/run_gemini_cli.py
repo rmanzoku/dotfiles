@@ -22,6 +22,7 @@ FATAL_STDERR_RE = re.compile(
     r"model\s+(?:not found|unsupported|unavailable|invalid|error))",
     re.IGNORECASE,
 )
+RAW_MODE_RE = re.compile(r"setRawMode\s+(?:EIO|EBADF)", re.IGNORECASE)
 
 GEMINI_ADAPTER = """\
 ## Gemini CLI Prompt Adapter
@@ -208,6 +209,10 @@ def stderr_has_cli_error(stderr_text: str) -> bool:
     return any(FATAL_STDERR_RE.search(line) for line in stderr_text.splitlines())
 
 
+def has_raw_mode_error(*texts: str) -> bool:
+    return any(RAW_MODE_RE.search(text) for text in texts if text)
+
+
 def write_failure(path: Path, summary: dict[str, Any]) -> None:
     command = " ".join(summary["command"])
     last = summary.get("last_error_record") or summary.get("last_stream_record") or {}
@@ -300,6 +305,7 @@ def main() -> int:
         proc = subprocess.run(
             command,
             cwd=str(output_dir),
+            stdin=subprocess.DEVNULL,
             stdout=stdout_fh,
             stderr=stderr_fh,
             check=False,
@@ -311,7 +317,9 @@ def main() -> int:
     last_stream_record = records[-1] if records else None
     last_error_record = error_records[-1] if error_records else None
     stderr_text = stderr_path.read_text(encoding="utf-8", errors="replace") if stderr_path.exists() else ""
+    stream_text = stream_path.read_text(encoding="utf-8", errors="replace") if stream_path.exists() else ""
     stderr_error = stderr_has_cli_error(stderr_text)
+    raw_mode_error = has_raw_mode_error(stderr_text, stream_text)
 
     expected = []
     for path in expected_artifact_paths:
@@ -333,6 +341,8 @@ def main() -> int:
         failure_reasons.append("nonzero_exit")
     if stderr_error:
         failure_reasons.append("stderr_cli_error")
+    if raw_mode_error:
+        failure_reasons.append("raw_mode_tty_error")
     if error_records:
         failure_reasons.append("stream_error")
     if not stream_path.exists() or stream_path.stat().st_size == 0:
@@ -342,6 +352,8 @@ def main() -> int:
 
     if "timeout" in failure_reasons:
         recommended = "Inspect run.stream.jsonl for partial progress, then rerun with a tighter prompt or larger timeout."
+    elif "raw_mode_tty_error" in failure_reasons:
+        recommended = "Gemini CLI attempted raw terminal mode in a noninteractive run; inspect run.stream.jsonl/run.err and let the caller materialize a blocked artifact."
     elif "stderr_cli_error" in failure_reasons:
         recommended = "Fix authentication, model, permission, trust, policy, quota, or rate-limit settings before rerunning."
     elif "missing_expected_artifact" in failure_reasons:
@@ -369,6 +381,7 @@ def main() -> int:
         "last_stream_record": last_stream_record,
         "last_error_record": last_error_record,
         "stderr_cli_error": stderr_error,
+        "raw_mode_tty_error": raw_mode_error,
         "expected_artifacts": expected,
         "success": not failure_reasons,
         "failure_reasons": failure_reasons,

@@ -24,7 +24,7 @@ Frame each delegation as an outcome-first contract: source prompt, expected arti
 Before running Gemini, make these decisions explicitly:
 
 - Task directory: choose `.context/<task>/`.
-- Source prompt: write `.context/<task>/prompt.md` with the outcome, artifact paths, success criteria, allowed side effects, evidence rules, and stop condition.
+- Source prompt: write `.context/<task>/prompt.md` with the outcome, artifact paths, success criteria, allowed side effects, evidence rules, and stop condition. If an expected artifact path is absolute, put that same absolute path in the source prompt; `--expected-artifact` only verifies materialization.
 - Working directory: pass `--cwd <project-root>` when the target repository matters. The wrapper records this as `target_cwd`, starts the Gemini process from the run output directory so hidden `.context` artifacts are readable by relative path, and includes the target directory with `--include-directories` unless the caller already supplied that flag.
 - Expected artifacts: pass every required output with `--expected-artifact`; relative paths resolve from `--output-dir`, so use absolute paths for artifacts that must be written outside `.context/<task>/`.
 - When `--output-dir .context/<task>` is used, pass `--expected-artifact result.md`, not `--expected-artifact .context/<task>/result.md`; the latter resolves under `.context/<task>/.context/<task>/`.
@@ -60,7 +60,7 @@ The wrapper writes:
 - `run.prompt.md`: launch prompt sent to Gemini, including any prompt profile adapter
 - `run.stream.jsonl`: Gemini stream-json stdout
 - `run.err`: stderr
-- `summary.json`: command, exit code, elapsed time, byte counts, parsed errors, prompt profile, `failure_reasons`, `recommended_next_action`, and `expected_artifacts`
+- `summary.json`: command, `target_cwd`, `process_cwd`, exit code, elapsed time, byte counts, parsed errors, prompt profile, `failure_reasons`, `recommended_next_action`, and `expected_artifacts`
 - `failure.md`: only when the wrapper run fails
 
 ## Prompt Profiles
@@ -87,12 +87,15 @@ Require all applicable checks:
 - Parsed stream-json records do not contain obvious error records.
 - `summary.json.success` is `true`, `summary.json.failure_reasons` is empty, and every item in `summary.json.expected_artifacts` has `exists=true` and `non_empty=true`.
 
+These checks prove runner execution and non-empty artifact materialization only. The caller must still evaluate task-specific artifact quality against the source prompt.
+
 ## Failure Criteria
 
 Treat any of these as failure:
 
 - Timeout exit, normally exit code `124`.
 - Non-zero process exit.
+- `run.stream.jsonl` or `run.err` contains `setRawMode EIO` or `setRawMode EBADF`; treat this as `raw_mode_tty_error`, a noninteractive TTY failure, not as task output.
 - stderr contains fatal authentication, model resolution, permission, quota, trust, policy, or rate-limit errors. Non-empty stderr and CLI warnings alone are not failures when the process exits `0`, stream output is present, and expected artifacts are non-empty.
 - Parsed stream-json records contain obvious error records.
 - `run.stream.jsonl` is missing or empty.
@@ -106,9 +109,12 @@ On failure, inspect `.context/<task>/summary.json` first:
 - `elapsed_seconds`
 - `stream_bytes` and `stderr_bytes`
 - `failure_reasons`
+- `raw_mode_tty_error`
 - `last_error_record` or `last_stream_record`
 - `expected_artifacts`
 - `recommended_next_action`
+
+If a higher-level workflow needs a downstream blocked artifact, create it in the caller using that workflow's schema or template. Do not invent a downstream schema in this runner and do not modify runner evidence artifacts. If no caller schema was supplied, report the runner as blocked with links to `summary.json` and `failure.md` instead of fabricating an artifact format.
 
 The wrapper also writes `.context/<task>/failure.md` with:
 
@@ -126,12 +132,15 @@ Use these patterns when testing the wrapper itself without spending Gemini API b
 
 - For command-construction checks only, pass `--timeout-bin /usr/bin/true`. This bypasses Gemini entirely and should fail wrapper success checks because no stream-json output or expected artifact is produced.
 - For end-to-end wrapper success without API spend, create a small fake Gemini executable under `.context/<task>/bin/` and pass it with `--gemini-bin <path-to-fake-gemini>`. The fake CLI must write JSONL stdout and create the expected artifact.
+- Minimal fake behavior: exit `0`, print one non-error JSON object such as `{"type":"message","status":"ok"}`, and write the requested expected artifact such as `result.md`.
+- Use an absolute `--gemini-bin` path for fake CLIs unless you have verified the relative path resolves from the wrapper output directory; real Gemini runs execute with `process_cwd=--output-dir`.
 - Keep fake CLIs under `.context/<task>/bin/` and use them only in validation. Do not use `--gemini-bin` for real Gemini delegation.
 - Do not hand-edit `summary.json`, `run.stream.jsonl`, `run.err`, or `failure.md`. If a controlled test needs explanation, write a separate `notes.md`.
 
 ## Wrapper Notes
 
 - Resolve `<skill-dir>` from the location of this `SKILL.md`.
+- The wrapper passes `stdin=DEVNULL` to keep `gemini -p` on a noninteractive subprocess path.
 - Pass `--cwd <project-root>` when Gemini should work against a specific repository. The wrapper uses that as `target_cwd` and runs the process from the output directory for reliable `.context` prompt access.
 - Omit `--model` and `--approval-mode` by default so Gemini CLI uses its configured defaults.
 - Pass `--model <model>` and `--approval-mode <mode>` from the caller when a model registry, role, or task explicitly requires overrides.
