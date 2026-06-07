@@ -1,4 +1,4 @@
 interface:
   display_name: "Agent Orchestration Evaluator"
-  short_description: "Evaluate agent role resolution and delegation boundaries."
-  default_prompt: "Evaluate this repository's agent orchestration rules, model resolver, and skills for clear self vs subagent delegation boundaries."
+  short_description: "Evaluate agent delegation, fallbacks, and remediation boundaries."
+  default_prompt: "Evaluate this repository's agent orchestration rules, model resolver, skills, and error-bypass policies for clear self vs subagent delegation and permanent-remediation boundaries."

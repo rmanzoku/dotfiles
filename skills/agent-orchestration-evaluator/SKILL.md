@@ -1,6 +1,6 @@
 ---
 name: agent-orchestration-evaluator
-description: Evaluate and tune AI agent orchestration rules, model resolvers, skill role assignments, slash commands, and prompt harnesses so parent agents stay focused on orchestration while researcher/reviewer/worker roles are delegated to subagents or observable CLI runners. Use when asked to review or extract resolver semantics, Self-Elision, self vs subagent boundaries, multi-agent skill design, Claude/Codex/Gemini/Grok delegation, runner-skill migration, or agent workflow evaluator/tuning guidance across projects.
+description: Evaluate and tune AI agent orchestration rules, model resolvers, skill role assignments, slash commands, and prompt harnesses so parent agents stay focused on orchestration while researcher/reviewer/worker roles are delegated to subagents or observable CLI runners. Use when asked to review or extract resolver semantics, Self-Elision, self vs subagent boundaries, multi-agent skill design, Claude/Codex/Gemini/Grok delegation, runner-skill migration, error-bypass remediation policy, or agent workflow evaluator/tuning guidance across projects.
 ---
 
 # Agent Orchestration Evaluator
@@ -29,6 +29,7 @@ Use these terms consistently:
 | Self-Elision | Runtime optimization when a delegated role resolves to the same provider/model as the parent. Skip external CLI, but still delegate to a same-provider/model subagent. |
 | Runner skill | A wrapper skill for observable Claude / Codex / Gemini / Grok CLI or API-backed subprocess execution, stream logs, timeouts, expected artifacts, and failure reports. |
 | Resolver | Logic that maps role -> alias -> provider/model/config/execution mode. It should not become a raw command cookbook when runner skills exist. |
+| Bypass remediation review | A separate review triggered when the parent or a delegated worker bypasses an error in a way that may recur, skip validation, reduce reproducibility, or reveal missing setup, permissions, dependencies, docs, hooks, or skills. |
 
 ## Invariants
 
@@ -51,6 +52,8 @@ Flag or fix violations of these invariants:
 15. Review and finding roles should not filter findings by vague importance bars during the discovery phase. Prefer coverage-first finding prompts, then rank, dedupe, or verify in a separate role or phase.
 16. Tool-use policy should be explicit enough for required evidence gathering, but should not force fixed tool-call counts or stale progress scaffolds that fight newer model tool-triggering behavior.
 17. Long-running delegated work must leave enough artifacts, summaries, and failure reports for the parent orchestrator to recover after context compaction or a runner restart.
+18. Error bypasses must not silently become the accepted workflow. If a command, tool, environment, permission, dependency, or validation error is bypassed and recurrence, skipped validation, setup drift, or reproducibility risk remains, the workflow must trigger an explicit bypass remediation review.
+19. Bypass remediation review may be delegated to a subagent, reviewer, evaluator, or runner when available, but the parent orchestrator must verify the proposed permanent fix against repository code, configuration, docs, tests, and managed state boundaries before adopting it.
 
 ## Audit Workflow
 
@@ -74,6 +77,8 @@ Flag or fix violations of these invariants:
    - Look for skills that hard-code concrete model names, provider names, effort settings, timeout defaults, or CLI flags that should come from a resolver/registry or runner skill.
    - Look for code-review prompts that tell finding roles to report only high-severity, important, or certain issues before a separate ranking or verification phase.
    - Look for fixed tool-call quotas, forced progress checkpoints, or stale "always use tools" language that should be replaced by outcome/evidence-based tool guidance.
+   - Look for wording that tells agents to "find another way", "work around", "skip", "continue anyway", "ignore", or "use a fallback" after errors without defining when a bypass remediation review is required.
+   - Look for workflows where failed tests, missing tools, permission errors, dependency problems, authentication issues, broken hooks, or unavailable subagents/runners can be bypassed without recording the cause, validation gap, permanent-fix candidate, and owner.
 
 4. **Evaluate model and effort policy**
    - Check whether skills only name logical roles and resolver paths, not concrete model IDs.
@@ -88,6 +93,8 @@ Flag or fix violations of these invariants:
    - Check Claude, Codex, Gemini, and Grok roles for available runner skills before accepting raw `claude`, `codex`, `gemini`, `grok`, direct API, or ad hoc wrapper calls inside skill text.
    - Same-provider subagents should have a bounded responsibility and a clear return artifact or final report shape.
    - Long-running roles should write summaries, blocked-state reports, and expected artifacts in stable paths so compaction does not make the work unrecoverable.
+   - Bypass remediation reviews should classify the error cause, temporary bypass, permanent-remediation options, repo-managed changes, machine-local state, and verification plan.
+   - If the bypass review is delegated, check that the subagent or runner prompt forbids direct adoption of its proposal and requires the parent to verify against source-of-truth files.
 
 6. **Report or tune**
    - In `audit` mode, produce findings first with path references and recommended wording.
@@ -211,6 +218,23 @@ Use repository search before claiming a symbol is unused. Use web fetch only for
 
 Avoid stale scaffolds such as mandatory progress updates every N tool calls or unconditional tool use when the task can be completed directly.
 
+### Detect Silent Error Bypasses
+
+Flag workflow text that lets an agent bypass errors without a durable review path:
+
+```text
+Bad: If the command fails, use another method and continue.
+Good: If the command fails, use a temporary bypass only when it preserves validation. Trigger bypass remediation review when the failure may recur, skips validation, reveals missing setup, or lowers reproducibility.
+```
+
+Recommended remediation review contract:
+
+- Error cause and observed command/tool output summary.
+- Temporary bypass used and what validation it preserves or loses.
+- Permanent-fix candidates across repo-managed config/docs/hooks/skills and machine-local state.
+- Whether a subagent, reviewer, evaluator, or runner should investigate the permanent fix.
+- Verification required before adopting the fix.
+
 ### Delegated Prompt Contract
 
 Subagent or runner prompts should include:
@@ -267,4 +291,5 @@ Stop only when:
 - Dependent skills/prompts no longer contradict the canonical resolver.
 - Review/finding roles preserve discovery coverage before final filtering.
 - Long-running runner or subagent roles leave recoverable artifacts for compaction or restart.
+- Error bypasses that may recur, skip validation, or reduce reproducibility trigger an explicit bypass remediation review with cause, temporary bypass, permanent-fix candidates, ownership boundary, and verification plan.
 - Durable architectural changes are recorded in the target repo's ADR or equivalent long-lived documentation when the repo requires it.
