@@ -102,23 +102,19 @@ done
 
 ### `empirical-prompt-tuning`
 
-- upstream: [mizchi/chezmoi-dotfiles `dot_claude/skills/empirical-prompt-tuning/SKILL.md`](https://github.com/mizchi/chezmoi-dotfiles/blob/main/dot_claude%2Fskills%2Fempirical-prompt-tuning%2FSKILL.md)
+- upstream: [mizchi/skills `empirical-prompt-tuning`](https://github.com/mizchi/skills/tree/main/empirical-prompt-tuning)
 - status: installed globally for Claude Code and Codex
-- install mode: fetch upstream `SKILL.md`, stage it locally, then install with `gh skill --from-local`
-- reason: upstream repo is not a publisher-layout repo, so direct `gh skill install OWNER/REPO skill` is unavailable
-- update note: `gh skill update --dry-run empirical-prompt-tuning` currently reports missing GitHub metadata, so refresh by re-fetching and reinstalling
+- install mode: direct `gh skill install` from upstream GitHub repository
+- reason: upstream is now publisher-discoverable on GitHub, so direct external install is the standard path
+- update note: refresh by reinstalling from `mizchi/skills` with `--force`
 
 #### Claude Code / Codex refresh
 
 repo root で実行する。
 
 ```bash
-mkdir -p .context/skill-bootstrap/empirical-prompt-tuning/skills/empirical-prompt-tuning
-curl -L --fail --silent --show-error \
-  'https://raw.githubusercontent.com/mizchi/chezmoi-dotfiles/main/dot_claude/skills/empirical-prompt-tuning/SKILL.md' \
-  -o .context/skill-bootstrap/empirical-prompt-tuning/skills/empirical-prompt-tuning/SKILL.md
-gh skill install ./.context/skill-bootstrap/empirical-prompt-tuning empirical-prompt-tuning --from-local --agent claude-code --scope user --force
-gh skill install ./.context/skill-bootstrap/empirical-prompt-tuning empirical-prompt-tuning --from-local --agent codex --scope user --force
+gh skill install mizchi/skills empirical-prompt-tuning --agent claude-code --scope user --force
+gh skill install mizchi/skills empirical-prompt-tuning --agent codex --scope user --force
 ```
 
 ### `grill-me`
