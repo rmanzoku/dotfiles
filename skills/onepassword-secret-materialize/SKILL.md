@@ -38,6 +38,8 @@ Use this when the user says a file is ready and should be saved for other PCs.
    opmaterialize add <path>
    ```
 
+   `opmaterialize add` takes exactly one file path. Run one add command per file; passing multiple positional file paths is invalid and exits before contacting 1Password.
+
    If the deployed command is not available in the current shell, run the bundled script:
 
    ```bash
@@ -90,10 +92,13 @@ Use this when setting up a new machine or rehydrating ignored local config files
    opmaterialize restore --force
    ```
 
+If Codex's normal shell cannot complete 1Password app-integration prompts, or `op` reports `account is not signed in`, `promptError`, `authorization prompt dismissed`, or waits silently, use `$op-cli-runner` to execute `opmaterialize diff` or `opmaterialize restore` through one observable direct path. Do not add Terminal, GUI, or alternate shell fallbacks; report the classified failure and fix the underlying 1Password CLI/session issue.
+
 ## Troubleshooting
 
 - If `op` reports multiple accounts, use `OP_ACCOUNT=my.1password.com`.
 - If `op` requires authentication, let the user unlock/sign in to 1Password; do not ask them to paste secrets into chat.
+- If `opmaterialize` is missing or exits 127, use the bundled script path from the installed skill; do not classify missing wrapper as an auth failure.
 - If `Dotfiles Secrets` or `Secrets Manifest` is missing, create or ask the user to create it in 1Password rather than storing its content in git.
 - If a requested generated path is not ignored, update `.chezmoiignore` before registering the file.
 - If changing the managed script, README, ADR, `.chezmoiignore`, or deployed dotfiles, follow the repository `dotfile-update` workflow.
@@ -107,7 +112,7 @@ After editing the workflow implementation or docs, run:
 shellcheck skills/onepassword-secret-materialize/scripts/opmaterialize dot_local/bin/executable_opmaterialize dot_local/bin/executable_oprun
 git diff --check -- . ':(exclude).context'
 scripts/chezmoi-drift --check-ignore
-scripts/skill-quick-validate .claude/skills/onepassword-secret-materialize
+scripts/skill-quick-validate skills/onepassword-secret-materialize
 ```
 
 For behavior changes, use a fake `op` in `.context/` to test `diff`, `restore`, and `add` without touching live 1Password.

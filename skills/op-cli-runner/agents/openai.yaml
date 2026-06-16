@@ -1,0 +1,4 @@
+interface:
+  display_name: "OP CLI Runner"
+  short_description: "Run 1Password CLI directly with clear failures"
+  default_prompt: "Use $op-cli-runner to run an op or opmaterialize command with safe logging."

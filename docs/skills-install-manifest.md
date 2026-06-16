@@ -1,6 +1,6 @@
 ---
 title: "Skill Install Manifest"
-updated_at: 2026-06-09
+updated_at: 2026-06-16
 ---
 
 # Skill Install Manifest
@@ -31,6 +31,7 @@ gh skill install . copilot-cli-runner --from-local --agent claude-code --scope u
 gh skill install . agent-orchestration-evaluator --from-local --agent claude-code --scope user
 gh skill install . soundcore-minutes --from-local --agent claude-code --scope user
 gh skill install . ghq-repo-placement --from-local --agent claude-code --scope user
+gh skill install . op-cli-runner --from-local --agent claude-code --scope user
 gh skill install . onepassword-secret-materialize --from-local --agent claude-code --scope user
 gh skill install . handoff --from-local --agent claude-code --scope user
 gh skill install . git-branch-review --from-local --agent claude-code --scope user
@@ -52,6 +53,7 @@ gh skill install . gemini-cli-runner --from-local --agent codex --scope user
 gh skill install . copilot-cli-runner --from-local --agent codex --scope user
 gh skill install . soundcore-minutes --from-local --agent codex --scope user
 gh skill install . ghq-repo-placement --from-local --agent codex --scope user
+gh skill install . op-cli-runner --from-local --agent codex --scope user
 gh skill install . onepassword-secret-materialize --from-local --agent codex --scope user
 gh skill install . handoff --from-local --agent codex --scope user
 gh skill install . git-branch-review --from-local --agent codex --scope user
