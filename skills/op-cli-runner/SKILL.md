@@ -16,10 +16,10 @@ If `op whoami`, `op vault list`, or `opmaterialize diff` fails with `account is 
 ## Safety
 
 - Do not print secret values.
-- Do not run `op read`, `op item get --reveal`, or commands expected to write secret values to stdout unless the caller explicitly provides a secret-safe output path and reporting plan.
+- Do not run `op read`, `op item get --reveal`, or commands expected to write secret values to stdout. The wrapper rejects known stdout-secret forms before execution.
 - Prefer commands that write secrets directly to files, such as `op document get --out-file ...`, or workflows like `opmaterialize` that avoid printing secret contents.
 - Treat `op://...` references as sensitive operational material. The wrapper redacts them from metadata, but avoid passing them through command lines when a file or env-file handoff is available.
-- Save logs under `.context/<task>/`, not `/tmp`.
+- Save logs under `.context/<task>/`, not `/tmp`. The wrapper rejects `--output-dir` outside the command `--cwd` repository's `.context/` directory.
 
 ## Wrapper
 
@@ -35,8 +35,10 @@ python3 skills/op-cli-runner/scripts/run_op_cli.py \
 The wrapper writes:
 
 - `command.redacted.json`: command arguments with `op://...` references redacted
-- `run.log`: timestamped runner log and subprocess output
+- `run.log`: timestamped runner log and redacted subprocess output
 - `summary.json`: mode, cwd, command metadata, exit code, elapsed time, and failure classification
+
+Relative `--output-dir` values are resolved under `--cwd`, so `--cwd /repo --output-dir .context/task/op` writes to `/repo/.context/task/op`.
 
 ## Direct Execution
 
@@ -102,6 +104,7 @@ Classify failures from `summary.json.failure_kind`:
 - `auth_timeout`: the auth prompt did not complete before 1Password CLI timed out.
 - `signin_unverified`: `op signin` exited without error, but `op whoami` did not confirm a usable session.
 - `timeout`: command exceeded the wrapper timeout.
+- `rejected_secret_stdout`: command was not executed because it is known to print secret values to stdout.
 - `command_failed`: command exited non-zero without a known auth signature.
 - exit 127 from `opmaterialize`: wrapper missing or not on `PATH`; check wrapper availability before auth troubleshooting.
 

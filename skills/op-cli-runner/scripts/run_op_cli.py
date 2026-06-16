@@ -21,13 +21,28 @@ AUTH_SIGNATURES = [
     ("auth_timeout", re.compile(r"authorization timeout", re.I)),
 ]
 
+PRIVATE_KEY_PATTERN = re.compile(
+    r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----",
+    re.S,
+)
+KEY_VALUE_SECRET_PATTERN = re.compile(
+    r"(?i)\b(password|token|secret|api[_-]?key|client[_-]?secret|credential)\b\s*[:=]\s*[^\s'\"`\\]+"
+)
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def redact_text(text: str) -> str:
+    redacted = re.sub(r"op://[^\s'\"`]+", "op://REDACTED", text)
+    redacted = re.sub(r"OP_SESSION_[A-Z0-9_]+=[^\s'\"`\\]+", "OP_SESSION_REDACTED=REDACTED", redacted)
+    redacted = PRIVATE_KEY_PATTERN.sub("-----BEGIN PRIVATE KEY-----\nREDACTED\n-----END PRIVATE KEY-----", redacted)
+    return KEY_VALUE_SECRET_PATTERN.sub(lambda match: f"{match.group(1)}=REDACTED", redacted)
+
+
 def redact_arg(arg: str) -> str:
-    return re.sub(r"op://[^\s'\"`]+", "op://REDACTED", arg)
+    return redact_text(arg)
 
 
 def classify(text: str, exit_code: int | None, timed_out: bool) -> str | None:
@@ -50,8 +65,64 @@ def log_line(log_path: Path, message: str) -> None:
         fh.write(f"{utc_now()} {message}\n")
 
 
+def log_output(log_path: Path, output: str) -> None:
+    if not output:
+        return
+    safe_output = redact_text(output)
+    with log_path.open("a", encoding="utf-8") as fh:
+        fh.write(safe_output)
+        if not safe_output.endswith("\n"):
+            fh.write("\n")
+
+
+def command_name(command: list[str]) -> str:
+    if not command:
+        return ""
+    return Path(command[0]).name
+
+
+def command_rejection(command: list[str]) -> str | None:
+    name = command_name(command)
+    if name == "op":
+        has_out_file = "--out-file" in command or any(part.startswith("--out-file=") for part in command)
+        has_reveal = "--reveal" in command or any(part.startswith("--reveal=") for part in command)
+        if len(command) >= 2 and command[1] == "read":
+            return "op read prints secret values to stdout"
+        if len(command) >= 3 and command[1:3] == ["item", "get"] and has_reveal:
+            return "op item get --reveal can print secret values to stdout"
+        if len(command) >= 3 and command[1:3] == ["document", "get"] and not has_out_file:
+            return "op document get requires --out-file to avoid stdout secret output"
+        return None
+
+    if name in {"sh", "bash", "zsh"} and len(command) >= 3 and command[1] == "-c":
+        script = command[2]
+        if re.search(r"\bop\s+read\b", script):
+            return "shell command contains op read, which can print secret values to stdout"
+        if re.search(r"\bop\s+item\s+get\b[^\n;]*--reveal", script):
+            return "shell command contains op item get --reveal, which can print secret values to stdout"
+        if re.search(r"\bop\s+document\s+get\b", script) and "--out-file" not in script:
+            return "shell command contains op document get without --out-file"
+
+    return None
+
+
+def resolve_cwd(cwd: str) -> Path:
+    return Path(cwd).expanduser().resolve()
+
+
+def resolve_output_dir(output_dir: str, cwd: Path) -> Path:
+    out_dir = Path(output_dir).expanduser()
+    if not out_dir.is_absolute():
+        out_dir = cwd / out_dir
+    out_dir = out_dir.resolve(strict=False)
+    context_root = (cwd / ".context").resolve(strict=False)
+    if out_dir != context_root and context_root not in out_dir.parents:
+        raise ValueError(f"--output-dir must be inside {context_root}")
+    return out_dir
+
+
 def signin_account(command: list[str]) -> str | None:
-    if len(command) < 2 or Path(command[0]).name != "op" or command[1] != "signin":
+    if len(command) < 2 or command_name(command) != "op" or command[1] != "signin":
         return None
     for index, value in enumerate(command):
         if value == "--account" and index + 1 < len(command):
@@ -71,7 +142,7 @@ def verify_signin(args: argparse.Namespace, command: list[str], log_path: Path) 
     try:
         proc = subprocess.run(
             verify_command,
-            cwd=args.cwd,
+            cwd=args.cwd_path,
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -88,11 +159,7 @@ def verify_signin(args: argparse.Namespace, command: list[str], log_path: Path) 
         return True, None, f"{proc.stdout}\n{proc.stderr}"
 
     combined = f"{proc.stdout}\n{proc.stderr}"
-    if proc.stderr:
-        with log_path.open("a", encoding="utf-8") as fh:
-            fh.write(proc.stderr)
-            if not proc.stderr.endswith("\n"):
-                fh.write("\n")
+    log_output(log_path, proc.stderr)
     failure = classify(combined, proc.returncode, False) or "signin_unverified"
     log_line(log_path, f"[verify-failed] signin did not create a usable session failure_kind={failure}")
     return False, failure, combined
@@ -107,7 +174,7 @@ def run_direct(args: argparse.Namespace, command: list[str], out_dir: Path, log_
     try:
         proc = subprocess.run(
             command,
-            cwd=args.cwd,
+            cwd=args.cwd_path,
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -115,16 +182,8 @@ def run_direct(args: argparse.Namespace, command: list[str], out_dir: Path, log_
             check=False,
         )
         exit_code = proc.returncode
-        if proc.stdout:
-            with log_path.open("a", encoding="utf-8") as fh:
-                fh.write(proc.stdout)
-                if not proc.stdout.endswith("\n"):
-                    fh.write("\n")
-        if proc.stderr:
-            with log_path.open("a", encoding="utf-8") as fh:
-                fh.write(proc.stderr)
-                if not proc.stderr.endswith("\n"):
-                    fh.write("\n")
+        log_output(log_path, proc.stdout)
+        log_output(log_path, proc.stderr)
         combined = f"{proc.stdout}\n{proc.stderr}"
     except subprocess.TimeoutExpired as exc:
         timed_out = True
@@ -144,7 +203,7 @@ def run_direct(args: argparse.Namespace, command: list[str], out_dir: Path, log_
     log_line(log_path, f"[done] direct exit_code={exit_code} elapsed={elapsed}s failure_kind={failure_kind or 'none'}")
     return {
         "mode": "direct",
-        "cwd": str(Path(args.cwd).resolve()),
+        "cwd": str(args.cwd_path),
         "exit_code": exit_code,
         "elapsed_seconds": elapsed,
         "timed_out": timed_out,
@@ -168,12 +227,31 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
-    out_dir = Path(args.output_dir)
+    args.cwd_path = resolve_cwd(args.cwd)
+    try:
+        out_dir = resolve_output_dir(args.output_dir, args.cwd_path)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
     out_dir.mkdir(parents=True, exist_ok=True)
     log_path = out_dir / "run.log"
     redacted = [redact_arg(part) for part in args.command]
     (out_dir / "command.redacted.json").write_text(json.dumps(redacted, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    summary = run_direct(args, args.command, out_dir, log_path)
+
+    rejection = command_rejection(args.command)
+    if rejection:
+        log_line(log_path, f"[rejected] {rejection}")
+        summary = {
+            "mode": "direct",
+            "cwd": str(args.cwd_path),
+            "exit_code": 2,
+            "elapsed_seconds": 0,
+            "timed_out": False,
+            "failure_kind": "rejected_secret_stdout",
+            "rejection_reason": rejection,
+        }
+    else:
+        summary = run_direct(args, args.command, out_dir, log_path)
 
     summary.update(
         {
