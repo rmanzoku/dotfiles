@@ -1,0 +1,6 @@
+interface:
+  display_name: "AI Usage Coach"
+  short_description: "Coach AI work delegation with axis-level feedback"
+  default_prompt: "Use $ai-usage-coach to review my AI usage from a local session log and suggest teacher-style improvements."
+policy:
+  allow_implicit_invocation: false

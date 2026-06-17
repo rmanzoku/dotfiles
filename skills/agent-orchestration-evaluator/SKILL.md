@@ -30,6 +30,7 @@ Use these terms consistently:
 | Runner skill | A wrapper skill for observable Claude / Codex / Gemini / Grok CLI or API-backed subprocess execution, stream logs, timeouts, expected artifacts, and failure reports. |
 | Resolver | Logic that maps role -> alias -> provider/model/config/execution mode. It should not become a raw command cookbook when runner skills exist. |
 | Bypass remediation review | A separate review triggered when the parent or a delegated worker bypasses an error in a way that may recur, skip validation, reduce reproducibility, or reveal missing setup, permissions, dependencies, docs, hooks, or skills. |
+| Promotion candidate | A repeated orchestration failure or waste pattern that may deserve a durable home such as resolver policy, runner hardening, AGENTS guidance, a skill, a script, a test, or an evaluator backlog item. |
 
 ## Invariants
 
@@ -54,6 +55,7 @@ Flag or fix violations of these invariants:
 17. Long-running delegated work must leave enough artifacts, summaries, and failure reports for the parent orchestrator to recover after context compaction or a runner restart.
 18. Error bypasses must not silently become the accepted workflow. If a command, tool, environment, permission, dependency, or validation error is bypassed and recurrence, skipped validation, setup drift, or reproducibility risk remains, the workflow must trigger an explicit bypass remediation review.
 19. Bypass remediation review may be delegated to a subagent, reviewer, evaluator, or runner when available, but the parent orchestrator must verify the proposed permanent fix against repository code, configuration, docs, tests, and managed state boundaries before adopting it.
+20. Repeated fallback, subline execution, delegated-role confusion, or runner bypass observed in session history or an AI-usage coach report is evidence for an orchestration audit, not proof of an orchestration defect by itself.
 
 ## Audit Workflow
 
@@ -79,6 +81,7 @@ Flag or fix violations of these invariants:
    - Look for fixed tool-call quotas, forced progress checkpoints, or stale "always use tools" language that should be replaced by outcome/evidence-based tool guidance.
    - Look for wording that tells agents to "find another way", "work around", "skip", "continue anyway", "ignore", or "use a fallback" after errors without defining when a bypass remediation review is required.
    - Look for workflows where failed tests, missing tools, permission errors, dependency problems, authentication issues, broken hooks, or unavailable subagents/runners can be bypassed without recording the cause, validation gap, permanent-fix candidate, and owner.
+   - When a coach report, session audit, or structured usage report identifies repeated fallback or wasted subline execution, trace it back to resolver semantics, runner contracts, prompts, and docs before deciding whether the durable home is orchestration policy, a skill, a script, a test, or no promotion.
 
 4. **Evaluate model and effort policy**
    - Check whether skills only name logical roles and resolver paths, not concrete model IDs.
@@ -95,6 +98,7 @@ Flag or fix violations of these invariants:
    - Long-running roles should write summaries, blocked-state reports, and expected artifacts in stable paths so compaction does not make the work unrecoverable.
    - Bypass remediation reviews should classify the error cause, temporary bypass, permanent-remediation options, repo-managed changes, machine-local state, and verification plan.
    - If the bypass review is delegated, check that the subagent or runner prompt forbids direct adoption of its proposal and requires the parent to verify against source-of-truth files.
+   - Treat promotion candidates as review inputs. Require recurrence, friction, risk, portability, and future-value evidence before recommending a reusable orchestration rule or skill.
 
 6. **Report or tune**
    - In `audit` mode, produce findings first with path references and recommended wording.
