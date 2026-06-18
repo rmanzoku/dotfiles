@@ -20,6 +20,20 @@ The repository owns the generic tool and policy. 1Password owns the sensitive ma
 
 Do not print secret file contents. Do not add materialized files, manifest rows, VPN configs, API keys, tokens, private keys, or real `op://...` references to git.
 
+## Stable Invocation
+
+Before any live 1Password operation, verify the command path and authentication state without printing secret material:
+
+```bash
+command -v opmaterialize
+OP_ACCOUNT=my.1password.com op account get
+OP_ACCOUNT=my.1password.com op vault get "Dotfiles Secrets"
+```
+
+If `opmaterialize` is not on `PATH`, use the bundled script form shown below. If `op` is not authenticated from the current agent process, stop after the readiness probe and ask the user to unlock or sign in from their normal terminal; repeated AI-side permission approvals are not a stable recovery path.
+
+Run `opmaterialize add` for one file at a time. Do not pass multiple secret-backed files to one `add` invocation.
+
 ## Choose The Operation
 
 ### Save Or Register A Local Secret-Backed File
@@ -38,7 +52,7 @@ Use this when the user says a file is ready and should be saved for other PCs.
    opmaterialize add <path>
    ```
 
-   `opmaterialize add` takes exactly one file path. Run one add command per file; passing multiple positional file paths is invalid and exits before contacting 1Password.
+   Run one `add` command per file.
 
    If the deployed command is not available in the current shell, run the bundled script:
 
@@ -92,14 +106,13 @@ Use this when setting up a new machine or rehydrating ignored local config files
    opmaterialize restore --force
    ```
 
-If Codex's normal shell cannot complete 1Password app-integration prompts, or `op` reports `account is not signed in`, `promptError`, `authorization prompt dismissed`, or waits silently, use `$op-cli-runner` to execute `opmaterialize diff` or `opmaterialize restore` through one observable direct path. Do not add Terminal, GUI, or alternate shell fallbacks; report the classified failure and fix the underlying 1Password CLI/session issue.
-
 ## Troubleshooting
 
 - If `op` reports multiple accounts, use `OP_ACCOUNT=my.1password.com`.
-- If `op` requires authentication, let the user unlock/sign in to 1Password; do not ask them to paste secrets into chat.
-- If `opmaterialize` is missing or exits 127, use the bundled script path from the installed skill; do not classify missing wrapper as an auth failure.
+- If `op` requires authentication, let the user unlock/sign in to 1Password from their normal terminal; do not ask them to paste secrets into chat, and do not keep retrying AI-side permission prompts after the readiness probe still fails.
+- If `opmaterialize` exits `127` or the wrapper is not found, use the bundled script with `OP_ACCOUNT=my.1password.com` and `OP_DOTFILES_MATERIALIZE_VAULT="Dotfiles Secrets"`.
 - If `Dotfiles Secrets` or `Secrets Manifest` is missing, create or ask the user to create it in 1Password rather than storing its content in git.
+- If `opmaterialize add` fails after multiple positional paths, retry as separate one-file `add` invocations.
 - If a requested generated path is not ignored, update `.chezmoiignore` before registering the file.
 - If changing the managed script, README, ADR, `.chezmoiignore`, or deployed dotfiles, follow the repository `dotfile-update` workflow.
 - If changing this skill, follow `skill-creator` and run `scripts/skill-quick-validate`.

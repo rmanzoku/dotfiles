@@ -1,8 +1,6 @@
 ---
 name: opus-4-8-tuning
 description: "Audit and rewrite repository docs, skills, prompts, and agent harness scaffolding so they fit Claude Opus 4.8 behavior and API guidance: Opus 4.7 prompt compatibility, high effort default, xhigh coding/agentic starting point, adaptive thinking, unsupported sampling parameters, improved tool triggering, coverage-first code review harnesses, long-context and compaction recovery, fast mode, mid-conversation system messages, lower prompt-cache minimums, and refusal stop details. Use when the user wants to migrate or readiness-check prompts, AGENTS.md / CLAUDE.md / skill files, agent rules, or eval harnesses for Opus 4.8. Do not use for broad Claude SDK migrations or application feature rewrites beyond prompt, model, and orchestration guidance."
-metadata:
-  local-path: /Users/rmanzoku/.local/share/chezmoi/skills/opus-4-8-tuning
 ---
 
 # Opus 4.8 Tuning

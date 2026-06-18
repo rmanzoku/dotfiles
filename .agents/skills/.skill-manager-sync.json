@@ -5,7 +5,7 @@
     {
       "name": "dotfile-update",
       "target": "../../.claude/skills/dotfile-update",
-      "link": "/Users/rmanzoku/.local/share/chezmoi/.agents/skills/dotfile-update",
+      "link": "./dotfile-update",
       "source_type": "project_skill",
       "source_id": null
     }
