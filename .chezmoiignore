@@ -1,7 +1,10 @@
 # Repo-only files (not deployed to home)
+.context
+AGENTS.md
 Brewfile
 CLAUDE.md
 README.md
+docs
 setup.sh
 scripts
 skills

@@ -5,7 +5,7 @@ service_tier = "fast"
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
 
-notify = ["/Users/rmanzoku/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
+notify = ["{{ .chezmoi.homeDir }}/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
 
 [features]
 codex_hooks = true
@@ -17,19 +17,19 @@ goals = true
 command = "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64"
 args = [ "--app", "desktop" ]
 
-[projects."/Users/rmanzoku/conductor/repos"]
+[projects."{{ .chezmoi.homeDir }}/conductor/repos"]
 trust_level = "trusted"
 
-[projects."/Users/rmanzoku/ghq"]
+[projects."{{ .chezmoi.homeDir }}/ghq"]
 trust_level = "trusted"
 
-[projects."/Users/rmanzoku/.local/share/chezmoi"]
+[projects."{{ .chezmoi.homeDir }}/.local/share/chezmoi"]
 trust_level = "trusted"
 
-[projects."/Users/rmanzoku/conductor/repos/ow-management-v1"]
+[projects."{{ .chezmoi.homeDir }}/conductor/repos/ow-management-v1"]
 trust_level = "trusted"
 
-[projects."/Users/rmanzoku/conductor/repos/changer-all"]
+[projects."{{ .chezmoi.homeDir }}/conductor/repos/changer-all"]
 trust_level = "trusted"
 
 [plugins."github@openai-curated"]

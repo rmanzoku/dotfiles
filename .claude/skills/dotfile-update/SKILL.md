@@ -35,6 +35,7 @@ Step artifact:
 補足:
 - repo ローカルの `.claude/skills/` 配下の skill 追加・更新と、publisher source `skills/` 配下の配布 skill 追加・更新は `dotfile-update` ではなく `skill-creator` の責務として扱う。
 - source / target の対応で迷ったら `chezmoi target-path <source-path>` と `chezmoi source-path <target-path>` で確認する。
+- Git config のように公式 CLI がキー単位の更新を提供する構造化設定は、実機 target の変更にその CLI（例: `git config --global --unset-all` / `--add`）を優先し、chezmoi source は同じ意図の最小差分で追随させる。`chezmoi apply` が target 側の無関係なローカルドリフトを巻き込む場合は実行しない。
 - symlink を扱うときは、source で `symlink_` file を書いて target symlink を表現するのか、`chezmoi add --follow` で既存 symlink のリンク先実体を file として取り込むのかを先に区別する。
 - 恒久性のあるユーザー指示、再発しやすい運用判断、複数回参照しそうな手順が出たら、関連 docs、AI 別指示ファイル、必要な Skill への反映要否を同じターンで確認する。
 - `*.md` のドキュメントを更新した場合は、更新後にそのファイル全体を読み直し、重複した指示や矛盾した記述、ルール漏れが残っていないか確認し、必要なら同じターンで修正する。
@@ -55,7 +56,7 @@ Step artifact:
 | 設定カテゴリ | Claude | Codex | Qwen | Gemini |
 |---|---|---|---|---|
 | 指示ファイル | `dot_claude/CLAUDE.md` | `dot_codex/AGENTS.md` | `dot_qwen/QWEN.md` | `dot_gemini/GEMINI.md` |
-| クライアント設定 | `dot_claude/settings.json` | `dot_codex/private_config.toml` | `dot_qwen/settings.json` | `dot_gemini/settings.json` |
+| クライアント設定 | `dot_claude/settings.json` | `dot_codex/private_config.toml.tmpl` | `dot_qwen/settings.json` | `dot_gemini/settings.json.tmpl` |
 
 判断ルール:
 - 共通運用ルール、保存方針、Plan ルールのように AI 間でそろえるべき内容は、対応ファイルを確認して必要なら反映する。
