@@ -1,6 +1,6 @@
 ---
 name: ai-usage-coach
-description: Evaluate and coach a human's AI work-delegation practice across prompts, context scoping, skill use, tool/subagent selection, verification, failure/waste recovery, privacy, learning loops, structured session signals, underused capabilities, and routing from observed AI failures to prompt, docs, code, orchestration, tooling, workflow, or durable-instruction improvements. Use when asked to review Claude/Codex usage, repeated AI mistakes, prompt habits, AI session logs, skill usage patterns, repository-specific AI friction, cross-repository AI workflow patterns, reusable improvement candidates, weekly/monthly AI usage, or "how should I use AI better"; supports trusted-local raw-log review and shareable abstracted reports. Do not use for HR/personnel evaluation, personality assessment, repository-quality evaluation, final technical philosophy judgment, or ranking people against a teacher.
+description: Evaluate and coach a human's AI work-delegation practice across prompts, context scoping, skill use, tool/subagent selection, verification, failure/waste recovery, privacy, learning loops, structured session signals, underused capabilities, and routing from observed AI failures to prompt, docs, code, orchestration, tooling, workflow, or durable-instruction improvements. Use when asked to review Claude/Codex usage, repeated AI mistakes, prompt habits, AI session logs, skill usage patterns, repository-specific AI friction, cross-repository AI workflow patterns, FDE/field-engineering AI usage habits, reusable improvement candidates, weekly/monthly AI usage, or "how should I use AI better"; supports trusted-local raw-log review and shareable abstracted reports. Do not use for HR/personnel evaluation, personality assessment, repository-quality evaluation, customer requirement judgment, commercial judgment, final technical philosophy judgment, or ranking people against a teacher.
 ---
 
 # AI Usage Coach
@@ -8,6 +8,8 @@ description: Evaluate and coach a human's AI work-delegation practice across pro
 Evaluate how a human delegates work to AI and return axis-level coaching. Score behaviors, not people. Use the teacher profile to suggest "teacher moves"; do not score users by similarity to the teacher.
 
 This skill is a diagnostic and routing layer. It identifies why AI collaboration struggled and where the next improvement likely belongs. It does not replace repository evaluators, code review, documentation review, orchestration review, or final technical judgment.
+
+For FDE or field-engineering development, use this skill only to coach AI usage habits: whether customer context, unknowns, constraints, verification, handoff, privacy boundaries, and learning loops were represented well enough for AI collaboration. Do not judge whether the human correctly understood the customer's true requirement, commercial risk, stakeholder dynamics, or customer value; route those to a business/management review path when relevant.
 
 ## Mode Decision
 
@@ -47,11 +49,13 @@ If both lenses apply, report them separately. Do not let cross-repository patter
 
 3. **Score axes and repeated waste**
    - Read `references/rubric.md`.
-   - Score each axis 0-4.
+   - Score each axis 0-10.
    - Do not calculate a total score.
    - Prefer structured signals over transcript impressions: task outcome, aborted turns, tool errors, patch/apply results, repeated retries, validation commands, missing checks, artifacts created, and explicit user corrections.
    - Treat keyword counts, prompt length, tool count, and tone as secondary clues only.
    - Do not assign a score without evidence; if evidence is thin, mark confidence as `low` and narrow the recommendation.
+   - For `trusted-local` reports, include representative evidence examples when they make the diagnosis more human-readable: repo/workflow label, command class, failure shape, short paraphrased prompt intent, or a short redacted excerpt. Do not rely on aggregate counts alone when the user expects coaching.
+   - Use `medium` confidence for aggregate structured signals without representative examples. Use `high` only when structured signals are backed by sampled sessions, concrete examples, or artifact-level checks.
    - Explicitly identify repeated failures, repeated dead ends, and repeated manual recovery work that only live in memory or session history.
    - Classify each important failure under one or more improvement surfaces: `prompt`, `context`, `skill`, `orchestration`, `docs`, `code`, `tooling`, `workflow`, `durable instructions`, `local environment`, or `underused capability`.
    - Mark evidence as behavior-level unless `trusted-local` raw excerpts are explicitly useful.
@@ -63,8 +67,16 @@ If both lenses apply, report them separately. Do not let cross-repository patter
    - For architecture, tests, dependencies, implementation quality, security hygiene, or broad code health concerns, recommend `code-evaluator` or the repository's equivalent code review path.
    - If no public evaluator or repo-local review path is available, record that as a gap instead of naming a specific unavailable agent.
 
-5. **Synthesize cross-repository patterns when requested**
+5. **Route field/customer concerns**
+   - When the session is FDE-adjacent, score only the observed AI collaboration behavior.
+   - Treat customer requirement understanding, customer value, stakeholder expectation management, scope/contract risk, pricing, delivery responsibility, and adoption risk as outside this skill's scoring scope.
+   - If those concerns appear material, recommend a `business-management-review` or another visible repo/team-local review path. Do not assume a private business reviewer agent exists.
+   - Useful coach-level evidence includes whether the prompt separated customer facts from hypotheses, named unknowns and confirmation paths, preserved environment constraints, defined customer-facing acceptance checks, protected customer data, and converted field failures into handoff artifacts or durable improvements.
+
+6. **Synthesize cross-repository patterns when requested**
    - Cluster recurring failures across repositories by improvement surface, not by person or repository blame.
+   - Name the top hotspots before summarizing general trends. A hotspot is a repository, workflow label, command class, tool family, or recurring failure class that explains a material share of the waste.
+   - For each hotspot, include the observed signal, why it matters, the likely surface, the next owner or review path, and a concrete verification that would prove the next action helped.
    - Separate per-repository fixes from reusable improvements such as shared skills, runner hardening, global instructions, repo templates, checklists, scripts, or evaluator backlog items.
    - Mark whether each pattern is `single-repo`, `multi-repo`, or `global`.
    - Score reusable improvement candidates with the promotion rubric in `references/rubric.md`: recurrence, friction, risk, portability, and future value.
@@ -74,7 +86,7 @@ If both lenses apply, report them separately. Do not let cross-repository patter
    - Mark whether the candidate is `personal`, `repo-local`, or `public` before recommending where it should live.
    - Do not prescribe a universal repo standard from one repository's evidence.
 
-6. **Apply teacher moves**
+7. **Apply teacher moves**
    - Read `references/teacher-moves.md`.
    - Read `references/teacher-profile.md` and `references/teacher-patterns.md` when the user asks "teacher would do what?" or when recommending next behavior.
    - Read `references/teacher-archetypes.md` for period reviews or style classification.
@@ -82,13 +94,16 @@ If both lenses apply, report them separately. Do not let cross-repository patter
    - For the top 1-3 improvement axes, add "teacher would do this" guidance.
    - Make the move concrete enough to use in the next prompt or workflow.
 
-7. **Format output**
+8. **Format output**
    - Read `references/output-schema.md`.
+   - Write the report in the primary language of the reviewed session or artifact. If evidence spans multiple languages, use the user's latest request language. Keep fixed schema keys in English when using YAML.
+   - Translate human-facing headings, table labels, score labels, recommendation names, and narrative section names into the report language. Do not leave headings such as "Summary", "Top Hotspots", "Decision Summary", or "Teacher Focus" in English when writing Japanese.
    - Include `mode`, `lens`, `shareable`, input scope, evidence coverage, confidence, axis scores, priority improvements, improvement surfaces, promotion candidates, recommended review paths, teacher moves, and warnings.
-   - In period review, include recurring gaps, improved axes, and next focus.
-   - For cross-repository reviews, include cross-repo patterns, reusable improvement candidates, and per-repo follow-up candidates.
+   - In period review, lead with a decision-ready summary, top hotspots, recurring gaps, improved axes, concrete next actions, and next focus.
+   - For cross-repository reviews, include cross-repo patterns, reusable improvement candidates, per-repo follow-up candidates, and what not to change yet.
+   - Do not let axis scores, percentages, or generic prompt snippets be the main deliverable. They support the decision, but the report must answer what to do next, where, and how to verify it.
 
-8. **Run privacy scan**
+9. **Run privacy scan**
    - For any saved report, run `scripts/privacy_scan.py <path> --mode <mode>`.
    - In `shareable` and `teacher-pack`, privacy scan must pass before final delivery.
    - In `trusted-local`, still run the scan and report any warnings.
@@ -97,34 +112,44 @@ If both lenses apply, report them separately. Do not let cross-repository patter
 
 - Prefer behavior evidence: "success condition was missing", "verification command was absent", "skill was invoked after manual exploration".
 - Prefer artifact-backed and structured evidence over self-report: diffs, docs, tests, validation logs, task outcomes, tool outcomes, review comments, and redacted summaries.
+- In `trusted-local`, make evidence concrete enough to be useful: include small representative examples, command families, failure shapes, repo/workflow labels, or short redacted excerpts. Keep these examples local-only and mark the report `shareable: false`.
+- In `trusted-local`, use concrete repository or workflow labels when they are visible and not sensitive. Avoid vague labels such as "wallet app 系" or "workspace 系" when an actual repo label like `oasyswallet/changer-all` or a concrete sanitized workflow label is available.
+- In `shareable`, keep evidence behavior-level, but still include specific sanitized pattern descriptions such as "test command discovered after implementation" instead of only percentages.
 - No score without evidence. If an axis has insufficient evidence, leave it unscored or mark confidence as `low` instead of filling gaps with personality or intent guesses.
 - Treat repeated failures and repeated wasted work as first-class evidence. If the same failure, workaround, or investigation recurs, recommend promotion into docs, a skill, a script, or a reusable checklist.
 - Do not conclude that a repository is poorly documented, poorly architected, or poorly orchestrated solely from a session log. Report the observed friction and recommend the appropriate evaluator or review path.
+- Do not conclude that a user understood or missed the customer's true requirement solely from AI logs. Report whether the customer context, unknowns, constraints, and acceptance checks were made usable for AI collaboration.
 - In cross-repository reviews, do not flatten local context. Keep repository-specific evidence separate from cross-repo patterns.
 - In `trusted-local`, raw excerpts are allowed only when they materially improve coaching and are kept short.
 - Never include secrets, access tokens, emails, absolute paths, full prompt bodies, system prompts, or long JSON message bodies in final output.
 - If raw excerpt evidence conflicts with privacy, drop the excerpt and keep the behavior-level diagnosis.
+- Do not over-redact trusted-local reports into generic dashboards. Privacy protection should remove secrets and identifying raw content, not erase the concrete failure pattern needed for coaching.
 
 ## Output Principles
 
 - Do not evaluate personality, talent, seniority, or work ethic.
+- Do not evaluate FDE capability as a whole. Evaluate only AI usage habits that support FDE-like work.
 - Do not produce a total score or ranking.
 - Do not say "closer to teacher is better".
 - Do say "in this situation, the teacher move would be..."
 - Prioritize the next 1-3 actionable improvements over exhaustive critique.
 - Prefer routing language such as "docs review likely needed" or "orchestration review candidate" over final repository judgments.
+- Match the report prose language to the session or artifact language; do not switch to English just because schema examples are English.
+- In Japanese reports, prefer natural Japanese labels such as `要約`, `判断サマリー`, `主要な詰まりどころ`, `次にやること`, `まだ変えないこと`, `根拠の厚み`, and keep English only for tool names, skill names, commands, schema keys, and proper nouns.
 - Watch for anti-rationalization red flags: all axes scored high without evidence, vague action items, impressive AI output accepted without verification, repeated failures explained away as one-offs, or recommendations that cannot be checked in the next session.
+- For weekly, monthly, or cross-repository reviews, avoid anodyne dashboards. If a report does not name concrete hotspots, recommended durable homes, owner/review path, and verification checks, treat it as incomplete even when the metrics are accurate.
 
 ## Delegation Boundaries
 
 - Do not assume a specific reviewer agent exists, and do not require delegation to non-standard agents.
 - Do not make final technical philosophy or repository-quality judgments inside this skill.
+- Do not make final customer requirement, commercial, stakeholder, or customer-value judgments inside this skill.
 - When evidence suggests a repository-side issue, classify the suspected repo-side surface: `orchestration`, `docs`, `code`, `tooling`, `workflow`, or `durable instructions`. Keep behavior-side surfaces such as `prompt`, `context`, `skill`, `privacy`, or `underused capability` in the coaching report instead of routing them as repository defects.
 - Recommend the relevant public evaluator or repository-local review path when available; otherwise state the missing review path as a gap.
 
 ## References
 
-- `references/rubric.md`: scoring axes and 0-4 anchors.
+- `references/rubric.md`: scoring axes and 0-10 anchors.
 - `references/teacher-moves.md`: teacher-style interventions by weak axis.
 - `references/teacher-profile.md`: teacher-pack v0 principles and non-goals.
 - `references/teacher-baseline.md`: abstract local-log signal baseline; no raw excerpts.

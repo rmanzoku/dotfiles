@@ -13,14 +13,14 @@ Axis scores:
 ```yaml
 intent: 2
 scope: 2
-decomposition: 1
+decomposition: 2
 context: 2
-skill_use: 1
+skill_use: 2
 tool_agent_use: 2
 verification: 0
-recovery: 1
-privacy: 3
-learning_loop: 1
+recovery: 2
+privacy: 7
+learning_loop: 2
 ```
 
 Diagnosis:
@@ -49,16 +49,16 @@ Scenario:
 Axis scores:
 
 ```yaml
-intent: 4
-scope: 4
-decomposition: 4
-context: 3
-skill_use: 4
-tool_agent_use: 3
-verification: 3
-recovery: 3
-privacy: 4
-learning_loop: 4
+intent: 10
+scope: 10
+decomposition: 10
+context: 8
+skill_use: 10
+tool_agent_use: 8
+verification: 8
+recovery: 8
+privacy: 10
+learning_loop: 10
 ```
 
 Diagnosis:
@@ -84,16 +84,16 @@ Scenario:
 Axis scores:
 
 ```yaml
-intent: 3
-scope: 1
+intent: 7
+scope: 2
 decomposition: 0
-context: 2
-skill_use: 1
-tool_agent_use: 1
-verification: 1
+context: 5
+skill_use: 2
+tool_agent_use: 2
+verification: 2
 recovery: 0
-privacy: 2
-learning_loop: 1
+privacy: 5
+learning_loop: 2
 ```
 
 Diagnosis:

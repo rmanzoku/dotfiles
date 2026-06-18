@@ -9,6 +9,8 @@ Requirements:
 - Set `shareable: false`.
 - Save outputs under `.context/ai-usage-coach/<task>/` unless the user explicitly chooses another private path.
 - Raw excerpts must be short and necessary.
+- Include concrete local-only evidence examples when they materially improve coaching: repo/workflow labels, command classes, failure shapes, short paraphrases, or short redacted excerpts.
+- Do not reduce the report to aggregate counts when representative examples are available.
 - Run `scripts/privacy_scan.py` and report warnings.
 - Warn that the report must not be committed, published, or pasted into shared channels.
 
@@ -20,7 +22,9 @@ Requirements:
 
 - Set `shareable: true`.
 - Do not include raw prompt or response excerpts.
+- Do not include customer-identifying field details, contracts, private URLs, production incident details, or customer-specific business facts unless intentionally public and explicitly allowed.
 - Use behavior-level evidence only.
+- Still use specific sanitized pattern descriptions; do not rely only on aggregate percentages.
 - Run `scripts/privacy_scan.py --mode shareable`; failure blocks delivery.
 
 ## teacher-pack

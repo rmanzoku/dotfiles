@@ -21,7 +21,7 @@
 # Desktop 自動実行設定管理
 
 - Codex / Claude Desktop などの自動実行定義は、再現可能な宣言的設定だけを chezmoi 配下で管理すること
-- Codex Desktop の automation は `dot_codex/automations/<automation-id>/automation.toml` を正本とすること
+- Codex Desktop の automation は `dot_codex/automations/<automation-id>/automation.toml.tmpl` を正本とすること
 - 自動実行の `memory.md`、lock、jitter salt、highwatermark、実行ログ、セッション履歴、UUID ごとの task 実行状態は machine-local state として `.chezmoiignore` で管理対象外にすること
 - Claude Desktop / Claude Code の `~/.claude/tasks` は、安定した宣言的 schedule ではなく実行 state として扱い、明示的に管理対象へ昇格する根拠が確認できるまで chezmoi で管理しないこと
 - 新しい Desktop 自動実行設定を追加するときは、source / target の対応を確認し、secret・token・認証情報が含まれないことを点検してから git 管理へ追加すること
@@ -37,6 +37,8 @@
 - 長めの処理を実行するためにスクリプトを生成する場合、特にループで外部通信を伴う処理では、処理開始、各反復または定期間隔、リトライ、完了、失敗を標準出力へログ出力し、AI や利用者が停止と進行を判別できるようにすること
 - 長時間スクリプトの進捗ログには、対象件数、現在位置、処理対象 ID や URL の要約、経過時間、次の待機やリトライ予定など、秘密情報を含めずに再実行判断へ必要な情報を含めること
 - 長時間スクリプトのログは artifact gate と同じく観測可能性のための運用契約として扱い、静かな成功を前提にせず、hang や外部 API 待ちで無出力に見える実装を避けること
+- AI が作る script / skill では、特に外部接続を伴う処理について、主経路の失敗原因を隠す暗黙 fallback を追加しないこと。代替経路が必要な場合は、目的、発動条件、観測ログ、冪等性、再実行時の挙動、検証欠落、恒久対策レビューの要否を明示し、安定した代替経路は fallback ではなく主経路へ昇格すること。同じデータに対する複数 RPC / mirror / replica のように同等性と選択条件が明示された冗長 provider は、この禁止の例外として扱うこと
+- 汎用 CLI / tool error は、失敗扱いする前に意味で分類すること。`rg` の exit code 1 は原則「検索一致なし」として検索仮説・検索範囲・次に広げる範囲を見直し、`apply_patch` の context mismatch は対象範囲を再読してから最小差分を作り直し、`sed` / `rg` の missing path は `rg --files` 等で実在 path を確認し、`git` の conflict / dirty state はユーザー変更保護を優先し、format / typecheck / test failure は対象 file・error shape・再実行 command を固定してから続行すること
 - コマンド、ツール、環境、権限、依存関係、検証でエラーが出た場合は、一時的な迂回で作業継続してよいが、同種エラーの再発、検証省略、環境・設定・権限・依存関係の不備、再現性低下、次回も必要になりそうな手順がある場合は恒久対策レビューの対象として扱うこと
 - 恒久対策レビューでは、エラー原因、一時迂回、恒久対策候補、git 管理へ反映すべき設定・文書・hook・Skill、machine-local に留める state、検証方法を分けて整理すること
 - サブエージェントや runner を使える環境では、恒久対策レビューを必要に応じて別 agent / reviewer / evaluator に委譲してよいが、親 Agent は提案をそのまま採用せず、既存実装・設定・文書・テストへ戻って妥当性を確認すること

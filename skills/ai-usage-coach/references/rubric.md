@@ -1,8 +1,8 @@
 # Rubric
 
-Score each axis from 0 to 4. Do not sum these into a total score. Use the score to choose improvement priorities.
+Score each axis from 0 to 10. Do not sum these into a total score. Use the score to choose improvement priorities.
 
-| Axis | Measures | 0 | 2 | 4 |
+| Axis | Measures | 0 | 5 | 10 |
 |---|---|---|---|---|
 | Intent | Purpose, desired output, done condition | Vague request | Goal present but success condition weak | Outcome and completion criteria explicit |
 | Scope | Target, exclusions, constraints | Scope left implicit | Some boundaries stated | Target, non-targets, constraints clear |
@@ -25,17 +25,19 @@ Choose the top 1-3 improvement axes using:
 4. Safety risk, especially privacy and missing verification.
 5. Repeated waste: the same failure, workaround, or investigation has happened before.
 
+For period or cross-repository reviews, choose priorities from concrete hotspots, not from axis scores alone. A hotspot should name the repo/workflow/tool/error class and explain why it is more actionable than a general trend.
+
 ## Evidence Confidence
 
-Use confidence separately from the 0-4 axis score:
+Use confidence separately from the 0-10 axis score:
 
 | Confidence | Meaning |
 |---|---|
 | `low` | Evidence is sparse, self-reported, mostly textual, or lacks task/tool/verification outcomes. |
-| `medium` | Some structured evidence exists, but coverage is partial or one important source is missing. |
-| `high` | Scores are backed by multiple structured signals such as task outcomes, tool outcomes, artifacts, tests, validation logs, or explicit corrections. |
+| `medium` | Structured aggregate evidence exists, but representative examples, artifact checks, or one important source are missing. |
+| `high` | Scores are backed by multiple structured signals plus sampled representative examples or artifact-level checks such as task outcomes, tool outcomes, tests, validation logs, or explicit corrections. |
 
-No score without evidence. If an axis cannot be supported by evidence, mark it unscored or `low` confidence instead of inferring intent, talent, seniority, or personality.
+No score without evidence. If an axis cannot be supported by evidence, mark it unscored or `low` confidence instead of inferring intent, talent, seniority, or personality. Do not mark a broad period review `high` confidence from aggregate counts alone.
 
 ## Promotion Candidate Score
 
@@ -69,6 +71,7 @@ Also mark direction:
 ## Interpretation Rules
 
 - Score observable behavior, not writing style.
+- In FDE-adjacent reviews, score only observable AI usage habits: customer facts vs hypotheses, unknowns, constraints, acceptance checks, verification, privacy boundaries, and learning-loop artifacts. Do not score customer understanding, customer value, stakeholder management, commercial judgment, or FDE capability as a whole from AI logs.
 - A short prompt can score high if it has enough intent, scope, and verification for the task.
 - A long prompt can score low if it mixes unrelated goals or lacks a testable done condition.
 - A session with eventual success can still score low on `Recovery` or `Learning Loop` if the route wasted time and left no durable prevention.
@@ -77,3 +80,5 @@ Also mark direction:
 - For cross-repository-lens reviews, prioritize recurring pattern clusters and reusable improvements, while preserving per-repository exceptions.
 - If evidence is thin, mark confidence as `low` and recommend a smaller follow-up review.
 - Treat underused capabilities as improvement candidates only when evidence shows they would have reduced repeated work, improved verification, or avoided unnecessary fallback paths.
+- A report with plausible scores but no concrete hotspot, owner/review path, and verification is low actionability even if its evidence confidence is medium or high.
+- A report with only aggregate counts should usually stay at `medium` confidence. Raise to `high` only after sampling representative examples or checking artifacts behind the count.
