@@ -23,6 +23,7 @@ brew "rbenv"
 brew "ripgrep"
 brew "shellcheck"
 brew "tmux"
+brew "vercel-cli"
 brew "xcodegen"
 brew "hashicorp/tap/terraform", link: false
 brew "wix/brew/applesimutils"
