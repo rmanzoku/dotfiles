@@ -1,0 +1,4 @@
+interface:
+  display_name: "DADS Design"
+  short_description: "Apply Digital Agency design tokens"
+  default_prompt: "Use $dads-design to apply Digital Agency Design System tokens, accessibility rules, and licensing guidance to this design."
