@@ -31,6 +31,8 @@
 - サブエージェントや runner を使える環境では、恒久対策レビューを必要に応じて別 agent / reviewer / evaluator に委譲してよいが、親 Agent は提案をそのまま採用せず、既存実装・設定・文書・テストへ戻って妥当性を確認すること
 - 複数モデルの使い分け自体を目的にせず、調査、レビュー、設計評価、事業判断、秘書的整理など明確な役割へ切り出せる作業では、必要に応じて role-appropriate なサブエージェント、custom agent、または runner を積極的に使うこと
 - サブエージェントや custom agent へ委譲するときは、親 Agent が目的、背景、対象範囲、制約、許可する副作用、期待成果物、検証方法を明示し、最終判断・統合・ユーザーへの報告責任を保持すること
+- 外部 CLI / MCP / runner / Skill の詳細な運用ルールは、作業中リポジトリに正規 docs / Skill がある場合はそちらを優先すること
+- 新しい永続的な Skill / Runner / wrapper を作る前に、既存 docs / Skill / wrapper / runner adapter で足りるか確認すること
 - Phase / Step を持つ作業では、各 Phase / Step の完了前に `.context/` 配下へ中間成果物 artifact を保存すること
 - 次の Phase / Step へ進む条件は、対応する artifact の生成とすること
 - 口頭合意、推論上の完了宣言、Memory 内だけの状態遷移で Phase / Step を進めてはならない

@@ -18,6 +18,10 @@ skills
 .config/op/materialize.tsv
 .config/op/injected
 .config/op/injected/**
+.config/gws
+.config/gws/**
+.config/freee-mcp
+.config/freee-mcp/**
 .config/**/*.env
 .config/**/*.conf
 .config/**/*.p8

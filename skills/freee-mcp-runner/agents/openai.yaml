@@ -1,0 +1,4 @@
+interface:
+  display_name: "freee MCP Runner"
+  short_description: "Run freee MCP with scoped OAuth"
+  default_prompt: "Use $freee-mcp-runner to run or configure a freee MCP server with the correct account-scoped profile."

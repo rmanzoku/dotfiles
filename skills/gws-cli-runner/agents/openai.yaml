@@ -1,0 +1,4 @@
+interface:
+  display_name: "GWS CLI Runner"
+  short_description: "Run gws with account-scoped OAuth"
+  default_prompt: "Use $gws-cli-runner to run a Google Workspace CLI task with the correct account-scoped profile."

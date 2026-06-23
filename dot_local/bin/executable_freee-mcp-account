@@ -1,0 +1,104 @@
+#!/bin/sh
+set -eu
+
+FREEE_MCP_PACKAGE="${FREEE_MCP_PACKAGE:-freee-mcp@0.30.1}"
+
+usage() {
+  cat >&2 <<'EOF'
+usage: freee-mcp-account <profile> <command>
+
+The profile name is local/account-specific state and is not defined by this
+repository.
+
+commands:
+  configure       run local freee-mcp OAuth setup for the profile
+  server          run local freee-mcp server for the profile
+  sign-configure  run local freee-sign-mcp OAuth setup for the profile
+  sign-server     run local freee-sign-mcp server for the profile
+  path            print the profile XDG config root
+
+examples:
+  freee-mcp-account <profile> configure
+  freee-mcp-account <profile> server
+EOF
+}
+
+if [ "$#" -lt 2 ]; then
+  usage
+  exit 64
+fi
+
+profile_name="$1"
+command_name="$2"
+shift 2
+
+case "$profile_name" in
+  -h|--help|help)
+    usage
+    exit 0
+    ;;
+esac
+
+case "$profile_name" in
+  *[!A-Za-z0-9._-]*|"")
+    printf '%s\n' "freee-mcp-account: invalid profile name" >&2
+    printf '%s\n' "allowed characters: A-Z a-z 0-9 . _ -" >&2
+    exit 64
+    ;;
+esac
+
+config_root="${FREEE_MCP_ACCOUNT_XDG_CONFIG_HOME:-$HOME/.config/freee-mcp/accounts/$profile_name/xdg}"
+profile_dir="$config_root/freee-mcp"
+
+case "$command_name" in
+  path)
+    printf '%s\n' "$profile_dir"
+    exit 0
+    ;;
+  configure|server|sign-configure|sign-server)
+    ;;
+  -h|--help|help)
+    usage
+    exit 0
+    ;;
+  *)
+    printf '%s\n' "freee-mcp-account: unknown command: $command_name" >&2
+    usage
+    exit 64
+    ;;
+esac
+
+if ! command -v npx >/dev/null 2>&1; then
+  printf '%s\n' "freee-mcp-account: npx is not installed or not in PATH" >&2
+  exit 127
+fi
+
+mkdir -p "$profile_dir"
+
+printf '%s\n' "freee-mcp-account: profile=$profile_name fallback=disabled" >&2
+printf '%s\n' "freee-mcp-account: config=$profile_dir" >&2
+
+export XDG_CONFIG_HOME="$config_root"
+
+case "$command_name" in
+  configure)
+    exec npx --yes --package="$FREEE_MCP_PACKAGE" -- freee-mcp configure "$@"
+    ;;
+  server)
+    if [ ! -r "$profile_dir/config.json" ]; then
+      printf '%s\n' "freee-mcp-account: missing config.json for '$profile_name'; run configure first" >&2
+      exit 66
+    fi
+    exec npx --yes --package="$FREEE_MCP_PACKAGE" -- freee-mcp "$@"
+    ;;
+  sign-configure)
+    exec npx --yes --package="$FREEE_MCP_PACKAGE" -- freee-sign-mcp configure "$@"
+    ;;
+  sign-server)
+    if [ ! -r "$profile_dir/sign-config.json" ]; then
+      printf '%s\n' "freee-mcp-account: missing sign-config.json for '$profile_name'; run sign-configure first" >&2
+      exit 66
+    fi
+    exec npx --yes --package="$FREEE_MCP_PACKAGE" -- freee-sign-mcp "$@"
+    ;;
+esac

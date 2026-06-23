@@ -1,6 +1,6 @@
 ---
 title: "Skill Install Manifest"
-updated_at: 2026-06-22
+updated_at: 2026-06-23
 ---
 
 # Skill Install Manifest
@@ -37,6 +37,8 @@ gh skill install . onepassword-secret-materialize --from-local --agent claude-co
 gh skill install . handoff --from-local --agent claude-code --scope user
 gh skill install . git-branch-review --from-local --agent claude-code --scope user
 gh skill install . dads-design --from-local --agent claude-code --scope user
+gh skill install . gws-cli-runner --from-local --agent claude-code --scope user
+gh skill install . freee-mcp-runner --from-local --agent claude-code --scope user
 ```
 
 ### Codex
@@ -61,6 +63,8 @@ gh skill install . onepassword-secret-materialize --from-local --agent codex --s
 gh skill install . handoff --from-local --agent codex --scope user
 gh skill install . git-branch-review --from-local --agent codex --scope user
 gh skill install . dads-design --from-local --agent codex --scope user
+gh skill install . gws-cli-runner --from-local --agent codex --scope user
+gh skill install . freee-mcp-runner --from-local --agent codex --scope user
 ```
 
 ## Third-party external skills

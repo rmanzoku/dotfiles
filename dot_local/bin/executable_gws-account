@@ -1,0 +1,96 @@
+#!/bin/sh
+set -eu
+
+usage() {
+  cat >&2 <<'EOF'
+usage: gws-account <profile> <gws args...>
+
+The profile name is local/account-specific state and is not defined by this
+repository.
+
+examples:
+  gws-account <profile> auth status
+  gws-account <profile> auth login
+  gws-account <profile> drive files list --params '{"pageSize": 5}'
+EOF
+}
+
+if [ "$#" -lt 2 ]; then
+  usage
+  exit 64
+fi
+
+profile_name="$1"
+shift
+
+case "$profile_name" in
+  -h|--help|help)
+    usage
+    exit 0
+    ;;
+esac
+
+case "$profile_name" in
+  *[!A-Za-z0-9._-]*|"")
+    printf '%s\n' "gws-account: invalid profile name" >&2
+    printf '%s\n' "allowed characters: A-Z a-z 0-9 . _ -" >&2
+    exit 64
+    ;;
+esac
+
+if ! command -v gws >/dev/null 2>&1; then
+  printf '%s\n' "gws-account: gws is not installed or not in PATH" >&2
+  exit 127
+fi
+
+config_dir="${GWS_ACCOUNT_CONFIG_DIR:-$HOME/.config/gws/accounts/$profile_name}"
+credentials_file="${GWS_ACCOUNT_CREDENTIALS_FILE:-}"
+allow_missing_credentials=false
+
+case "${1:-}" in
+  auth)
+    case "${2:-}" in
+      login|setup|status|logout|export|help|-h|--help|"")
+        allow_missing_credentials=true
+        ;;
+    esac
+    ;;
+  schema|help|-h|--help)
+    allow_missing_credentials=true
+    ;;
+esac
+
+if [ "${GOOGLE_WORKSPACE_CLI_TOKEN:-}" ]; then
+  printf '%s\n' "gws-account: refusing to run with GOOGLE_WORKSPACE_CLI_TOKEN set; it overrides the selected profile" >&2
+  exit 78
+fi
+
+if [ "${GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE:-}" ] && [ -z "$credentials_file" ]; then
+  printf '%s\n' "gws-account: refusing ambient GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE; pass GWS_ACCOUNT_CREDENTIALS_FILE explicitly" >&2
+  exit 78
+fi
+
+if [ "$allow_missing_credentials" = false ] &&
+   [ -z "$credentials_file" ] &&
+   [ ! -r "$config_dir/credentials.enc" ] &&
+   [ ! -r "$config_dir/credentials.json" ]; then
+  printf '%s\n' "gws-account: credentials are missing for profile '$profile_name'" >&2
+  printf '%s\n' "config dir: $config_dir" >&2
+  printf '%s\n' "run: gws-account $profile_name auth login" >&2
+  printf '%s\n' "fallback: disabled; another Google account is not a recovery path" >&2
+  exit 66
+fi
+
+mkdir -p "$config_dir"
+
+printf '%s\n' "gws-account: profile=$profile_name fallback=disabled" >&2
+
+export GOOGLE_WORKSPACE_CLI_CONFIG_DIR="$config_dir"
+unset GOOGLE_WORKSPACE_CLI_TOKEN
+if [ "$credentials_file" ]; then
+  export GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE="$credentials_file"
+else
+  unset GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE
+fi
+
+exec gws "$@"

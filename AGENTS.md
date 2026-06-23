@@ -59,6 +59,9 @@
 # スキル管理
 
 - 本リポジトリではリポジトリ専用の Claude Code 用スキル（`.claude/skills/`）も管理対象に含む
+- 新しい Skill / Runner / wrapper は、単なる便利化ではなく、再発する失敗パターン、secret / OAuth / account 境界、長時間実行の観測性、副作用リスクを扱う場合に限って追加すること
+- 追加前に、運用ルール、既存 wrapper の最終ガード、既存 runner の adapter / option で足りるか確認し、足りない理由を [docs/runner-skill-governance.md](docs/runner-skill-governance.md)、該当 Skill、または ADR に残すこと
+- グローバル配備される AI 指示ファイル（例: `dot_codex/AGENTS.md`）は薄く保ち、tool 固有・repo 固有の詳細な runner / Skill 作成判断は、この repo の `AGENTS.md`、`docs/`、または該当 Skill に置くこと
 - `.claude/skills/` 配下のファイルは repo ローカル用途とし、chezmoi でグローバル配備しない
 - 配布する repo オリジナル skill は publisher layout の `skills/` 配下を正本として git 管理すること
 - publisher layout の skill は `gh skill install --from-local <repo-root> <skill> --agent <agent> --scope user` を標準配備経路とし、chezmoi で `~/.claude/skills/` や `~/.codex/skills/` へ直接配備しないこと
