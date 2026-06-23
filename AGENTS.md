@@ -1,6 +1,9 @@
 # リポジトリ管理ルール
 
 - このリポジトリ（dotfiles）の管理責任は Codex が持つ
+- このリポジトリは元の利用者の環境を主対象としつつ、他者の初期設定や AI 運用ポリシー参照にも使われるため、個人・会社・案件・マシンに依存する値は git 管理の汎用層へ固定せず、環境変数、ignored private file、1Password-backed restore、または各作業リポジトリの責務へ分離すること
+- `tech`、`biz`、`personal` などの role agent は元利用者の判断スタイルや実務文脈を一部模倣する private agent として存在し得るが、利用不能時に AI が元利用者の private context を推測・模倣して補完してはならない
+- 他者が流用できる設定を追加・変更するときは、[docs/adopting-this-dotfiles.md](docs/adopting-this-dotfiles.md) のレイヤー分離に従い、owner 固有の既定値・secret-backed state・account profile 対応を差し替え可能にすること
 - `dot_*` 配下のファイルは chezmoi により環境へ配置される成果物として扱う
 - `dot_*` 配下の変更時は必ず `dotfile-update` スキルを使用すること
 - dotfile 変更前に [chezmoi-knowledge/SKILL.md](.claude/skills/chezmoi-knowledge/SKILL.md) と [semantics.md](.claude/skills/chezmoi-knowledge/references/semantics.md) を確認し、source / target / ignore の前提を外さないこと

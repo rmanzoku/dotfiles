@@ -3,13 +3,30 @@
 [chezmoi](https://www.chezmoi.io/) で管理する dotfiles。
 
 配布 skill の復元一覧は [docs/skills-install-manifest.md](docs/skills-install-manifest.md) を正本にします。
+ドキュメント全体の入口は [docs/README.md](docs/README.md) です。
+
+## このリポジトリの位置づけ
+
+このリポジトリは、第一義的には元の利用者の作業環境を復元・運用するための dotfiles です。
+一方で、他者が初期設定として流用したり、AI 運用の方針を参照したりするケースも想定しています。
+
+流用する場合は、汎用 dotfiles とオーナー固有の private state を分けて扱ってください。
+clone URL、workspace repo、1Password account / vault、private agent 定義、account profile 対応、secret reference は各利用者の環境で差し替える前提です。
+詳細は [docs/adopting-this-dotfiles.md](docs/adopting-this-dotfiles.md) を参照してください。
+
+この repo では `tech`、`biz`、`personal` のような role agent を使うことがあります。
+これらは元利用者の判断スタイルや実務文脈をある程度模倣する private agent であり、定義本体や facts は git には含めません。
+流用者は同じ名前を使っても、自分の文脈に合わせた agent 定義を用意してください。
 
 ## セットアップ (新しいマシン)
 
 git も Homebrew も入っていない完全に新しい Mac では、Terminal で以下を実行します。
 Homebrew の installer が必要に応じて Command Line Tools を要求します。
+fork して流用する場合は `DOTFILES_REPO_URL` を自分の repository に置き換えてください。
 
 ```bash
+DOTFILES_REPO_URL="https://github.com/<owner>/<dotfiles-repo>.git"
+
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && \
 if [ -x /opt/homebrew/bin/brew ]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
@@ -21,21 +38,22 @@ else
 fi && \
 brew install git chezmoi && \
 mkdir -p "$HOME/.local/share" && \
-git clone https://github.com/rmanzoku/dotfiles.git "$HOME/.local/share/chezmoi" && \
+git clone "$DOTFILES_REPO_URL" "$HOME/.local/share/chezmoi" && \
 chezmoi apply && \
-brew bundle --file="$HOME/.local/share/chezmoi/Brewfile" && \
-"$HOME/.local/share/chezmoi/scripts/bootstrap-workspace"
+brew bundle --file="$HOME/.local/share/chezmoi/Brewfile"
 ```
 
 既に Homebrew が入っている場合は、以下だけで復元できます。
 
 ```bash
+DOTFILES_REPO_URL="https://github.com/<owner>/<dotfiles-repo>.git"
+
 # git と chezmoi をインストール
 brew install git chezmoi
 
 # dotfiles repo を chezmoi の標準 source path に clone
 mkdir -p "$HOME/.local/share"
-git clone https://github.com/rmanzoku/dotfiles.git "$HOME/.local/share/chezmoi"
+git clone "$DOTFILES_REPO_URL" "$HOME/.local/share/chezmoi"
 
 # dotfiles を適用
 chezmoi apply
@@ -51,17 +69,31 @@ brew bundle --file="$HOME/.local/share/chezmoi/Brewfile"
 
 # 1Password にサインイン後、secret-backed file を復元
 opmaterialize restore
-
-# project に依存しない workspace repo を clone / pull
-"$HOME/.local/share/chezmoi/scripts/bootstrap-workspace"
 ```
 
 配布 skill と third-party external skill の復元は script を持たず、[docs/skills-install-manifest.md](docs/skills-install-manifest.md) に記録した `gh skill install` 一覧を使います。
 
-### サブエージェントの復元
+### オーナー向け workspace 復元
+
+`scripts/bootstrap-workspace` は元利用者向けの workspace repo を clone / fast-forward pull します。
+`ghq` が利用できる場合は `ghq root` 配下に `rmanzoku/workspace` を配置し、`ghq` がない場合は `~/workspace/github.com/rmanzoku/workspace` を fallback とします。
+流用者は、必要な場合だけ `WORKSPACE_REPO_URL`、`WORKSPACE_REPO_HOST_PATH`、`WORKSPACE_ROOT`、`WORKSPACE_TARGET` を明示して実行してください。
+
+```bash
+# owner default を使う場合のみ
+"$HOME/.local/share/chezmoi/scripts/bootstrap-workspace"
+
+# 流用者が自分の workspace repo を使う例
+WORKSPACE_REPO_URL="https://github.com/<owner>/<workspace-repo>.git" \
+WORKSPACE_REPO_HOST_PATH="github.com/<owner>/<workspace-repo>" \
+"$HOME/.local/share/chezmoi/scripts/bootstrap-workspace"
+```
+
+### サブエージェントの復元（オーナー向け）
 
 `personal` や `tech` などのサブエージェントは skill ではなく、Claude Code / Codex の private agent 定義として管理します。
 定義ファイルや private secretary の facts / assets は git に入れず、1Password の `Secrets Manifest` から `opmaterialize restore` で復元します。
+この手順は元利用者の private state を復元するためのものです。流用者は自分の agent 定義と fact store を用意してください。
 
 新しいマシンでは 1Password にサインインして `opmaterialize restore` を実行した後、サブエージェント関連 target を再 apply します。
 
@@ -87,11 +119,6 @@ test -r ~/.config/private-secretary/facts.jsonl
 ```
 
 更新手順と source / target 対応は [docs/adr/0039-restore-private-agent-definitions-from-1password.md](docs/adr/0039-restore-private-agent-definitions-from-1password.md) を参照してください。
-
-`scripts/bootstrap-workspace` は `ghq` が利用できる場合は `ghq root` 配下に
-`rmanzoku/workspace` を clone / fast-forward pull します。
-`ghq` がない場合は `~/workspace/github.com/rmanzoku/workspace` を fallback とします。
-古い Conductor 配下の clone は移行期間の互換として残し、新規 bootstrap の標準にはしません。
 
 ## 日常の操作
 
