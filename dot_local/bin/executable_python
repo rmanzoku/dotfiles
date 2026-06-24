@@ -1,2 +1,6 @@
 #!/bin/sh
+if [ -x /opt/homebrew/bin/python3 ]; then
+  exec /opt/homebrew/bin/python3 "$@"
+fi
+
 exec /usr/bin/python3 "$@"
