@@ -49,6 +49,20 @@ Execute the source prompt literally and completely.
 """
 
 
+def normalize_argv(argv: list[str]) -> list[str]:
+    normalized: list[str] = []
+    index = 0
+    while index < len(argv):
+        token = argv[index]
+        if token == "--extra-claude-arg" and index + 1 < len(argv):
+            normalized.append(f"--extra-claude-arg={argv[index + 1]}")
+            index += 2
+            continue
+        normalized.append(token)
+        index += 1
+    return normalized
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run claude -p with stream-json output, timeout, optional budget, and artifact checks."
@@ -95,6 +109,17 @@ def parse_args() -> argparse.Namespace:
         help="Claude CLI binary to execute. Use the default for real runs; pass a fake CLI only for no-API tests.",
     )
     parser.add_argument(
+        "--permission-mode",
+        default=None,
+        help="Claude permission mode override. Omit to use the Claude CLI configured default.",
+    )
+    parser.add_argument(
+        "--safe-mode",
+        action="store_true",
+        default=False,
+        help="Pass Claude CLI --safe-mode. Omit to use the Claude CLI configured default customizations.",
+    )
+    parser.add_argument(
         "--extra-claude-arg",
         action="append",
         default=[],
@@ -106,7 +131,7 @@ def parse_args() -> argparse.Namespace:
         default="auto",
         help="Prompt adapter profile. Auto applies an Opus adapter for explicit opus-4.7 or opus-4.8 models.",
     )
-    return parser.parse_args()
+    return parser.parse_args(normalize_argv(sys.argv[1:]))
 
 
 def resolve_timeout_bin(explicit: str | None) -> str:
@@ -265,13 +290,15 @@ def main() -> int:
         str(args.timeout_seconds),
         args.claude_bin,
         "-p",
-        "--permission-mode",
-        "bypassPermissions",
         "--verbose",
         "--output-format",
         "stream-json",
         "--include-partial-messages",
     ]
+    if args.permission_mode:
+        command.extend(["--permission-mode", args.permission_mode])
+    if args.safe_mode:
+        command.append("--safe-mode")
     if args.budget_usd:
         command.extend(["--max-budget-usd", str(args.budget_usd)])
     if args.model:
@@ -330,12 +357,16 @@ def main() -> int:
         recommended = "Fix authentication, model, permission, quota, or rate-limit settings before rerunning."
     elif "missing_expected_artifact" in failure_reasons:
         recommended = "Check the prompt artifact path contract and rerun with an explicit expected output path."
+    elif not failure_reasons:
+        recommended = "Run succeeded; evaluate task-specific artifact quality against the source prompt."
     else:
         recommended = "Inspect run.stream.jsonl and run.err, then rerun with adjusted prompt, model, optional budget, or timeout."
 
     summary = {
         "command": command,
         "claude_bin": args.claude_bin,
+        "permission_mode": args.permission_mode,
+        "safe_mode": args.safe_mode,
         "cwd": str(cwd),
         "prompt_file": str(prompt_file),
         "launch_prompt_path": str(launch_prompt_path),

@@ -7,7 +7,7 @@ description: Run Gemini CLI subprocesses with observable stream-json logs, timeo
 
 Use this skill when delegating work to Gemini CLI through non-interactive `gemini -p`. Keep the source prompt, launch prompt, stream-json output, stderr, summary, and failure notes under `.context/<task>/`.
 
-Frame each delegation as an outcome-first contract: source prompt, expected artifacts, timeout, success criteria, allowed side effects, evidence rules, output shape, and failure handling. Let caller-provided model, approval mode, Gemini config, and explicit extra args control model selection and permission policy.
+Frame each delegation as an outcome-first contract: source prompt, expected artifacts, timeout, success criteria, allowed side effects, evidence rules, output shape, and failure handling. Let caller-provided model, approval mode, Gemini config/profile, and explicit extra args control model selection and permission policy.
 
 ## Core Rules
 
@@ -16,7 +16,7 @@ Frame each delegation as an outcome-first contract: source prompt, expected arti
 - Save the real assignment as `.context/<task>/prompt.md`.
 - Do not pass a large prompt body as an inline shell argument. The wrapper embeds the source prompt inside `.context/<task>/run.prompt.md`, starts Gemini from that output directory, and passes only a short instruction to read `./run.prompt.md`.
 - Use the wrapper's 600-second timeout default, or pass an explicit timeout override when the task needs a shorter or longer limit.
-- Do not force `--sandbox`, `--yolo`, `--approval-mode`, trust, policy, or tool flags by default. Let Gemini config decide unless the caller explicitly requests an override.
+- Do not force `--sandbox`, `--yolo`, `--approval-mode`, trust, policy, or tool flags by default. The caller owns gate enforcement; this runner preserves observability and lets Gemini config/profile decide unless the caller explicitly requests an override.
 - Do not treat 0-byte `run.stream.jsonl` or `run.err` as a hang by itself.
 
 ## Caller Checklist
@@ -75,7 +75,7 @@ Default behavior:
 - `--prompt-profile gemini` forces the Gemini adapter.
 - `--prompt-profile none` suppresses prompt adaptation.
 
-The Gemini adapter is short and outcome-first. It tells Gemini to execute the embedded source prompt literally, write requested artifacts exactly where specified, preserve absolute artifact paths, avoid side effects outside those artifacts unless explicitly allowed, avoid unavailable shell tools such as `run_shell_command`, keep output concise unless the source prompt asks otherwise, and stop when the source contract is complete or blocked.
+The Gemini adapter is short and outcome-first. It tells Gemini to execute the embedded source prompt literally, write requested artifacts exactly where specified, preserve absolute artifact paths, avoid side effects outside those artifacts unless explicitly allowed, use tools available under the caller's Gemini CLI config/profile when needed, keep output concise unless the source prompt asks otherwise, and stop when the source contract is complete or blocked.
 
 ## Success Criteria
 

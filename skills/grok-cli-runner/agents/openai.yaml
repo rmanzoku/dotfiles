@@ -1,4 +1,4 @@
 interface:
   display_name: "Grok CLI Runner"
-  short_description: "Call Grok and inspect X URLs"
-  default_prompt: "Use $grok-cli-runner to run a Grok handoff through Homebrew-managed Hermes/SuperGrok OAuth by default, preserving request/response artifacts, direct X Search engagement artifacts, timeout guards, and failure summaries."
+  short_description: "Run Grok Build headlessly"
+  default_prompt: "Use $grok-cli-runner to run a Grok Build CLI headless handoff through a file-based request artifact, including public X/Twitter retrieval when requested, preserving response, summary, stderr, timeout, dry-run, and failure artifacts under .context/<task>/."

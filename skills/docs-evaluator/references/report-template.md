@@ -76,6 +76,11 @@ sections that apply.
 - Boundary violations:
 - Canonical claim conflicts:
 
+## Policy Contamination
+
+| Priority | Location | Classification | Evidence | Impact | Recommendation | Confidence |
+| --- | --- | --- | --- | --- | --- | --- |
+
 ## Instruction Strength Drift
 
 | Topic | Stronger Wording | Weaker Wording | Risk | Recommendation |

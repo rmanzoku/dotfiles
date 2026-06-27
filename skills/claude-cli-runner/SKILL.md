@@ -14,7 +14,7 @@ Use this skill to invoke Claude Code CLI from Codex without losing observability
 - When a workflow previously said "run Claude via resolver", resolve the requested Claude model/effort if needed, then execute Claude through this skill and its wrapper.
 - Let the calling workflow decide whether this skill is run directly or through a subagent. For example, the `research` skill may require Codex to delegate researcher roles to subagents; that policy belongs to `research`, not here.
 
-Frame each delegation as an outcome-first contract: source prompt, expected artifacts, timeout, success criteria, allowed side effects, and failure handling. Let caller-provided model and effort settings do model selection; do not encode model behavior with magic words in the source prompt.
+Frame each delegation as an outcome-first contract: source prompt, expected artifacts, timeout, success criteria, allowed side effects, and failure handling. Let caller-provided model, effort, permission mode, Claude config, and profile settings control model selection and tool policy; do not encode model behavior with magic words in the source prompt.
 
 ## Core Rules
 
@@ -24,6 +24,7 @@ Frame each delegation as an outcome-first contract: source prompt, expected arti
 - Do not pass a large prompt body as an inline shell argument. Pass a short instruction that tells Claude to read the prompt file.
 - Use the wrapper's 600-second timeout default, or pass an explicit timeout override when the task needs a shorter or longer limit.
 - For research tasks, explicitly limit WebSearch/WebFetch counts, timeout, and output lines in the prompt.
+- Do not force Claude `--permission-mode`, `--safe-mode`, tool, MCP, hook, plugin, or skill settings by default. The caller owns gate enforcement; this runner preserves observability and lets Claude CLI config/profile decide unless the caller explicitly requests an override.
 - Do not treat `stdout` or `stderr` being 0 bytes as a hang by itself.
 
 ## Caller Checklist
@@ -35,6 +36,7 @@ Before running Claude, make these decisions explicitly:
 - Working directory: pass `--cwd <project-root>` when the target repository matters.
 - Expected artifacts: pass every required output with `--expected-artifact`; relative paths resolve from `--output-dir`, so use absolute paths for artifacts that must be written outside `.context/<task>/`.
 - When `--output-dir .context/<task>` is used, pass `--expected-artifact result.md`, not `--expected-artifact .context/<task>/result.md`; the latter resolves under `.context/<task>/.context/<task>/`.
+- Defaults: omit `--model`, `--effort`, `--permission-mode`, and `--safe-mode` unless the caller, model registry, role, or task explicitly requires an override.
 - Timeout and budget: rely on the 600-second timeout default and omit `--budget-usd` unless the caller explicitly needs a budget guard.
 
 ## Standard Command Shape
@@ -42,10 +44,10 @@ Before running Claude, make these decisions explicitly:
 Use this form, with `<prompt>` kept short and pointing to the prompt file:
 
 ```bash
-timeout 600 claude -p --permission-mode bypassPermissions --verbose --output-format stream-json --include-partial-messages "<prompt>" > <artifact>.stream.jsonl 2> <artifact>.err
+timeout 600 claude -p --verbose --output-format stream-json --include-partial-messages "<prompt>" > <artifact>.stream.jsonl 2> <artifact>.err
 ```
 
-Add `--model <model>` and/or `--effort <level>` only when the caller wants to override the Claude CLI configured defaults.
+Add `--model <model>`, `--effort <level>`, `--permission-mode <mode>`, or `--safe-mode` only when the caller wants to override the Claude CLI configured defaults.
 
 For repeatable runs, prefer the bundled wrapper:
 
@@ -56,7 +58,18 @@ python3 <skill-dir>/scripts/run_claude_cli.py \
   --expected-artifact <expected-file>
 ```
 
-Add `--model <model>` or `--effort <low|medium|high|xhigh|max>` to the wrapper only when overriding the CLI defaults.
+For Claude CLI pass-through options, repeat `--extra-claude-arg` once per Claude argv token:
+
+```bash
+python3 <skill-dir>/scripts/run_claude_cli.py \
+  --prompt-file .context/<task>/prompt.md \
+  --output-dir .context/<task> \
+  --expected-artifact result.md \
+  --extra-claude-arg --tools \
+  --extra-claude-arg WebSearch,WebFetch,Read,Write
+```
+
+Add `--model <model>`, `--effort <low|medium|high|xhigh|max>`, `--permission-mode <mode>`, or `--safe-mode` to the wrapper only when overriding the CLI defaults.
 Add `--timeout-seconds <seconds>` only when overriding the 600-second default.
 Add `--budget-usd <amount>` only when an explicit API budget guard is required. Omit it for subscription-based Claude CLI usage.
 
@@ -65,7 +78,7 @@ The wrapper writes:
 - `run.prompt.md`: launch prompt sent to Claude, including any model-specific adapter
 - `run.stream.jsonl`: Claude stream-json stdout
 - `run.err`: stderr
-- `summary.json`: command, resolved `cwd`, exit code, elapsed time, byte counts, parsed result/error status, and artifact checks
+- `summary.json`: command, resolved `cwd`, permission-mode override, safe-mode override, exit code, elapsed time, byte counts, parsed result/error status, and artifact checks
 - `failure.md`: only when the run fails
 
 ## Prompt Profiles
@@ -139,11 +152,12 @@ For Claude researcher roles, include:
 - Resolve `<skill-dir>` from the location of this `SKILL.md`.
 - Pass `--cwd <project-root>` when Claude should run from a specific repository.
 - `summary.json.cwd` records the resolved `--cwd`; the shell directory that launched the wrapper is not recorded as a separate field.
-- Omit `--model` and `--effort` by default so Claude CLI uses its configured defaults.
-- Pass `--model <model>` and `--effort <level>` from the caller when a model registry, role, or task explicitly requires overrides.
+- Omit `--model`, `--effort`, `--permission-mode`, and `--safe-mode` by default so Claude CLI uses its configured defaults.
+- Pass `--model <model>`, `--effort <level>`, `--permission-mode <mode>`, or `--safe-mode` from the caller when a model registry, role, or task explicitly requires overrides.
 - Use `--prompt-profile opus-4-7` or `--prompt-profile opus-4-8` when the caller knows the CLI default model is that Opus version but does not pass `--model`.
 - Pass each expected output as `--expected-artifact`; use an absolute path or a path relative to the wrapper output directory.
-- Use `--extra-claude-arg` for narrow additions such as `--tools` or `--add-dir` when needed.
+- Use `--extra-claude-arg` for narrow additions such as `--tools` or `--add-dir` when needed. When the extra Claude argument itself starts with `-`, either `--extra-claude-arg --tools` or `--extra-claude-arg=--tools` is accepted; repeat the option for each token.
+- Keep permission and customization gate decisions in the caller or Claude CLI config/profile. Use wrapper overrides only to reproduce an explicit caller decision.
 - Keep final orchestration in the caller. This skill only runs Claude and records observable artifacts.
 
 ## No-API Validation
@@ -153,6 +167,8 @@ Use these patterns when testing the wrapper itself without spending Claude API b
 - For command-construction checks only, pass `--timeout-bin /usr/bin/true`. This bypasses Claude entirely and should be expected to fail wrapper success checks because no stream-json success result or expected artifact is produced.
 - For end-to-end wrapper success without API spend, create a small fake Claude executable under the task directory and pass it with `--claude-bin <path-to-fake-claude>`. The fake CLI must write stream-json stdout ending with `{"type":"result","subtype":"success"}` and create the expected artifact.
 - Minimal fake behavior: exit `0`, print `{"type":"result","subtype":"success"}` as the final stdout line, and write the requested expected artifact such as `result.md`.
+- Fake CLIs validate wrapper command construction, stream parsing, timeout/failure handling, and expected artifact materialization only. They do not validate Claude CLI semantics such as whether `--tools`, `--permission-mode`, or `--safe-mode` actually enforce downstream behavior; run a tightly scoped real Claude smoke only when that downstream behavior matters.
+- When running a real Claude smoke for downstream CLI semantics, record the Claude CLI version, exact command, `summary.json.permission_mode`, `summary.json.safe_mode`, and wrapper summary path next to the smoke artifacts.
 - Prefer an absolute `--claude-bin` path for fake CLIs unless you have verified the relative path resolves from `--cwd`.
 - Keep fake CLIs under `.context/<task>/bin/` and use them only in validation. Do not use `--claude-bin` for real Claude delegation.
 - Do not hand-edit `summary.json`, `run.stream.jsonl`, `run.err`, or `failure.md`. If a controlled test needs explanation, write a separate `notes.md` next to the wrapper artifacts.

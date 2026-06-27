@@ -27,6 +27,8 @@ Use this rubric to score the documentation system as a graph of active guidance,
 - Multiple files do not claim canonical authority for the same topic unless the precedence rule is explicit.
 - Canonical claims name the current source, not just historical rationale.
 - Detailed schemas for skills, gates, artifacts, or workflow contracts have one identifiable canonical owner; summaries and ADRs link to or summarize that owner instead of repeating the full schema.
+- Active canonical docs and active skill instructions do not keep deprecated, temporary, fallback, retired, historical, or override vocabulary as current policy options.
+- Negative references to retired vocabulary are classified as `allowed-negative-reference`, `migration-map`, `historical-reference`, or `search-only-audit-pattern`; unclassified cases are `QUESTION`, and current-option usage is `current-policy-contamination`.
 
 ### AI Readability
 
@@ -104,6 +106,9 @@ Use this rubric to score the documentation system as a graph of active guidance,
 - `provenance-gap`: important knowledge claims lack source, observation date, confidence, or enough context to distinguish direct, inferred, synthesized, and external claims.
 - `relationship-graph-hygiene`: links, backlinks, aliases, or entity relationships are missing, duplicated, untyped, or too vague for agent traversal.
 - `current-history-blur`: current truth, accepted policy, timeline evidence, historical notes, and temporary task context are mixed without a clear boundary.
+- `policy-contamination`: active canonical docs or active skill instructions contain deprecated, temporary, fallback, retired, historical, or override wording as a current implementation, QA, release, or authoring option.
+- `negative-reference-ambiguity`: active docs mention retired or deprecated vocabulary but do not make clear whether the occurrence is a prohibited term, migration map, historical reference, search-only audit pattern, or current option.
+- `temporary-legitimacy`: temporary/fallback/workaround wording is treated as valid because it is documented, even though the repository's source-boundary rule requires current policy in docs, reasons in ADR, and local exceptions in source comments.
 - `privacy-boundary`: public, internal, private, confidential, or machine-local knowledge boundaries are unclear to agents that may quote, index, commit, or expose content.
 - `contract-traceability`: docs mention a contract/spec/implementation dependency but do not identify the canonical artifact to inspect.
 - `stale-or-deprecated`: obsolete docs or skills remain discoverable as active.

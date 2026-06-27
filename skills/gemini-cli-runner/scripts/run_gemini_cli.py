@@ -33,7 +33,7 @@ Complete the source prompt as an outcome-first task contract.
 - Write requested artifacts exactly where specified.
 - If an expected artifact path is absolute, use that absolute path exactly; do not rewrite it as a path relative to the current working directory.
 - Do not create, update, or delete files outside the requested artifacts unless the source prompt explicitly allows that side effect.
-- Do not use shell execution tools such as run_shell_command; they may be unavailable in headless Gemini. Use read_file, list_directory, and write_file for file checks when needed.
+- Use the tools available under the caller's Gemini CLI config/profile when they are needed to complete the contract.
 - Prefer the smallest sufficient plan and tool use that completes the contract.
 - Do not emulate model effort with phrases like "think hard" or mandatory step-by-step narration; rely on the CLI/config settings supplied by the caller.
 - If a required input is missing or unreadable, mark the requested artifact blocked with the missing input instead of guessing.

@@ -53,6 +53,14 @@ Do not add a runner when:
 
 These classes can share a common pattern, but each adapter owns its tool-specific contract.
 
+## AI CLI Delegation Defaults
+
+AI CLI delegation runners should keep gate enforcement in the caller or the underlying CLI config/profile.
+By default, they should preserve observability, prompt and artifact handling, timeout, and failure classification without forcing permission, approval, sandbox, safe-mode, tool, MCP, hook, plugin, or skill policy.
+Use wrapper-level overrides only to reproduce an explicit caller decision.
+
+Secret and credential/account runners are exceptions: they may enforce profile, account, secret, and recovery gates because those boundaries are the reason the runner exists.
+
 ## Responsibility Boundaries
 
 AGENTS files define the rule of conduct.

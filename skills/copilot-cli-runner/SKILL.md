@@ -7,7 +7,7 @@ description: Run GitHub Copilot CLI subprocesses with observable JSONL logs, tim
 
 Use this skill when delegating work to GitHub Copilot CLI through non-interactive `copilot -p`. Keep the source prompt, launch prompt, JSONL output, stderr, summary, and failure notes under `.context/<task>/`.
 
-Frame each delegation as an outcome-first contract: source prompt, expected artifacts, timeout, success criteria, allowed side effects, evidence rules, output shape, and failure handling. Let caller-provided model, effort, agent, permissions, and Copilot config control model selection and tool policy.
+Frame each delegation as an outcome-first contract: source prompt, expected artifacts, timeout, success criteria, allowed side effects, evidence rules, output shape, and failure handling. Let caller-provided model, effort, agent, permissions, and Copilot config/profile control model selection and tool policy.
 
 ## Core Rules
 
@@ -16,7 +16,7 @@ Frame each delegation as an outcome-first contract: source prompt, expected arti
 - Save the real assignment as `.context/<task>/prompt.md`.
 - Do not pass a large prompt body as an inline shell argument. Pass a short instruction that tells Copilot to read `.context/<task>/run.prompt.md`.
 - Use the wrapper's 600-second timeout default, or pass an explicit timeout override when the task needs a shorter or longer limit.
-- Do not force `--allow-all`, `--allow-all-tools`, `--allow-all-paths`, `--allow-all-urls`, `--yolo`, or broad permissions by default. Let Copilot config decide unless the caller explicitly requests an override.
+- Do not force `--allow-all`, `--allow-all-tools`, `--allow-all-paths`, `--allow-all-urls`, `--yolo`, or permission grants by default. The caller owns gate enforcement; this runner preserves observability and lets Copilot config/profile decide unless the caller explicitly requests an override.
 - Do not treat 0-byte `run.events.jsonl` or `run.err` as a hang by itself.
 
 ## Caller Checklist
@@ -29,7 +29,7 @@ Before running Copilot, make these decisions explicitly:
 - Expected artifacts: pass every required output with `--expected-artifact`; relative paths resolve from `--output-dir`, so use absolute paths for artifacts that must be written outside `.context/<task>/`.
 - When `--output-dir .context/<task>` is used, pass `--expected-artifact result.md`, not `--expected-artifact .context/<task>/result.md`; the latter resolves under `.context/<task>/.context/<task>/`.
 - Defaults: omit `--model`, `--effort`, and `--agent` unless the caller, model registry, role, or task explicitly requires an override.
-- Permissions: add `--allow-tool`, `--allow-url`, `--add-dir`, or broader flags only when explicitly required by the caller. Non-interactive tasks that need tools should receive explicit narrow grants; prefer those over `--allow-all`.
+- Permission overrides: add `--allow-tool`, `--allow-url`, `--add-dir`, or broader flags only when explicitly supplied by the caller. Do not infer grants inside this runner.
 - Timeout: rely on the 600-second wrapper default unless the task contract says otherwise.
 - Prompt profile: use `--prompt-profile auto` by default; pass `--prompt-profile none` only when the source prompt already contains a complete Copilot-specific launch contract.
 - Extra Copilot args: pass each Copilot CLI token as its own `--extra-copilot-arg=<token>` value, especially for leading-hyphen tokens.
@@ -135,7 +135,7 @@ Use these patterns when testing the wrapper itself without spending Copilot API 
 - Omit `--model`, `--effort`, and `--agent` by default so Copilot CLI uses its configured defaults.
 - Pass `--model <model>`, `--effort <level>`, and `--agent <agent>` from the caller when a model registry, role, or task explicitly requires overrides.
 - Pass each expected output as `--expected-artifact`; use an absolute path or a path relative to the wrapper output directory. If the artifact is directly inside `.context/<task>/`, pass only the filename.
-- Use `--extra-copilot-arg` for narrow additions when explicitly required. Pass one Copilot CLI token per wrapper argument, for example `--extra-copilot-arg=--allow-tool --extra-copilot-arg=shell(git)`, `--extra-copilot-arg=--add-dir --extra-copilot-arg=/path/to/dir`, or `--extra-copilot-arg=--allow-url --extra-copilot-arg=github.com`.
+- Use `--extra-copilot-arg` only to pass caller-supplied Copilot CLI overrides. Pass one Copilot CLI token per wrapper argument, for example `--extra-copilot-arg=--allow-tool --extra-copilot-arg=shell(git)`, `--extra-copilot-arg=--add-dir --extra-copilot-arg=/path/to/dir`, or `--extra-copilot-arg=--allow-url --extra-copilot-arg=github.com`.
 - Keep final orchestration in the caller. This skill only runs Copilot and records observable artifacts.
 
 ## Validation
