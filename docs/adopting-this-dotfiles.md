@@ -1,6 +1,6 @@
 ---
 title: "Adopting This Dotfiles Repository"
-updated_at: 2026-06-23
+updated_at: 2026-06-28
 ---
 
 # Adopting This Dotfiles Repository
@@ -29,7 +29,8 @@ updated_at: 2026-06-23
 - `scripts/bootstrap-workspace` は既定で元利用者の workspace repo を対象にする。流用時は `WORKSPACE_REPO_URL`、`WORKSPACE_REPO_HOST_PATH`、`WORKSPACE_ROOT`、`WORKSPACE_TARGET` で差し替えるか、実行しない。
 - `oprun` / `opmaterialize` の既定 1Password account / vault は元利用者の運用に合わせている。流用時は `OP_ACCOUNT`、`OP_DOTFILES_ENV_FILE`、`OP_DOTFILES_MATERIALIZE_VAULT` を明示する。
 - `personal`、`tech`、`biz` などの private agent 定義は git に含まれない。必要なら流用者自身の agent 定義を作る。
-- Google / Freee の account profile 名、実アカウント対応、credential path、secret reference は git に含めない。Personal または各作業リポジトリの責務として扱う。
+- Google の account profile 名、実アカウント対応、credential path、secret reference は git に含めない。Personal または各作業リポジトリの責務として扱う。
+- Freee MCP は Remote MCP 前提であり、local MCP profile / token state は git で共有しない。
 
 ## Role Agents
 

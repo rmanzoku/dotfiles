@@ -1,6 +1,6 @@
 ---
 title: "Skill Install Manifest"
-updated_at: 2026-06-23
+updated_at: 2026-06-28
 ---
 
 # Skill Install Manifest
@@ -38,7 +38,6 @@ gh skill install . handoff --from-local --agent claude-code --scope user
 gh skill install . git-branch-review --from-local --agent claude-code --scope user
 gh skill install . dads-design --from-local --agent claude-code --scope user
 gh skill install . gws-cli-runner --from-local --agent claude-code --scope user
-gh skill install . freee-mcp-runner --from-local --agent claude-code --scope user
 ```
 
 ### Codex
@@ -64,7 +63,6 @@ gh skill install . handoff --from-local --agent codex --scope user
 gh skill install . git-branch-review --from-local --agent codex --scope user
 gh skill install . dads-design --from-local --agent codex --scope user
 gh skill install . gws-cli-runner --from-local --agent codex --scope user
-gh skill install . freee-mcp-runner --from-local --agent codex --scope user
 ```
 
 ## Third-party external skills
@@ -132,4 +130,23 @@ repo root で実行する。
 ```bash
 gh skill install mattpocock/skills grill-me --agent claude-code --scope user
 gh skill install mattpocock/skills grill-me --agent codex --scope user
+```
+
+### `freee-api-skill`
+
+- upstream: [freee/freee-mcp `skills/freee-api-skill`](https://github.com/freee/freee-mcp/tree/main/skills/freee-api-skill)
+- release: [v0.30.2](https://github.com/freee/freee-mcp/releases/tag/v0.30.2)
+- status: installed globally for Claude Code and Codex
+- install mode: direct `gh skill install` from the official upstream GitHub repository
+- pin: `v0.30.2`
+- reason: official freee distribution provides the API reference skill; keep it external and do not vendor it into this repo
+- update note: inspect changes with `gh skill preview freee/freee-mcp freee-api-skill` and keep the skill pin aligned with the intended `freee-mcp` release
+
+#### Claude Code / Codex refresh
+
+repo root で実行する。
+
+```bash
+gh skill install freee/freee-mcp freee-api-skill --pin v0.30.2 --agent claude-code --scope user --force
+gh skill install freee/freee-mcp freee-api-skill --pin v0.30.2 --agent codex --scope user --force
 ```
