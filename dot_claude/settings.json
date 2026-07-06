@@ -4,40 +4,11 @@
     "pr": ""
   },
   "permissions": {
-    "defaultMode": "bypassPermissions",
     "allow": [
       "mcp__pencil"
-    ]
+    ],
+    "defaultMode": "bypassPermissions"
   },
-  "enabledPlugins": {
-    "document-skills@anthropic-agent-skills": true,
-    "skill-creator@claude-plugins-official": true,
-    "claude-code-metrics-plugin@oasys-dev-marketplace": true,
-    "codex@openai-codex": true
-  },
-  "extraKnownMarketplaces": {
-    "anthropic-agent-skills": {
-      "source": {
-        "source": "github",
-        "repo": "anthropics/skills"
-      }
-    },
-    "openai-codex": {
-      "source": {
-        "source": "github",
-        "repo": "openai/codex-plugin-cc"
-      }
-    },
-    "oasys-dev-marketplace": {
-      "source": {
-        "source": "git",
-        "url": "git@github.com:oasysgames/claude-code-dev-marketplace.git"
-      }
-    }
-  },
-  "agentPushNotifEnabled": true,
-  "skipAutoPermissionPrompt": true,
-  "skipDangerousModePermissionPrompt": true,
   "hooks": {
     "PreToolUse": [
       {
@@ -104,5 +75,36 @@
         ]
       }
     ]
-  }
+  },
+  "enabledPlugins": {
+    "document-skills@anthropic-agent-skills": true,
+    "skill-creator@claude-plugins-official": true,
+    "claude-code-metrics-plugin@oasys-dev-marketplace": true,
+    "codex@openai-codex": true,
+    "vercel@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "anthropic-agent-skills": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/skills"
+      }
+    },
+    "openai-codex": {
+      "source": {
+        "source": "github",
+        "repo": "openai/codex-plugin-cc"
+      }
+    },
+    "oasys-dev-marketplace": {
+      "source": {
+        "source": "git",
+        "url": "git@github.com:oasysgames/claude-code-dev-marketplace.git"
+      }
+    }
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "agentPushNotifEnabled": true,
+  "skipAutoPermissionPrompt": true,
+  "skipWorkflowUsageWarning": true
 }
