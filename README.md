@@ -174,7 +174,6 @@ Conductor などのツールが git worktree を立ち上げて dotfiles を編�
 | `.local/bin/oprun` | `op run --env-file` 用ラッパー |
 | `.local/bin/opmaterialize` | `onepassword-secret-materialize` skill 同梱 script を呼び出すラッパー |
 | `.local/bin/gws-account` | Google Workspace CLI の account profile 選択ラッパー |
-| `.local/bin/freee-mcp-account` | freee MCP の account profile 選択ラッパー |
 | `.claude/CLAUDE.md` | Claude Code グローバル設定 |
 | `.claude/settings.json` | Claude Code 設定 |
 | `.codex/AGENTS.md` | Codex エージェント設定 |
@@ -198,17 +197,17 @@ Conductor などのツールが git worktree を立ち上げて dotfiles を編�
 |-----------|----------------|
 | `.claude/CLAUDE.md` | `dot_claude/CLAUDE.md` |
 | `.claude/settings.json` | `dot_claude/settings.json` |
-| `.codex/AGENTS.md` | `dot_codex/AGENTS.md` |
+| `.codex/AGENTS.md` | `dot_codex/AGENTS.md.tmpl` |
 | `.codex/config.toml` | `dot_codex/private_config.toml.tmpl` |
 | `.config/op/dotfiles.env.example` | `dot_config/private_op/dotfiles.env.example` |
 | `.local/bin/oprun` | `dot_local/bin/executable_oprun` |
 | `.local/bin/opmaterialize` | `dot_local/bin/executable_opmaterialize` |
 | `.local/bin/gws-account` | `dot_local/bin/executable_gws-account` |
-| `.local/bin/freee-mcp-account` | `dot_local/bin/executable_freee-mcp-account` |
-| `.qwen/QWEN.md` | `dot_qwen/QWEN.md` |
+| `.qwen/QWEN.md` | `dot_qwen/QWEN.md.tmpl` |
 | `.qwen/settings.json` | `dot_qwen/settings.json` |
 
 `dot_` はドットファイル化です。`private_` はファイル名変換ではなく、target の group / world 権限を外す属性です。
+AI 指示ファイル（`.codex/AGENTS.md`、`.gemini/GEMINI.md`、`.qwen/QWEN.md`）の共通ルールは `.chezmoitemplates/common-rules.md` を正本とし、各 `*.tmpl` が template include で取り込みます。
 `./.claude/skills/` は repo ローカル運用とし、chezmoi ではホームディレクトリへ配備しません。配布する first-party skill は `skills/` を正本とし、`gh skill install --from-local` で `~/.claude/skills/` や `~/.codex/skills/` へ入れます。
 詳細は [chezmoi-knowledge/SKILL.md](.claude/skills/chezmoi-knowledge/SKILL.md) と [semantics.md](.claude/skills/chezmoi-knowledge/references/semantics.md) を参照してください。
 
@@ -275,7 +274,7 @@ opmaterialize add "$HOME/.config/wireguard/example.conf"
 opmaterialize add "$HOME/.config/op/dotfiles.env"
 ```
 
-### Google / Freee のマルチアカウント OAuth
+### Google のマルチアカウント OAuth
 
 Google Workspace CLI は `gws-account <profile> ...` で account profile を選びます。
 profile 名、実アカウント対応、`.env` への cache 方針は、Personal 側または各作業リポジトリが決めます。
@@ -291,15 +290,6 @@ gws-account <profile> drive files list --params '{"pageSize": 5}'
 `GOOGLE_WORKSPACE_CLI_TOKEN` と `GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE` は profile 指定より優先されるため、`gws-account` はそれらが設定されている場合に停止します。
 認証失敗時に別アカウントへ切り替える fallback は行いません。
 
-Freee MCP は `freee-mcp-account <profile> <command>` で account profile を選びます。
-各 profile は `XDG_CONFIG_HOME=~/.config/freee-mcp/accounts/<profile>/xdg` を使い、`config.json`、`tokens.json`、`sign-config.json`、`sign-tokens.json` を profile ごとに分離します。
-呼び出し元が config root を明示したい場合は、`FREEE_MCP_ACCOUNT_XDG_CONFIG_HOME` を渡します。
-
-```bash
-freee-mcp-account <profile> configure
-freee-mcp-account <profile> server
-```
-
 OAuth / token / client secret の実体は git では管理せず、必要な profile ファイルを `opmaterialize add` で 1Password の `Secrets Manifest` に登録します。
 `gws` の `credentials.enc` は同一マシン内の暗号化保存として扱い、別マシン復元用には `credentials.json` または `client_secret.json` を登録します。
 token 更新、再ログイン、1Password への書き戻しはツールごとの credential lifecycle として扱い、各ツール用の runner / adapter 側で決めます。
@@ -307,9 +297,8 @@ token 更新、再ログイン、1Password への書き戻しはツールごと�
 ```bash
 opmaterialize add "$HOME/.config/gws/accounts/<profile>/client_secret.json"
 opmaterialize add "$HOME/.config/gws/accounts/<profile>/credentials.json"
-opmaterialize add "$HOME/.config/freee-mcp/accounts/<profile>/xdg/freee-mcp/config.json"
-opmaterialize add "$HOME/.config/freee-mcp/accounts/<profile>/xdg/freee-mcp/tokens.json"
 ```
 
-Freee の作成・更新・削除・送信・承認、Google の送信・共有・権限変更では fallback を禁止します。
-読み取り診断であっても、別 principal / 別 company / 別 profile への自動切替は行わず、必要なら profile を明示して再実行します。
+freee MCP は Remote MCP 前提とし、Codex には `https://mcp.freee.co.jp/mcp` を登録します。
+この dotfiles では local `freee-mcp` / `freee-sign-mcp` server、local OAuth profile wrapper、profile 別 token file の配備を管理しません。
+Freee / Google 操作での fallback 禁止（別 principal / 別 company / 別 profile への自動切替禁止）は、グローバル AI 指示の共通ルール（source: `.chezmoitemplates/common-rules.md`）を正本とします。

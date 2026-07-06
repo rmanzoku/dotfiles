@@ -12,7 +12,7 @@
 - `~/.config/op/dotfiles.env` は管理外の secret reference 置き場とし、実値を書かないこと
 - `~/.zshenv.local` は secret の置き場ではなく、マシン固有の非 secret local override に限定すること
 - 永続的に参照すべき指示や、worktree / セッションをまたいで再現が必要な情報は Memory ではなく git 管理ファイルに保存すること
-- 継続的な指示の保存先は、作業リポジトリの `docs/`、`.gemini/`、またはグローバル dotfiles（例: `~/.gemini/GEMINI.md`）を使うこと
+- 継続的な指示の保存先は、作業リポジトリの `docs/`、`{{ .localDir }}`、またはグローバル dotfiles（例: `{{ .globalFile }}`）を使うこと
 - 恒久性のあるユーザー指示、再発しやすい運用判断、複数回参照しそうな手順は、原則その作業ターン内で git 管理ファイルへ反映すること
 - 反映先は、運用ルールや判断基準なら現在作業中のリポジトリの正規指示ファイル（通常は `AGENTS.md`）と AI 別指示ファイル、背景や継続判断なら `docs/adr/`、反復手順や更新フローなら対応 Skill を使い分けること
 - 反映先に迷う場合は、まず現在作業中のリポジトリの正規指示ファイルを優先し、AI 固有の挙動だけ AI 別指示ファイルへ、背景・採用理由・長期判断だけ `docs/adr/` へ分離すること
@@ -26,6 +26,7 @@
 - 長時間スクリプトの進捗ログには、対象件数、現在位置、処理対象 ID や URL の要約、経過時間、次の待機やリトライ予定など、秘密情報を含めずに再実行判断へ必要な情報を含めること
 - 長時間スクリプトのログは artifact gate と同じく観測可能性のための運用契約として扱い、静かな成功を前提にせず、hang や外部 API 待ちで無出力に見える実装を避けること
 - AI が作る script / skill では、特に外部接続を伴う処理について、主経路の失敗原因を隠す暗黙 fallback を追加しないこと。代替経路が必要な場合は、目的、発動条件、観測ログ、冪等性、再実行時の挙動、検証欠落、恒久対策レビューの要否を明示し、安定した代替経路は fallback ではなく主経路へ昇格すること。同じデータに対する複数 RPC / mirror / replica のように同等性と選択条件が明示された冗長 provider は、この禁止の例外として扱うこと
+- Freee の作成・更新・削除・送信・承認、Google の送信・共有・権限変更では fallback を禁止し、読み取り診断であっても別 principal / 別 company / 別 profile への自動切替を行わず、必要なら profile を明示して再実行すること
 - 汎用 CLI / tool error は、失敗扱いする前に意味で分類すること。`rg` の exit code 1 は原則「検索一致なし」として検索仮説・検索範囲・次に広げる範囲を見直し、`apply_patch` の context mismatch は対象範囲を再読してから最小差分を作り直し、`sed` / `rg` の missing path は `rg --files` 等で実在 path を確認し、`git` の conflict / dirty state はユーザー変更保護を優先し、format / typecheck / test failure は対象 file・error shape・再実行 command を固定してから続行すること
 - コマンド、ツール、環境、権限、依存関係、検証でエラーが出た場合は、一時的な迂回で作業継続してよいが、同種エラーの再発、検証省略、環境・設定・権限・依存関係の不備、再現性低下、次回も必要になりそうな手順がある場合は恒久対策レビューの対象として扱うこと
 - 恒久対策レビューでは、エラー原因、一時迂回、恒久対策候補、git 管理へ反映すべき設定・文書・hook・Skill、machine-local に留める state、検証方法を分けて整理すること
@@ -34,6 +35,14 @@
 - サブエージェントや custom agent へ委譲するときは、親 Agent が目的、背景、対象範囲、制約、許可する副作用、期待成果物、検証方法を明示し、最終判断・統合・ユーザーへの報告責任を保持すること
 - 外部 CLI / MCP / runner / Skill の詳細な運用ルールは、作業中リポジトリに正規 docs / Skill がある場合はそちらを優先すること
 - 新しい永続的な Skill / Runner / wrapper を作る前に、既存 docs / Skill / wrapper / runner adapter で足りるか確認すること
+- Phase / Step を持つ作業では、各 Phase / Step の完了前に `.context/` 配下へ中間成果物 artifact を保存すること
+- 次の Phase / Step へ進む条件は、対応する artifact の生成とすること
+- 口頭合意、推論上の完了宣言、Memory 内だけの状態遷移で Phase / Step を進めてはならない
+- artifact の初期必須項目は `task`、`phase_or_step`、`created_at` とし、Markdown は Front Matter、JSON は同名キーで保持すること
+- artifact の推奨命名は `.context/<task-or-date>/<nn>-<phase-name>.(md|json)` とし、同名更新時は最新更新時刻のファイルのみを有効扱いにすること
+- 非 Phase 作業は artifact 必須対象外とする。ただし単発例外として artifact gate を明示的にバイパスする場合だけ `.context/single-step/<task>.json` を使い、`enabled=true`、`task`、`reason`、`expires_at` を必須とすること
+- Phase / Step 遷移の最小原則は現在作業中のリポジトリの正規指示ファイル（通常は `AGENTS.md`）を正本とし、各 Skill 固有の required artifact は `SKILL.md` を正本とすること
+- 現在作業中のリポジトリの正規指示ファイル（通常は `AGENTS.md`）と `SKILL.md` が競合する場合は `SKILL.md` をその Skill 実行中の具体契約として優先し、正規指示ファイルは下限ルールとして常に適用すること
 - `*.md` ファイルを編集した際は、ファイル全体を見直し、矛盾・重複・ルール漏れが発生していないか必ず確認し、必要なら同じターンで修正すること
 - `*.md` ファイルのメタデータは本文に書かず、必ず Front Matter で管理すること
 - アーキテクチャ、運用方針、永続設定、複数ファイルにまたがるワークフロー変更などの大きめの変更では、作業リポジトリの `docs/adr/` に ADR を作成または更新すること
@@ -44,10 +53,3 @@
 
 - Phase を含む Plan では、各 Phase ごとに使用する Skill を明示し、使用しない Phase は `なし` と明記すること
 - Phase を含む Plan は、実行時に途中確認を前提にせず完走できる粒度で提示し、Phase 提示後は不測の事態がない限り追加許可を求めず停止せず最後まで進めること。ただし、既存 Skill や repo ルールで明示された事前確認は例外として維持すること
-
-# Gemini CLI 固有ルール
-
-- グローバル `~/.gemini/GEMINI.md` は横断運用ルールの置き場とすること
-- repo / project 固有ルールは原則その repo 直下の `AGENTS.md` に集約し、Gemini 用に別の `GEMINI.md` を増やすのは避けること
-- `context.fileName` で `GEMINI.md` も読める状態は維持するが、既存 repo では `AGENTS.md` を正規の集約先として扱うこと
-- Gemini の `save_memory` で残すべき内容も、恒久的に参照するなら最終的には git 管理ファイルへ移すこと

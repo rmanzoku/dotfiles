@@ -6,6 +6,7 @@
 - 他者が流用できる設定を追加・変更するときは、[docs/adopting-this-dotfiles.md](docs/adopting-this-dotfiles.md) のレイヤー分離に従い、owner 固有の既定値・secret-backed state・account profile 対応を差し替え可能にすること
 - `dot_*` 配下のファイルは chezmoi により環境へ配置される成果物として扱う
 - `dot_*` 配下の変更時は必ず `dotfile-update` スキルを使用すること
+- グローバル AI 指示ファイルの共通ルールは `.chezmoitemplates/common-rules.md` を単一の正本とし、AI 別 `.tmpl`（`dot_codex/AGENTS.md.tmpl` など）には include と AI 固有セクションだけを置き、共通ルール文面を複製しないこと
 - dotfile 変更前に [chezmoi-knowledge/SKILL.md](.claude/skills/chezmoi-knowledge/SKILL.md) と [semantics.md](.claude/skills/chezmoi-knowledge/references/semantics.md) を確認し、source / target / ignore の前提を外さないこと
 - `chezmoi apply` の前とドリフト確認時は `scripts/chezmoi-drift --check-ignore` 相当の `.chezmoiignore` 整合確認を行い、意図せず無効化された source がないことを確認すること
 - secret 実値は 1Password に保存し、CLI では `op run --env-file` / `op read` と `op://...` secret reference 経由で受け渡すこと
@@ -64,7 +65,7 @@
 - 本リポジトリではリポジトリ専用の Claude Code 用スキル（`.claude/skills/`）も管理対象に含む
 - 新しい Skill / Runner / wrapper は、単なる便利化ではなく、再発する失敗パターン、secret / OAuth / account 境界、長時間実行の観測性、副作用リスクを扱う場合に限って追加すること
 - 追加前に、運用ルール、既存 wrapper の最終ガード、既存 runner の adapter / option で足りるか確認し、足りない理由を [docs/runner-skill-governance.md](docs/runner-skill-governance.md)、該当 Skill、または ADR に残すこと
-- グローバル配備される AI 指示ファイル（例: `dot_codex/AGENTS.md`）は薄く保ち、tool 固有・repo 固有の詳細な runner / Skill 作成判断は、この repo の `AGENTS.md`、`docs/`、または該当 Skill に置くこと
+- グローバル配備される AI 指示ファイル（例: `dot_codex/AGENTS.md.tmpl`）は薄く保ち、tool 固有・repo 固有の詳細な runner / Skill 作成判断は、この repo の `AGENTS.md`、`docs/`、または該当 Skill に置くこと
 - `.claude/skills/` 配下のファイルは repo ローカル用途とし、chezmoi でグローバル配備しない
 - 配布する repo オリジナル skill は publisher layout の `skills/` 配下を正本として git 管理すること
 - publisher layout の skill は `gh skill install --from-local <repo-root> <skill> --agent <agent> --scope user` を標準配備経路とし、chezmoi で `~/.claude/skills/` や `~/.codex/skills/` へ直接配備しないこと

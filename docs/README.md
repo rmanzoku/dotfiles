@@ -1,6 +1,6 @@
 ---
 title: "Documentation Index"
-updated_at: 2026-06-23
+updated_at: 2026-07-07
 ---
 
 # Documentation Index
@@ -14,6 +14,7 @@ updated_at: 2026-06-23
 |---|---|
 | Human setup and daily operation | [../README.md](../README.md) |
 | Repository-local AI operating rules | [../AGENTS.md](../AGENTS.md) |
+| Shared global AI instruction rules | [../.chezmoitemplates/common-rules.md](../.chezmoitemplates/common-rules.md) |
 | Adopting / forking this dotfiles repository | [adopting-this-dotfiles.md](adopting-this-dotfiles.md) |
 | Runner / Skill creation governance | [runner-skill-governance.md](runner-skill-governance.md) |
 | Skill install manifest | [skills-install-manifest.md](skills-install-manifest.md) |

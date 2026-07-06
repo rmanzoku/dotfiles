@@ -1,12 +1,12 @@
 ---
-title: "ADR 0042: grok-cli-runner を Grok Build CLI runner として再設計する"
+title: "ADR 0049: grok-cli-runner を Grok Build CLI runner として再設計する"
 status: accepted
 date: 2026-06-27
 worked_at: 2026-06-27 23:01 JST
 agent_model: GPT-5 Codex
 ---
 
-# ADR 0042: grok-cli-runner を Grok Build CLI runner として再設計する
+# ADR 0049: grok-cli-runner を Grok Build CLI runner として再設計する
 
 ## Context
 

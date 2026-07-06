@@ -3,7 +3,8 @@ name: dotfile-update
 description: >
   chezmoi 管理の dotfiles リポジトリで dotfile を追加・変更・削除するためのワークフロースキル。
   `dot_*` ファイル、`.chezmoiignore`、`Brewfile`、共通ルールファイル
-  （`dot_claude/CLAUDE.md`、`dot_codex/AGENTS.md`、`dot_qwen/QWEN.md`、`dot_gemini/GEMINI.md`）を
+  （`.chezmoitemplates/common-rules.md`、`dot_claude/CLAUDE.md`、`dot_codex/AGENTS.md.tmpl`、
+  `dot_qwen/QWEN.md.tmpl`、`dot_gemini/GEMINI.md.tmpl`）を
   編集する依頼で必ず使用すること。
   AI 間の設定対応、`json` から `toml` への変換、chezmoi の
   `private_` / `dot_` / `symlink_` 属性や source / target の対応確認が関わる依頼にも適用すること。
@@ -55,7 +56,7 @@ Step artifact:
 
 | 設定カテゴリ | Claude | Codex | Qwen | Gemini |
 |---|---|---|---|---|
-| 指示ファイル | `dot_claude/CLAUDE.md` | `dot_codex/AGENTS.md` | `dot_qwen/QWEN.md` | `dot_gemini/GEMINI.md` |
+| 指示ファイル | `dot_claude/CLAUDE.md` | `dot_codex/AGENTS.md.tmpl` | `dot_qwen/QWEN.md.tmpl` | `dot_gemini/GEMINI.md.tmpl` |
 | クライアント設定 | `dot_claude/settings.json` | `dot_codex/private_config.toml.tmpl` | `dot_qwen/settings.json` | `dot_gemini/settings.json.tmpl` |
 
 判断ルール:
@@ -75,13 +76,17 @@ Step artifact:
 
 ### 3. 共通ルールの同期
 
-`dot_claude/CLAUDE.md`、`dot_codex/AGENTS.md`、`dot_qwen/QWEN.md`、`dot_gemini/GEMINI.md` は共通ルールセクションを共有している。
-いずれかの共通ルール部分を変更した場合、残りのファイルにも同じ変更を反映すること。
+共通ルール（`# 共通ルール` と `# Plan 共通ルール`）の正本は `.chezmoitemplates/common-rules.md` である。
+`dot_codex/AGENTS.md.tmpl`、`dot_gemini/GEMINI.md.tmpl`、`dot_qwen/QWEN.md.tmpl` は
+`includeTemplate "common-rules.md"` で共通ブロックを取り込み、AI 固有セクションだけを各ファイルに持つ。
+`dot_claude/CLAUDE.md` は配備後の `~/.codex/AGENTS.md` を import するため、template を include しない。
 
-共通ルールセクションの識別: `# 共通ルール` 見出し配下の箇条書き。
+- 共通ルールを変更する場合は `.chezmoitemplates/common-rules.md` だけを編集し、各 `.tmpl` へ同文を複製しない。
+- AI 固有の挙動は各 `.tmpl` の固有セクション（`# Codex 固有ルール` など）へ書く。
+- `includeTemplate` に渡す `localDir` / `globalFile` は AI ごとの指示保存先パラメータである。共通 template 内に新しい分岐やパラメータを増やす場合は ADR で背景を残す。
+- 共通ルール変更後は `chezmoi cat ~/.codex/AGENTS.md ~/.gemini/GEMINI.md ~/.qwen/QWEN.md` で render を確認する。
 
-Claude Code 固有ルール（`# Claude Code 固有ルール` 以降）は `dot_claude/CLAUDE.md` のみに存在し、
-同期対象外。
+Claude Code 固有ルール（`# Claude Code 固有ルール` 以降）は `dot_claude/CLAUDE.md` のみに存在する。
 
 共通ルールや指示ファイルを更新したときの追加確認:
 - 恒久運用の変更なら、必要に応じて `docs/adr/` に背景判断を残す。
@@ -93,7 +98,7 @@ Step artifact:
 
 ### 4. グローバル配備文書のレビュー
 
-`dot_claude/CLAUDE.md`、`dot_codex/AGENTS.md`、`dot_qwen/QWEN.md`、`dot_gemini/GEMINI.md`、
+`.chezmoitemplates/common-rules.md`、`dot_claude/CLAUDE.md`、`dot_codex/AGENTS.md.tmpl`、`dot_qwen/QWEN.md.tmpl`、`dot_gemini/GEMINI.md.tmpl`、
 および `.chezmoiignore` の解釈を説明する文書を更新した場合は、最終利用者向け文面として不自然な説明が混入していないかレビューする。
 
 固定レビュー観点:
@@ -145,9 +150,9 @@ Step artifact:
 ## 注意事項
 
 - `Brewfile` の更新後は `brew bundle` の実行は不要（パッケージインストールはユーザーが別途行う）
-- シークレット（API キー等）は `~/.zshenv.local` に配置し、chezmoi 管理外とする。リポジトリにコミットしない
+- シークレット（API キー等）は 1Password に保存し、`op://...` secret reference 経由で受け渡す。`~/.zshenv.local` はマシン固有の非 secret local override に限定し、リポジトリにコミットしない
 - pre-commit hook（`.claude/hooks/chezmoi-pre-commit-hook`）がコミット前にドリフトを自動検出する。ドリフトがあるとコミットがブロックされるため、必ず apply まで完了させること
 - chezmoi の仕様に自信がない場合は、推測で編集せず公式ドキュメントを確認してから変更すること
 - `python` のような互換コマンドが必要な場合は、まず `symlink_` source で足りるかを確認し、macOS shim の都合で不適切な場合だけ wrapper script を検討すること
 - `.claude/skills/` 配下を更新した場合は、`skill-creator` の手順に従い repo ローカルの `scripts/skill-quick-validate <skill-dir>` で基本妥当性を確認すること
-- `dot_claude/CLAUDE.md` や `dot_codex/AGENTS.md` のような `dot_*` 配下の変更は `dotfile-update` の責務とし、hook 変更だけを先行適用しないこと
+- `dot_claude/CLAUDE.md` や `dot_codex/AGENTS.md.tmpl` のような `dot_*` 配下の変更は `dotfile-update` の責務とし、hook 変更だけを先行適用しないこと
