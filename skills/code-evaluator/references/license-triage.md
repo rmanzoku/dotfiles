@@ -1,6 +1,8 @@
 ---
 name: license-triage
 description: License, distribution context, and dependency remediation guidance for code-evaluator.
+version: "2.0"
+updated: 2026-07-05
 ---
 
 # License Triage
@@ -31,7 +33,7 @@ Classify each relevant component before judging risk:
 | `distributed-cli-sdk-image` | CLI, SDK, Docker image, binary, embedded code sent to customers | High |
 | `unknown` | Cannot infer | Conservative; mark needs-confirmation |
 
-For this repository's typical shape, `frontend/` is usually distributed and `backend/` is usually server-side only. In a generic repo, infer this from paths, manifests, build config, and docs; record evidence and confidence.
+Determine distribution context from the evaluated repository's own signals: paths, manifests, build config, release/deployment artifacts, and docs. Record the evidence and confidence for each classification. Do not carry a default assumption from any particular repository shape; when the context cannot be determined from evidence, classify it as `unknown` and mark the component `needs-confirmation`.
 
 In license-audit mode, include scope-adjacent vendored/native assets when they can enter distributed artifacts even if they are not package-manager dependencies. Check `vendor/`, `third_party/`, native project files, linker flags, bundled media/sample assets, plugin configs, and generated resource references. Do not perform a full source-quality review of those directories unless the license/provenance question requires it.
 

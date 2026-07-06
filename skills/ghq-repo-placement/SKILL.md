@@ -1,6 +1,6 @@
 ---
 name: ghq-repo-placement
-description: "Use when Codex sees a Git repository URL, GitHub/GitLab URL, `git clone` request, repository placement question, or task that requires cloning, pulling, inspecting, or opening an external repository. Prefer ghq-based placement and commands over ad hoc clone paths unless the user explicitly needs a project-local vendor, submodule, fixture, or temporary checkout."
+description: "Use when Claude Code or Codex sees a Git repository URL, GitHub/GitLab URL, `git clone` request, repository placement question, or task that requires cloning, pulling, inspecting, or opening an external repository. Prefer ghq-based placement and commands over ad hoc clone paths unless the user explicitly needs a project-local vendor, submodule, fixture, or temporary checkout."
 ---
 
 # Ghq Repo Placement

@@ -61,7 +61,7 @@ The wrapper writes:
 - `run.events.jsonl`: Codex JSONL stdout events
 - `run.err`: stderr
 - `last-message.md`: final Codex message from `--output-last-message`
-- `summary.json`: command, resolved `cwd`, exit code, elapsed time, byte counts, parsed errors, prompt profile, `failure_reasons`, `recommended_next_action`, and `expected_artifacts`
+- `summary.json`: command, resolved `cwd`, exit code, elapsed time, byte counts, parsed errors, prompt profile, `failure_reasons`, `nonfatal_reasons`, `recommended_next_action`, and `expected_artifacts`
 - `failure.md`: only when the wrapper run fails
 
 ## Prompt Profiles
@@ -96,7 +96,7 @@ Treat any of these as failure:
 
 - Timeout exit, normally exit code `124`.
 - Non-zero process exit.
-- stderr contains authentication, model, permission, quota, or rate-limit errors.
+- stderr contains authentication, model, permission, trust, policy, quota, or rate-limit error signatures. When every other success check passes, such stderr matches are recorded in `summary.json.nonfatal_reasons` instead of failing the run.
 - JSONL events contain obvious error records.
 - `last-message.md` is missing or empty.
 - Expected artifacts are missing or empty.
@@ -109,6 +109,7 @@ On failure, inspect `.context/<task>/summary.json` first:
 - `elapsed_seconds`
 - `events_bytes`, `stderr_bytes`, and `last_message_bytes`
 - `failure_reasons`
+- `nonfatal_reasons`
 - `last_error_event` or `last_event`
 - `expected_artifacts`
 - `recommended_next_action`

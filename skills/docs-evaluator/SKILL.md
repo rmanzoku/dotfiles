@@ -23,7 +23,8 @@ Use `docs-entrypoint-check` instead when the user only wants a lightweight check
 - When a repository has a canonical Source Boundary rule, evaluate against that rule before the generic rubric. Violations against the repo's own current-docs-vs-history-vs-source-comment boundary should normally be P1 or P2, not a cosmetic cleanup item.
 - For deprecated or retired vocabulary that remains in active docs, classify each occurrence as one of: `allowed-negative-reference`, `migration-map`, `historical-reference`, `search-only-audit-pattern`, or `current-policy-contamination`. If it cannot be classified, report `QUESTION`; if it is readable as a current implementation, QA, release, or authoring option, report `P1 current-policy-contamination`.
 - Use confidence labels. Do not make whole-repo claims from narrow sampling without marking them provisional.
-- For large repositories or any review that will not deep-read all relevant docs, create and save a sampling plan before deep dives. Do not use fixed numeric thresholds as the definition of "large"; explain the scope factors, prioritize entrypoints, canonical docs, and mode-relevant docs, sample remaining classes intentionally, and report unread ranges in `Evidence Coverage` and confidence impact.
+- For large repositories or any review that will not deep-read all relevant docs, create a sampling plan before deep dives and save it to `.context/docs-evaluator/<task>/sampling-plan.md`. Do not use fixed numeric thresholds as the definition of "large"; explain the scope factors, prioritize entrypoints, canonical docs, and mode-relevant docs, sample remaining classes intentionally, and report unread ranges in `Evidence Coverage` and confidence impact.
+- Start every artifact written under `.context/docs-evaluator/<task>/` with front matter containing `task`, `phase_or_step`, and `created_at` (ISO 8601); add `mode` in `report.md`. Use the artifact filename stem as `phase_or_step`.
 
 ## Mode Selection
 
@@ -51,6 +52,19 @@ Mode decision order:
 
 ## Workflow
 
+Copy this checklist into your working notes and check off steps as you complete them:
+
+```
+Docs Evaluation Progress:
+- [ ] 1 Task and artifact directory set
+- [ ] 2 Inventory saved (inventory.md); for large targets, sampling planned (sampling-plan.md)
+- [ ] 3 Reachability map saved (reachability.md)
+- [ ] 4 Source-of-truth classification saved (source-of-truth.md)
+- [ ] 5 Findings recorded against the rubric (raw-findings.md)
+- [ ] 6 Checks run with mutation guard (checks.md)
+- [ ] 7 Report written and summarized (report.md)
+```
+
 1. **Set task and artifact directory**
    - Create `.context/docs-evaluator/<task>/`. Use `<YYYYMMDD>-<target-slug>` when no task name is given; if the directory already exists, append `-2`, `-3`, and so on instead of overwriting prior artifacts.
    - Record target, mode, requested scope, exclusions, assumptions, and whether the user requested all text files or documentation-like files.
@@ -74,9 +88,10 @@ Mode decision order:
   - Save `.context/docs-evaluator/<task>/source-of-truth.md`.
 
 5. **Evaluate quality and consistency**
-   - Read `references/evaluation-rubric.md`.
+   - Read `references/evaluation-rubric.md`. The rubric is the canonical list of pillars, issue categories, and finding discipline; do not maintain a parallel criteria list here.
    - When evaluating knowledge-base directories, durable notes, agent-readable knowledge systems, or reusable context stores, read `references/knowledge-system-patterns.md`.
-   - Check reachability, entrypoint conflicts, AI readability, necessity/sufficiency, contradictions, instruction-strength drift, stale/deprecated docs or skills, active-doc policy contamination, negative-reference classification, freshness governance, knowledge-system structure, primary-home/resolver clarity, current-truth-vs-history separation, provenance/confidence/freshness, typed entity and relationship hygiene, raw-source-vs-curated-synthesis boundaries, privacy/data-boundary clarity, TODO/deferred work governance, duplicated policy, agent-specific guidance separation, skill contract precedence, artifact contract hygiene, schema source-of-truth drift, machine-check boundary clarity, naming taxonomy documentation, stable selector vs implementation-name separation, metadata/front matter hygiene, external reference clarity, documented dependency clarity, spec/contract traceability, canonical-vs-temporary separation, unreflected gaps, terminology consistency, and qualitative reading burden.
+   - Evaluate every applicable rubric criterion; record `N/A` with a one-line reason for criteria that do not apply instead of skipping them silently.
+   - Give first-class attention to active-doc policy contamination, current-truth-vs-history separation, and AI readability as context economy.
    - Save raw evidence to `.context/docs-evaluator/<task>/raw-findings.md`.
 
 6. **Run checks with mutation guard**
@@ -100,9 +115,9 @@ Mode decision order:
 
 - For `documentation-system-evaluation`, include `Executive Summary`, `Overall Score`, `Pillar Scores`, `Evidence Coverage`, `Inventory Summary`, `Entrypoint Conflicts`, `Reachability`, `Source-of-Truth Boundaries`, `Policy Contamination`, `Instruction Strength Drift`, `Agent-Specific Guidance`, `Skill Contract Precedence`, `Metadata / Front Matter Hygiene`, `Reference Integrity`, `AI Readability`, `Positive Signals`, `Contradictions & Drift`, `TODO / Deferred Work`, `Deprecated or Stale Docs`, `Temporary-to-Canonical Gaps`, `Checks Run`, `Checks Not Run`, `Issues & Risks`, and `Recommended Next Actions`. Start with summary and scores. If P0/P1 policy contamination exists, show it in `Executive Summary` top risks even when the overall score is otherwise good.
 - For narrower modes, include `Findings`, `Evidence Coverage`, mode-specific sections, `Checks Run / Not Run`, `Residual Gaps`, and `Summary`. Start with findings ordered by severity.
-- Include these mode-specific sections when applicable: `Source-of-Truth Boundaries` and `Temporary-to-Canonical Gaps` for `source-of-truth-review`; `Reachability` and `Entrypoint Conflicts` for `reachability-audit` and `entrypoint-conflict-review`; `Deprecated or Stale Docs` and `Freshness Governance` for `stale-docs-review`; `TODO / Deferred Work` for `todo-governance-review`; `Instruction Strength Drift`, `Agent-Specific Guidance`, `Skill Contract Precedence`, and `Contradictions & Drift` for `guidance-consistency-review`; `Metadata / Front Matter Hygiene` for `metadata-hygiene-review`; `Reference Integrity` for `reference-integrity-review`.
+- Include these mode-specific sections when applicable: `Source-of-Truth Boundaries` and `Temporary-to-Canonical Gaps` for `source-of-truth-review`; `Reachability` and `Entrypoint Conflicts` for `reachability-audit` and `entrypoint-conflict-review`; `Deprecated or Stale Docs` and `Freshness Governance` for `stale-docs-review`; `TODO / Deferred Work` and `Temporary-to-Canonical Gaps` for `todo-governance-review`; `Instruction Strength Drift`, `Agent-Specific Guidance`, `Skill Contract Precedence`, and `Contradictions & Drift` for `guidance-consistency-review`; `Metadata / Front Matter Hygiene` for `metadata-hygiene-review`; `Reference Integrity` for `reference-integrity-review`.
 - Use priority by documentation-system risk: `P0` blocker, `P1` high risk, `P2` meaningful maintainability or AI-readability risk, `P3` optional cleanup.
-- Each issue must include evidence, impact, recommended next action, and confidence.
+- Each issue must include evidence, impact, recommended next action, and confidence; P0/P1 issues also include revisit conditions.
 - Distinguish "missing canonical doc" from "canonical doc exists but is not linked" and from "historical note contains unreflected policy".
 - Distinguish "active docs intentionally mention an old term as a negative reference" from "active docs keep an old term as a current option". The latter is policy contamination.
 - Treat recommendations as ideal-state directions, not a human work breakdown.

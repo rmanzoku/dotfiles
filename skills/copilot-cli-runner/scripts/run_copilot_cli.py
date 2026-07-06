@@ -16,7 +16,10 @@ from typing import Any
 
 
 ERROR_RE = re.compile(
-    r"(auth|authentication|login|model|permission|rate limit|rate-limit|quota|policy|path|tool|url|denied|forbidden)",
+    r"(auth(?:entication)?\s+(?:failed|required|error)|api key|login\s+(?:required|failed)|"
+    r"permission\s+(?:denied|required|error)|rate[- ]limit|quota|overloaded|"
+    r"trust\s+(?:required|error)|policy\s+(?:violation|denied|error)|sandbox\s+(?:denied|error)|"
+    r"model\s+(?:not found|unsupported|unavailable|invalid|error))",
     re.IGNORECASE,
 )
 
@@ -269,7 +272,7 @@ def main() -> int:
     last_event = records[-1] if records else None
     last_error_event = error_events[-1] if error_events else None
     stderr_text = stderr_path.read_text(encoding="utf-8", errors="replace") if stderr_path.exists() else ""
-    stderr_error = bool(ERROR_RE.search(stderr_text))
+    stderr_error = any(ERROR_RE.search(line) for line in stderr_text.splitlines())
 
     expected = []
     for raw in args.expected_artifact:
@@ -285,26 +288,38 @@ def main() -> int:
             }
         )
 
+    expected_ok = all(item["exists"] and item["non_empty"] for item in expected)
+    events_present = events_path.exists() and events_path.stat().st_size > 0
+    success_evidence_ok = proc.returncode == 0 and not error_events and events_present and expected_ok
+
     failure_reasons: list[str] = []
+    nonfatal_reasons: list[str] = []
     if proc.returncode == 124:
         failure_reasons.append("timeout")
     elif proc.returncode != 0:
         failure_reasons.append("nonzero_exit")
     if stderr_error:
-        failure_reasons.append("stderr_cli_error")
+        if success_evidence_ok:
+            nonfatal_reasons.append("stderr_cli_error")
+        else:
+            failure_reasons.append("stderr_cli_error")
     if error_events:
         failure_reasons.append("event_error")
-    if not events_path.exists() or events_path.stat().st_size == 0:
+    if not events_present:
         failure_reasons.append("missing_events")
-    if any(not item["exists"] or not item["non_empty"] for item in expected):
+    if not expected_ok:
         failure_reasons.append("missing_expected_artifact")
 
     if "timeout" in failure_reasons:
         recommended = "Inspect run.events.jsonl for partial progress, then rerun with a tighter prompt or larger timeout."
     elif "stderr_cli_error" in failure_reasons:
-        recommended = "Fix authentication, model, permission, path, tool, URL, quota, or rate-limit settings before rerunning."
+        recommended = "Fix authentication, model, permission, trust, policy, quota, or rate-limit settings before rerunning."
     elif "missing_expected_artifact" in failure_reasons:
         recommended = "Check the prompt artifact path contract and rerun with an explicit expected output path."
+    elif nonfatal_reasons:
+        recommended = "Run succeeded with non-fatal Copilot CLI warnings; inspect nonfatal_reasons and run.err if task quality is suspicious."
+    elif not failure_reasons:
+        recommended = "Run succeeded; evaluate task-specific artifact quality against the source prompt."
     else:
         recommended = "Inspect run.events.jsonl and run.err, then rerun with adjusted prompt, model, effort, agent, permissions, or timeout."
 
@@ -329,6 +344,7 @@ def main() -> int:
         "expected_artifacts": expected,
         "success": not failure_reasons,
         "failure_reasons": failure_reasons,
+        "nonfatal_reasons": nonfatal_reasons,
         "recommended_next_action": recommended,
     }
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

@@ -1,11 +1,25 @@
 ---
 name: evaluation-rubric
 description: General codebase evaluation rubric for the code-evaluator skill.
+version: "2.0"
+updated: 2026-07-05
 ---
 
 # Evaluation Rubric
 
 Use this rubric to evaluate code quality while keeping the final report evidence-backed and concise.
+
+## Applying the Rubric
+
+- Criteria are separated on purpose: judge each criterion independently and do not average a failed criterion away inside an otherwise good pillar.
+- Not every criterion applies to every target. Record non-applicable criteria as `N/A` with a one-line reason instead of scoring them.
+- Every finding must cite trace evidence the reader can open: path, line where practical, and the observed fact. No finding without evidence.
+- Judge severity by damage depth and reversibility, not by probability alone or by prose volume. A one-way-door risk (money, contracts, data loss, security, PII, legal exposure, public API breakage) outranks a statistically likelier but reversible annoyance. Report length must not scale with repository size.
+- In the final report, prefer fewer evidenced findings over many speculative ones; findings the maintainer dismisses as nitpicks erode trust in the whole report. This filter applies when composing the report, not during the finding pass: raw-findings coverage stays complete (see the change-review coverage rule in `SKILL.md`).
+- Present structural concerns as conditional smell hypotheses: "acceptable while condition A holds; hurts when condition B becomes true." Confirmed defects outrank hypotheses; style preferences rank last.
+- For every P0/P1 issue, include revisit conditions: the concrete observation that would flip or retire the judgment.
+- A single evaluator pass is one perspective, not exhaustive coverage. When confidence matters, state which classes of issues this pass is unlikely to catch.
+- When materially changing this rubric's pillars or criteria, sanity-check the new version against at least one recent past report before adopting it.
 
 ## Pillars
 
@@ -17,6 +31,9 @@ Use this rubric to evaluate code quality while keeping the final report evidence
 2. **Implementation quality and maintainability**
    - Readability, simple control flow, robust error handling, observability, validation, security hygiene, performance hygiene, operational readiness signals, and testability.
    - Prefer idiomatic use of language/framework features over custom abstractions without clear benefit.
+   - Treat guard clauses, input validation, and error handling as healthy branches; `if` statements are not inherently bad. Treat repeated conditions, `type`/`kind`/`mode`/`status` branching, unclear one-vs-many special cases, and unnamed domain concepts buried in conditions as signals of specification complexity or unextracted concepts.
+   - Treat bare default values, magic numbers, Boolean parameters, sentinel values, stringly typed modes, unitless values, implicit fallbacks, and env/config reads from deep layers as observation points for anonymous specification decisions. For domain-significant branches or values, prefer named constants, types, enums, policies, explicit inputs, and boundary validation; comments explain background and tradeoffs, not missing intent.
+   - Flag fallback paths that hide the primary path's failure cause, silently switch execution routes, or weaken idempotency. If the alternate path is more reliable, the finding is "promote it to primary," not "keep it as fallback." Explicitly modeled redundant providers (equivalent endpoints, mirrors, replicas) with clear selection rules are not fallback smells.
    - Public component, directory, function, and module names should describe responsibility or ownership, not authoring method, AI involvement, or generator provenance.
    - Semantic UI object names should own the object contract they imply, such as relevant state, variants, accessibility, interaction, layout/composition, and data/source responsibility; leaf text, formatter, wrapper, or selector helpers should use names and placement that reflect their narrower role.
 
@@ -41,8 +58,17 @@ Use this rubric to evaluate code quality while keeping the final report evidence
 
 7. **AI/LLM ergonomics**
    - Clear structure, chunkable files, explicit interfaces/types, predictable naming, low boilerplate, focused modules, and tests/docs that let future agents reason with limited context.
+   - Context economy: an agent can load the smallest relevant slice of the codebase for a task — focused modules with clear entrypoints beat sprawling files that force whole-file reads.
+   - Feedback loops exist and are agent-usable: validators, tests, and checks that an agent can run, with verbose, self-repair-friendly error messages ("field X not found; available: ...") rather than bare failures.
+   - No voodoo constants: configuration values carry their justification; if the right value is unknowable from the code, an agent cannot maintain it either.
+   - When the repository contains agent scaffolding (prompts, skills, harness scripts), evaluate whether its instruction specificity matches task fragility: fixed scripts for fragile operations, principles for judgment work; and whether prompts hold a useful altitude instead of hardcoding brittle case logic.
    - Treat this as supplementary to human readability, domain idiom, and maintainability; do not reward AI convenience at their expense.
    - Future agents should be able to identify source taxonomy, ownership layer, canonical docs, and verification gates before editing.
+
+8. **Future-context fit**
+   - Backward compatibility, commonization, staged migration, feature flags, abstraction layers, and fallback paths are not inherently good; each must name the constraint it protects. Where change is cheap and reversible, rebuilding at time of need may beat embedding future support now.
+   - Do not present human-era development conventions (effort-based phasing, ceremony-heavy process) as optimal by default when change velocity is high and the change is reversible.
+   - This relaxation never applies to high-damage-depth domains: billing, authentication/authorization, audit, migrations, data models, external API contracts, legal/regulatory requirements, security, PII, money movement, and irreversible production data operations are judged by damage depth with explicit specifications, boundary validation, auditability, rollback, and human approval.
 
 ## Dependency Triage
 
@@ -89,6 +115,9 @@ Impact:
 Recommended next action:
 - Ideal-state direction or investigation target.
 
+Revisit conditions:
+- (P0/P1 only) The concrete observation that would flip or retire this judgment.
+
 Confidence:
 - High | Medium | Low
 ```
@@ -105,7 +134,7 @@ Include a short section for what should likely be preserved:
 - Evidence of dependency/license remediation.
 - Simple internal code replacing unnecessary commodity dependencies.
 
-## What Not To Preserve
+## What I Would Not Preserve
 
 Call out existing structures that should not constrain future improvement:
 

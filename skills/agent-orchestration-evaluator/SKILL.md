@@ -1,6 +1,6 @@
 ---
 name: agent-orchestration-evaluator
-description: Evaluate and tune AI agent orchestration rules, model resolvers, skill role assignments, slash commands, and prompt harnesses so parent agents stay focused on orchestration while researcher/reviewer/worker roles are delegated to subagents or observable CLI runners. Use when asked to review or extract resolver semantics, Self-Elision, self vs subagent boundaries, multi-agent skill design, Claude/Codex/Gemini/Grok delegation, runner-skill migration, error-bypass remediation policy, or agent workflow evaluator/tuning guidance across projects.
+description: Evaluate and tune AI agent orchestration rules, model resolvers, skill role assignments, slash commands, and prompt harnesses so parent agents stay focused on orchestration while researcher/reviewer/worker roles are delegated to subagents or observable CLI runners. Use when asked to review or extract resolver semantics, Self-Elision, self vs subagent boundaries, multi-agent skill design, Claude/Codex/Gemini/Grok/Copilot delegation, runner-skill migration, error-bypass remediation policy, or agent workflow evaluator/tuning guidance across projects.
 ---
 
 # Agent Orchestration Evaluator
@@ -27,7 +27,7 @@ Use these terms consistently:
 | `self` | An explicit role assignment meaning the parent orchestrator directly performs orchestration work for the phase. Reserve for intent clarification, planning, delegation, artifact checks, synthesis, adjudication, and final output. Do not use for concrete task execution that can be delegated. |
 | AI agent role | A delegated role such as researcher, reviewer, creator, worker, judge, analyzer, verifier, or implementation slice owner. |
 | Self-Elision | Runtime optimization when a delegated role resolves to the same provider/model as the parent. Skip external CLI, but still delegate to a same-provider/model subagent. |
-| Runner skill | A wrapper skill for observable Claude / Codex / Gemini / Grok CLI or API-backed subprocess execution, stream logs, timeouts, expected artifacts, and failure reports. |
+| Runner skill | A wrapper skill for observable Claude / Codex / Gemini / Grok / Copilot CLI or API-backed subprocess execution, stream logs, timeouts, expected artifacts, and failure reports. |
 | Resolver | Logic that maps role -> alias -> provider/model/config/execution mode. It should not become a raw command cookbook when runner skills exist. |
 | Bypass remediation review | A separate review triggered when the parent or a delegated worker bypasses an error in a way that may recur, skip validation, reduce reproducibility, or reveal missing setup, permissions, dependencies, docs, hooks, or skills. |
 | Promotion candidate | A repeated orchestration failure or waste pattern that may deserve a durable home such as resolver policy, runner hardening, AGENTS guidance, a skill, a script, a test, or an evaluator backlog item. |
@@ -42,7 +42,7 @@ Flag or fix violations of these invariants:
 4. Aliased AI agent roles are not performed by the parent orchestrator merely because the model matches.
 5. Delegation should prefer subagents whenever the environment supports them, including for same-provider Self-Elision and for wrapping cross-provider runner-skill calls.
 6. Self-Elision means "do not spawn an external CLI subprocess; spawn a same-provider subagent instead."
-7. Cross-provider roles use a runner skill when available; otherwise use the resolver's CLI command contract. This includes Claude, Codex, Gemini, and Grok runner skills.
+7. Cross-provider roles use a runner skill when available; otherwise use the resolver's CLI command contract. This includes Claude, Codex, Gemini, Grok, and Copilot runner skills.
 8. Runner skills own subprocess mechanics: prompt files, stream logs, timeout defaults, expected artifacts, summary, and failure reports.
 9. Resolver docs own role/provider/model/config selection and execution-mode semantics, not wrapper internals.
 10. Skills should reference the resolver/registry for concrete provider, model ID, effort, and config. Do not hard-code model names or effort settings in skill text except as examples clearly marked non-authoritative.
@@ -93,7 +93,7 @@ Flag or fix violations of these invariants:
 5. **Evaluate execution contracts**
    - Delegated work should have an outcome-first prompt, source prompt file when large, expected artifacts, success criteria, allowed side effects, evidence rules, timeout/budget guard, and blocked-state reporting.
    - CLI runner calls should preserve observability: stream logs, stderr, summary, failure artifact, elapsed time, and expected artifact checks.
-   - Check Claude, Codex, Gemini, and Grok roles for available runner skills before accepting raw `claude`, `codex`, `gemini`, `grok`, direct API, or ad hoc wrapper calls inside skill text.
+   - Check Claude, Codex, Gemini, Grok, and Copilot roles for available runner skills before accepting raw `claude`, `codex`, `gemini`, `grok`, `copilot`, direct API, or ad hoc wrapper calls inside skill text.
    - Same-provider subagents should have a bounded responsibility and a clear return artifact or final report shape.
    - Long-running roles should write summaries, blocked-state reports, and expected artifacts in stable paths so compaction does not make the work unrecoverable.
    - Bypass remediation reviews should classify the error cause, temporary bypass, permanent-remediation options, repo-managed changes, machine-local state, and verification plan.
@@ -198,6 +198,7 @@ Expected runner mapping:
 | Codex CLI | Use `codex-cli-runner` when available; do not inline `codex exec` details in dependent skills. If unavailable, keep only an explicit resolver fallback contract. |
 | Gemini CLI | `gemini-cli-runner` |
 | Grok CLI or API-backed handoff | `grok-cli-runner` |
+| Copilot CLI | `copilot-cli-runner` |
 
 Prefer runners that provide prompt-file handoff, timeout control, expected artifact checks, summary, and failure reporting. Keep the skill text at the level of "use the runner skill"; do not inline runner command details.
 
@@ -289,7 +290,7 @@ Stop only when:
 - Delegated AI roles have an explicit subagent or runner path.
 - Parent `self` phases are limited to orchestration responsibilities, not concrete task execution.
 - Skills reference resolver/registry paths instead of hard-coding concrete model names, effort, or provider config.
-- Claude, Codex, Gemini, and Grok cross-provider invocations use available runner skills instead of raw command or ad hoc API calls.
+- Claude, Codex, Gemini, Grok, and Copilot cross-provider invocations use available runner skills instead of raw command or ad hoc API calls.
 - Execution-only roles such as `creator` use lightweight defaults unless a documented reason says otherwise.
 - Fallbacks are explicit and do not silently assign worker roles to the parent orchestrator.
 - Dependent skills/prompts no longer contradict the canonical resolver.

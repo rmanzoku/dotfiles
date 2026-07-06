@@ -164,7 +164,7 @@ def load_request_payload(data: dict[str, Any], *, model: str) -> dict[str, Any]:
     if not isinstance(request_data, dict):
         raise ValueError("request artifact must include object 'request'")
     payload = dict(request_data)
-    payload.setdefault("model", model)
+    payload["model"] = model
     if "input" not in payload:
         raise ValueError("request.request must include 'input'")
     if "instructions" in payload:

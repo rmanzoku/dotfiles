@@ -1,6 +1,6 @@
 ---
 name: gws-cli-runner
-description: Run Google Workspace CLI (`gws`) through the repository-managed account-scoped wrapper. Use when Codex needs to execute, configure, debug, or propose `gws` commands, especially where OAuth profile selection, credential paths, Personal-owned account mapping, `.env` account cache, 1Password restore, fallback policy, or avoidance of wrong Google principals matters.
+description: Run Google Workspace CLI (`gws`) through the repository-managed account-scoped wrapper. Use when Claude Code or Codex needs to execute, configure, debug, or propose `gws` commands, especially where OAuth profile selection, credential paths, Personal-owned account mapping, `.env` account cache, 1Password restore, fallback policy, or avoidance of wrong Google principals matters.
 ---
 
 # GWS CLI Runner

@@ -61,7 +61,7 @@ The wrapper writes:
 - `run.prompt.md`: launch prompt sent to Copilot, including any prompt profile adapter
 - `run.events.jsonl`: Copilot JSONL stdout events
 - `run.err`: stderr
-- `summary.json`: command, exit code, elapsed time, byte counts, parsed errors, prompt profile, `failure_reasons`, `recommended_next_action`, and `expected_artifacts`
+- `summary.json`: command, exit code, elapsed time, byte counts, parsed errors, prompt profile, `failure_reasons`, `nonfatal_reasons`, `recommended_next_action`, and `expected_artifacts`
 - `failure.md`: only when the wrapper run fails
 
 ## Prompt Profiles
@@ -92,7 +92,7 @@ Treat any of these as failure:
 
 - Timeout exit, normally exit code `124`.
 - Non-zero process exit.
-- stderr contains authentication, login, model, permission, quota, policy, path, tool, URL, or rate-limit errors.
+- stderr contains authentication, login, model, permission, trust, policy, quota, or rate-limit error signatures. When every other success check passes, such stderr matches are recorded in `summary.json.nonfatal_reasons` instead of failing the run.
 - Copilot exits because a required non-interactive tool, path, or URL permission was not granted.
 - Parsed JSONL records contain obvious error records.
 - `run.events.jsonl` is missing or empty.
@@ -105,6 +105,7 @@ On failure, inspect `.context/<task>/summary.json` first:
 - `elapsed_seconds`
 - `events_bytes` and `stderr_bytes`
 - `failure_reasons`
+- `nonfatal_reasons`
 - `last_error_event` or `last_event`
 - `expected_artifacts`
 - `recommended_next_action`

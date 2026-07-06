@@ -1,6 +1,25 @@
+---
+name: evaluation-rubric
+description: Documentation-system evaluation rubric for the docs-evaluator skill.
+version: "2.0"
+updated: 2026-07-05
+---
+
 # Docs Evaluator Rubric
 
 Use this rubric to score the documentation system as a graph of active guidance, canonical sources, and historical records.
+
+## Applying the Rubric
+
+- Criteria are separated on purpose: judge each criterion independently and do not average a failed criterion away inside an otherwise good pillar.
+- Not every criterion applies to every repository. Record non-applicable criteria as `N/A` with a one-line reason instead of scoring them.
+- Every finding must cite trace evidence the reader can open: path, line or heading, and the observed wording. No finding without evidence.
+- Judge severity by impact and damage depth, not by how much prose the finding needs. Long explanations do not make a finding more severe, and report length must not scale with repository size.
+- Prefer fewer evidenced findings over many speculative ones; findings the maintainer dismisses as nitpicks erode trust in the whole report.
+- Present low/medium-confidence structural concerns as conditional smell hypotheses: "acceptable while condition A holds; hurts when condition B becomes true."
+- For every P0/P1 issue, include revisit conditions: the concrete observation that would flip or retire the judgment.
+- A single evaluator pass is one perspective, not exhaustive coverage. When confidence matters, state which classes of issues this pass is unlikely to catch.
+- When materially changing this rubric's pillars or issue categories, sanity-check the new version against at least one recent past report before adopting it.
 
 ## Pillars
 
@@ -32,8 +51,15 @@ Use this rubric to score the documentation system as a graph of active guidance,
 
 ### AI Readability
 
-- Documents are necessary and sufficient for an AI agent to complete common tasks without reading excessive unrelated history.
+Evaluate this pillar as context economy: agent context is a finite resource, and a good documentation system lets an agent assemble the smallest set of high-signal tokens needed for the task at hand.
+
+- Documents are necessary and sufficient for an AI agent to complete common tasks without reading excessive unrelated history, and they do not re-explain what a competent agent already knows.
 - Reading order is explicit enough to avoid both missed rules and unnecessary deep dives.
+- Entrypoints work as pointer sets (path plus one-line purpose) that support just-in-time retrieval: an agent can decide which file to load next without loading everything.
+- The docs system maps to a three-layer shape: index/table-of-contents entrypoints, focused per-topic documents, and deep reference material loaded only on demand.
+- Structure signals are checkable: entry documents stay concise, documents are reachable within the layers the entrypoints declare (index to topic to reference) rather than through undeclared nested reference chains, and long reference documents open with a table of contents or an equivalent scannable heading structure.
+- Critical rules sit where agents will see them — near the beginning or end of a document — not buried mid-file.
+- Guidance documents hold a useful instruction altitude: concrete enough to steer behavior, without hardcoding brittle case-by-case logic that belongs in scripts or validators.
 - Documents are chunkable: scoped headings, concise sections, stable names, and structured lists where useful.
 - The required reading path has a reasonable qualitative burden and does not force agents through irrelevant history.
 - Gate or phase artifacts expose machine-checkable status fields when docs say work cannot proceed on `FAIL` or `QUESTION`; prose-only completion claims are a risk when downstream agents or validators need stable state.

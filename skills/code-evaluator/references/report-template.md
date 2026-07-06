@@ -1,15 +1,28 @@
 ---
 name: report-template
 description: Report templates for code-evaluator modes.
+version: "2.0"
+updated: 2026-07-05
 ---
 
 # Report Template
 
 Use these structures as output contracts. Keep reports concise enough to act on, but include evidence paths and confidence.
 
+Every artifact under `.context/code-evaluator/<task>/` starts with front matter
+containing `task`, `phase_or_step` (the artifact filename stem), and
+`created_at`; `report.md` adds `mode`, as shown below.
+
 ## Whole-Codebase Evaluation
 
 ```md
+---
+task: <task-slug>
+phase_or_step: report
+created_at: <ISO-8601 timestamp>
+mode: whole-codebase-evaluation
+---
+
 # Code Evaluation Report
 
 ## Executive Summary
@@ -67,6 +80,7 @@ Use these structures as output contracts. Keep reports concise enough to act on,
 | Dependency necessity | X/10 | high/medium/low | |
 | Security and reliability | X/10 | high/medium/low | |
 | AI/LLM ergonomics | X/10 | high/medium/low | |
+| Future-context fit | X/10 | high/medium/low | |
 
 Confidence must reflect evidence coverage: use `low` for narrow sampling or missing core areas, `medium` for representative but incomplete evidence, and `high` only when inspected evidence and relevant checks support the claim.
 
@@ -86,6 +100,9 @@ Impact:
 
 Recommended next action:
 - ...
+
+Revisit conditions:
+- (P0/P1 only) ...
 
 Confidence:
 - High | Medium | Low
@@ -130,6 +147,13 @@ Use risk/design priority, not human work phasing.
 Start with findings:
 
 ```md
+---
+task: <task-slug>
+phase_or_step: report
+created_at: <ISO-8601 timestamp>
+mode: change-review
+---
+
 # Code Evaluation Change Review
 
 ## Findings
@@ -144,6 +168,9 @@ Impact:
 
 Recommended next action:
 - ...
+
+Revisit conditions:
+- (P0/P1 only) ...
 
 Confidence:
 - High | Medium | Low
@@ -178,6 +205,13 @@ If there are no findings, state that clearly and still report checks, coverage, 
 ## License Audit Mode
 
 ```md
+---
+task: <task-slug>
+phase_or_step: report
+created_at: <ISO-8601 timestamp>
+mode: license-audit
+---
+
 # Code Evaluation License Audit
 
 ## Executive Summary
@@ -235,6 +269,9 @@ Impact:
 Recommended next action:
 - ...
 
+Revisit conditions:
+- (P0/P1 only) ...
+
 Confidence:
 - High | Medium | Low
 
@@ -250,6 +287,13 @@ Confidence:
 ## Framework Best-Practice Review Mode
 
 ```md
+---
+task: <task-slug>
+phase_or_step: report
+created_at: <ISO-8601 timestamp>
+mode: framework-best-practice-review
+---
+
 # Code Evaluation Framework Best-Practice Review
 
 ## Executive Summary
@@ -293,6 +337,9 @@ Impact:
 
 Recommended next action:
 - ...
+
+Revisit conditions:
+- (P0/P1 only) ...
 
 Confidence:
 - High | Medium | Low

@@ -104,7 +104,7 @@ If both lenses apply, report them separately. Do not let cross-repository patter
    - Do not let axis scores, percentages, or generic prompt snippets be the main deliverable. They support the decision, but the report must answer what to do next, where, and how to verify it.
 
 9. **Run privacy scan**
-   - For any saved report, run `scripts/privacy_scan.py <path> --mode <mode>`.
+   - For any saved report, run `python3 scripts/privacy_scan.py <path> --mode <mode>` (resolve `scripts/` from this skill's install directory; the exec bit is not preserved by `gh skill install`).
    - In `shareable` and `teacher-pack`, privacy scan must pass before final delivery.
    - In `trusted-local`, still run the scan and report any warnings.
 
@@ -113,7 +113,7 @@ If both lenses apply, report them separately. Do not let cross-repository patter
 - Prefer behavior evidence: "success condition was missing", "verification command was absent", "skill was invoked after manual exploration".
 - Prefer artifact-backed and structured evidence over self-report: diffs, docs, tests, validation logs, task outcomes, tool outcomes, review comments, and redacted summaries.
 - In `trusted-local`, make evidence concrete enough to be useful: include small representative examples, command families, failure shapes, repo/workflow labels, or short redacted excerpts. Keep these examples local-only and mark the report `shareable: false`.
-- In `trusted-local`, use concrete repository or workflow labels when they are visible and not sensitive. Avoid vague labels such as "wallet app 系" or "workspace 系" when an actual repo label like `oasyswallet/changer-all` or a concrete sanitized workflow label is available.
+- In `trusted-local`, use concrete repository or workflow labels when they are visible and not sensitive. Avoid vague labels such as "wallet app 系" or "workspace 系" when an actual repo label like `<org>/<repo>` or a concrete sanitized workflow label is available.
 - In `shareable`, keep evidence behavior-level, but still include specific sanitized pattern descriptions such as "test command discovered after implementation" instead of only percentages.
 - No score without evidence. If an axis has insufficient evidence, leave it unscored or mark confidence as `low` instead of filling gaps with personality or intent guesses.
 - Treat repeated failures and repeated wasted work as first-class evidence. If the same failure, workaround, or investigation recurs, recommend promotion into docs, a skill, a script, or a reusable checklist.

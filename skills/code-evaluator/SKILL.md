@@ -1,6 +1,6 @@
 ---
 name: code-evaluator
-description: Evaluate a repository, package, subsystem, or substantial source tree when explicitly asked for a broad codebase assessment. Produces an artifact-backed Markdown report covering architecture, maintainability, tests, documentation, dependency necessity, license/distribution risk, security, framework idioms, and AI/LLM ergonomics. Use for whole-codebase or subsystem evaluations, architecture assessments, dependency/license audits, broad quality baselines, and broader-than-PR reviews; do not take over ordinary narrow PR/diff review unless the user asks for this evaluator or a broad assessment.
+description: Evaluate a repository, package, subsystem, or substantial source tree when explicitly asked for a broad codebase assessment. Produces an artifact-backed Markdown report covering architecture, maintainability, tests, documentation, dependency necessity, license/distribution risk, security, framework idioms, AI/LLM ergonomics, and future-context fit. Use for whole-codebase or subsystem evaluations, architecture assessments, dependency/license audits, broad quality baselines, and broader-than-PR reviews; do not take over ordinary narrow PR/diff review unless the user asks for this evaluator or a broad assessment.
 ---
 
 # Code Evaluator
@@ -20,6 +20,8 @@ Produce an evidence-backed evaluation report. Do not create patches, edit target
 - For frontend/shared UI evaluations, compare semantic component names with actual ownership. A component named as a UI object such as an indicator, header, footer, dialog, panel, card, CTA, or badge should own that object contract; if it only shares a leaf text renderer, formatter, wrapper, or testID while callers duplicate the object grammar, report the abstraction as insufficient rather than treating it as successful reuse.
 - Use confidence labels. Do not make whole-repo claims from narrow sampling without marking them provisional.
 - When the target is large, create and save a sampling plan before deep dives.
+- Start every artifact written under `.context/code-evaluator/<task>/` with front matter containing `task`, `phase_or_step`, and `created_at` (ISO 8601); add `mode` in `report.md`. Use the artifact filename stem as `phase_or_step`.
+- Treat the target's phase and nature as first-class evaluation inputs: whether it is exploratory, and whether it carries users, revenue, data, contracts, PII, or regulatory exposure. Weigh severity by damage depth and reversibility, not only by probability or by generic best practice.
 - If the user asks for fixes, edits, upgrades, commits, or PR work during an evaluation, keep the current output report-only and propose a separate implementation handoff.
 
 ## Mode Selection
@@ -27,7 +29,7 @@ Produce an evidence-backed evaluation report. Do not create patches, edit target
 Select the narrowest mode that matches the request:
 
 - `whole-codebase-evaluation`: Health check for a repository, package, or subsystem. Use summary-first output with pillar scores, sampling plan, coverage, positive signals, prioritized issues, and ideal-state recommendations.
-- `change-review`: Review a diff/PR/patch in a broader evaluator style. Use findings-first output with severity, file/line references, missing tests, and summary last. Stay limited to the diff and directly coupled boundaries; do not drift into unrelated whole-repo critique.
+- `change-review`: Review a diff/PR/patch in a broader evaluator style. Use findings-first output with severity, file/line references, missing tests, and summary last. During the finding pass, record every issue observed — including uncertain or low-severity ones — with severity and confidence attached; filter and rank when composing the report, not while finding. Stay limited to the diff and directly coupled boundaries; do not drift into unrelated whole-repo critique.
 - `license-audit`: Focus on dependency licenses, distribution context, prior accepted signals, unknown/no-license blockers, and remediation evidence.
 - `framework-best-practice-review`: Focus on idiomatic use of a named framework or library while still checking tests, boundaries, and dependency necessity. Record framework/library name, detected version, primary references consulted, and reviewer confidence for idiom claims.
 
@@ -35,9 +37,22 @@ If the user gives no mode, infer it from the target and wording. If a normal PR 
 
 ## Workflow
 
+Copy this checklist into your working notes and check off steps as you complete them:
+
+```
+Code Evaluation Progress:
+- [ ] 1 Task and artifact directory set
+- [ ] 2 Context acquired (inventory.md)
+- [ ] 3 Sampling planned for large targets (sampling-plan.md)
+- [ ] 4 References loaded as needed
+- [ ] 5 Findings recorded with evidence (raw-findings.md)
+- [ ] 6 Checks run with mutation guard (checks.md)
+- [ ] 7 Report written and summarized (report.md)
+```
+
 1. **Set task and artifact directory**
    - Create `.context/code-evaluator/<task>/`.
-   - Record the target, mode, assumptions, and requested scope.
+   - Record the target, mode, assumptions, requested scope, and the target's phase and nature (exploratory vs carrying users, revenue, data, contracts, PII, or regulatory exposure).
 
 2. **Acquire efficient context**
    - Read high-level docs first when present: `AGENTS.md`, `README*`, `docs/`, architecture/rules docs, package readmes.
@@ -59,7 +74,7 @@ If the user gives no mode, infer it from the target and wording. If a normal PR 
 
 5. **Evaluate and record evidence**
    - Save raw notes/findings under `.context/code-evaluator/<task>/raw-findings.md`.
-   - Each issue must include evidence, impact, recommended next action, and confidence.
+   - Each issue must include evidence, impact, recommended next action, and confidence; P0/P1 issues also include revisit conditions.
    - Include `What I Would Not Preserve` when existing abstractions or dependencies should not constrain a best-state redesign.
    - Tag security findings as `static-review-only` when no scanner, dynamic test, or targeted security tool was run.
 
@@ -77,7 +92,7 @@ If the user gives no mode, infer it from the target and wording. If a normal PR 
 
 ## Required Report Properties
 
-- For `whole-codebase-evaluation`, include `Executive Summary`, `Overall Score`, `Pillar Scores`, `Evidence Coverage`, `Checks Run`, `Checks Not Run`, `Positive Signals`, `Issues & Risks`, `Dependency Triage`, `License / Distribution Triage` when applicable, `What I Would Not Preserve`, and `Recommended Next Actions`. Start with summary and scores.
+- For `whole-codebase-evaluation`, include `Executive Summary`, `Overall Score`, `Pillar Scores`, `Evidence Coverage`, `Checks Run`, `Checks Not Run`, `Positive Signals`, `Issues and Risks`, `Dependency Triage`, `License / Distribution Triage` when applicable, `What I Would Not Preserve`, and `Recommended Next Actions`. Start with summary and scores.
 - For `change-review`, include `Findings`, `Missing Tests`, `Evidence Coverage`, `Open Questions`, `Checks Run / Not Run`, and `Summary`. Start with findings ordered by severity and include file/line references when available.
 - For `license-audit`, include dependency and license/distribution matrices, distribution context assumptions, accepted or unresolved license signals, remediation evidence, blockers or needs-confirmation items, and recommended next actions.
 - For `framework-best-practice-review`, include framework/library name, detected version, primary references consulted, reviewer confidence for idiom claims, findings, tests/checks coverage, dependency necessity, and recommended next actions.
@@ -87,6 +102,7 @@ If the user gives no mode, infer it from the target and wording. If a normal PR 
 
 ## Boundaries
 
+- This skill evaluates source implementation quality, not documentation systems. Use `docs-evaluator` for docs reachability, source-of-truth boundaries, entrypoint conflicts, metadata hygiene, and knowledge-retrieval cost.
 - This skill provides engineering triage, not legal advice.
 - This skill reports visible security hygiene and reliability risks; it does not certify that a system is secure or compliant.
 - Do not declare a license safe only because a name looks familiar. Consider distribution context, notice/source obligations, prior accepted signals, and remediation evidence.

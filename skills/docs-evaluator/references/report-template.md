@@ -1,3 +1,10 @@
+---
+name: report-template
+description: Report templates for docs-evaluator modes.
+version: "2.0"
+updated: 2026-07-05
+---
+
 # Docs Evaluator Report Template
 
 Use this shape for `.context/docs-evaluator/<task>/report.md`.
@@ -6,7 +13,18 @@ Use the full template for `documentation-system-evaluation`. For narrower
 modes, use the findings-first template and include only the mode-specific
 sections that apply.
 
+Every artifact under `.context/docs-evaluator/<task>/` starts with front
+matter containing `task`, `phase_or_step` (the artifact filename stem), and
+`created_at`; `report.md` adds `mode`, as shown below.
+
 ```markdown
+---
+task: <task-slug>
+phase_or_step: report
+created_at: <ISO-8601 timestamp>
+mode: <selected mode>
+---
+
 # Docs Evaluator Report
 
 ## Executive Summary
@@ -25,9 +43,9 @@ sections that apply.
 | Source-of-truth boundaries |  |  |
 | AI readability |  |  |
 | Consistency |  |  |
+| Reference integrity |  |  |
 | Task and gap governance |  |  |
 | Metadata hygiene |  |  |
-| Reference integrity |  |  |
 
 ## Evidence Coverage
 
@@ -44,13 +62,16 @@ sections that apply.
 | Class | Count | Notes |
 | --- | ---: | --- |
 | entrypoint |  |  |
+| index |  |  |
 | canonical |  |  |
+| policy |  |  |
 | spec |  |  |
 | skill |  |  |
 | historical |  |  |
 | temporary |  |  |
 | task-tracking |  |  |
 | deprecated |  |  |
+| generated |  |  |
 | out-of-scope |  |  |
 
 ## Reachability
@@ -162,6 +183,7 @@ sections that apply.
 - Evidence:
 - Impact:
 - Recommended next action:
+- Revisit conditions: (P0/P1 only — what observation would flip or retire this judgment)
 - Confidence:
 
 ## Recommended Next Actions
@@ -194,6 +216,13 @@ reports:
 | reference-integrity-review | Reference Integrity |
 
 ```markdown
+---
+task: <task-slug>
+phase_or_step: report
+created_at: <ISO-8601 timestamp>
+mode: <selected mode>
+---
+
 # Docs Evaluator Narrow Review
 
 ## Findings
@@ -204,6 +233,7 @@ reports:
 - Evidence:
 - Impact:
 - Recommended next action:
+- Revisit conditions: (P0/P1 only — what observation would flip or retire this judgment)
 - Confidence:
 
 ## Evidence Coverage

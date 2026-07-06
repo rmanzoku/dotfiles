@@ -71,9 +71,15 @@ Do not duplicate committed plans, ADRs, PR descriptions, test logs, or issue tex
 
 ## Template
 
-Use this structure unless the target medium has a stronger local convention:
+Use this structure unless the target medium has a stronger local convention. Keep the front matter for `.context/` handoff files when the repository requires artifact gating (see Medium Rules); for PR comments and other non-file media, drop the front matter block:
 
 ```markdown
+---
+task: <task-or-topic>
+phase_or_step: handoff
+created_at: <ISO-8601 timestamp>
+---
+
 # Handoff
 
 ## Destination

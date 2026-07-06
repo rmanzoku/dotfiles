@@ -36,7 +36,11 @@ def utc_now() -> str:
 
 def redact_text(text: str) -> str:
     redacted = re.sub(r"op://[^\s'\"`]+", "op://REDACTED", text)
-    redacted = re.sub(r"OP_SESSION_[A-Z0-9_]+=[^\s'\"`\\]+", "OP_SESSION_REDACTED=REDACTED", redacted)
+    redacted = re.sub(
+        r"OP_SESSION_[A-Za-z0-9_]+=(\\?\"[^\"\n]*\"|'[^'\n]*'|`[^`\n]*`|[^\s'\"`\\]+)",
+        "OP_SESSION_REDACTED=REDACTED",
+        redacted,
+    )
     redacted = PRIVATE_KEY_PATTERN.sub("-----BEGIN PRIVATE KEY-----\nREDACTED\n-----END PRIVATE KEY-----", redacted)
     return KEY_VALUE_SECRET_PATTERN.sub(lambda match: f"{match.group(1)}=REDACTED", redacted)
 

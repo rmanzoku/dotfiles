@@ -58,15 +58,14 @@ python3 <skill-dir>/scripts/run_claude_cli.py \
   --expected-artifact <expected-file>
 ```
 
-For Claude CLI pass-through options, repeat `--extra-claude-arg` once per Claude argv token:
+For Claude CLI pass-through options, repeat `--extra-claude-arg` once per Claude argv token; pass value-taking Claude options in combined `=` form:
 
 ```bash
 python3 <skill-dir>/scripts/run_claude_cli.py \
   --prompt-file .context/<task>/prompt.md \
   --output-dir .context/<task> \
   --expected-artifact result.md \
-  --extra-claude-arg --tools \
-  --extra-claude-arg WebSearch,WebFetch,Read,Write
+  --extra-claude-arg --tools=WebSearch,WebFetch,Read,Write
 ```
 
 Add `--model <model>`, `--effort <low|medium|high|xhigh|max>`, `--permission-mode <mode>`, or `--safe-mode` to the wrapper only when overriding the CLI defaults.
@@ -78,7 +77,7 @@ The wrapper writes:
 - `run.prompt.md`: launch prompt sent to Claude, including any model-specific adapter
 - `run.stream.jsonl`: Claude stream-json stdout
 - `run.err`: stderr
-- `summary.json`: command, resolved `cwd`, permission-mode override, safe-mode override, exit code, elapsed time, byte counts, parsed result/error status, and artifact checks
+- `summary.json`: command, resolved `cwd`, permission-mode override, safe-mode override, exit code, elapsed time, byte counts, parsed result/error status, `failure_reasons`, `nonfatal_reasons`, and artifact checks
 - `failure.md`: only when the run fails
 
 ## Prompt Profiles
@@ -113,7 +112,7 @@ These checks prove runner execution and non-empty artifact materialization only.
 Treat any of these as failure:
 
 - Timeout exit, normally exit code `124`.
-- stderr contains authentication, model, permission, or rate-limit errors.
+- stderr contains authentication, model, permission, trust, policy, quota, or rate-limit error signatures. When every other success check passes (final success result, no error result records, exit 0, non-empty expected artifacts), such stderr matches are recorded in `summary.json.nonfatal_reasons` instead of failing the run.
 - stream-json contains a `type=result` object whose `subtype` starts with `error`, including values such as `error_max_budget_usd`.
 - Expected artifact files are missing or empty.
 - The process exits non-zero for any reason other than an explicitly accepted test case.
@@ -126,6 +125,8 @@ On failure, inspect `.context/<task>/summary.json` first, then use `.context/<ta
 - elapsed time
 - stdout/stderr sizes
 - last stream-json result or error
+- `failure_reasons`
+- `nonfatal_reasons`
 - expected artifact status
 - recommended next action
 
@@ -156,7 +157,8 @@ For Claude researcher roles, include:
 - Pass `--model <model>`, `--effort <level>`, `--permission-mode <mode>`, or `--safe-mode` from the caller when a model registry, role, or task explicitly requires overrides.
 - Use `--prompt-profile opus-4-7` or `--prompt-profile opus-4-8` when the caller knows the CLI default model is that Opus version but does not pass `--model`.
 - Pass each expected output as `--expected-artifact`; use an absolute path or a path relative to the wrapper output directory.
-- Use `--extra-claude-arg` for narrow additions such as `--tools` or `--add-dir` when needed. When the extra Claude argument itself starts with `-`, either `--extra-claude-arg --tools` or `--extra-claude-arg=--tools` is accepted; repeat the option for each token.
+- Use `--extra-claude-arg` for narrow additions such as `--tools` or `--add-dir` when needed. When the extra Claude argument itself starts with `-`, either `--extra-claude-arg --tools=...` or `--extra-claude-arg=--tools=...` is accepted.
+- Pass value-taking Claude options in combined `=` form (for example `--extra-claude-arg --tools=WebSearch,WebFetch`). A space-separated value token is appended just before the positional prompt, and variadic Claude options such as `--tools` and `--add-dir` absorb the prompt and break the run.
 - Keep permission and customization gate decisions in the caller or Claude CLI config/profile. Use wrapper overrides only to reproduce an explicit caller decision.
 - Keep final orchestration in the caller. This skill only runs Claude and records observable artifacts.
 
