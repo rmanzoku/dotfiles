@@ -102,7 +102,8 @@ def list_git_files(root: Path, scopes: list[str]) -> list[Path]:
     return [
         root / line
         for line in result.stdout.splitlines()
-        if Path(line).suffix.lower() in DOC_EXTENSIONS
+        # git ls-files lists tracked-but-deleted paths; skip files absent from the worktree
+        if Path(line).suffix.lower() in DOC_EXTENSIONS and (root / line).is_file()
     ]
 
 
