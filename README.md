@@ -196,7 +196,7 @@ Conductor などのツールが git worktree を立ち上げて dotfiles を編�
 | 実ファイル | chezmoi ソース |
 |-----------|----------------|
 | `.claude/CLAUDE.md` | `dot_claude/CLAUDE.md` |
-| `.claude/settings.json` | `dot_claude/settings.json` |
+| `.claude/settings.json` | `dot_claude/private_settings.json` |
 | `.codex/AGENTS.md` | `dot_codex/AGENTS.md.tmpl` |
 | `.codex/config.toml` | `dot_codex/private_config.toml.tmpl` |
 | `.config/op/dotfiles.env.example` | `dot_config/private_op/dotfiles.env.example` |

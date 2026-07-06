@@ -29,6 +29,7 @@
 - 自動実行の `memory.md`、lock、jitter salt、highwatermark、実行ログ、セッション履歴、UUID ごとの task 実行状態は machine-local state として `.chezmoiignore` で管理対象外にすること
 - Claude Desktop / Claude Code の `~/.claude/tasks` は、安定した宣言的 schedule ではなく実行 state として扱い、明示的に管理対象へ昇格する根拠が確認できるまで chezmoi で管理しないこと
 - 新しい Desktop 自動実行設定を追加するときは、source / target の対応を確認し、secret・token・認証情報が含まれないことを点検してから git 管理へ追加すること
+- アプリが実行時に target へ注入する app 管理設定（例: Codex Desktop が `~/.codex/config.toml` へ書き込む `mcp_servers.node_repl` 等）は machine-local runtime state として source へ取り込まず、pre-commit hook の `APP_MANAGED_DRIFT_ALLOWLIST` で警告のみとすること（[docs/adr/0051](docs/adr/0051-warn-only-app-managed-chezmoi-drift.md)）
 
 # 恒久指示の反映運用
 

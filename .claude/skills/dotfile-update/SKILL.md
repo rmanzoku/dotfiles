@@ -57,7 +57,7 @@ Step artifact:
 | 設定カテゴリ | Claude | Codex | Qwen | Gemini |
 |---|---|---|---|---|
 | 指示ファイル | `dot_claude/CLAUDE.md` | `dot_codex/AGENTS.md.tmpl` | `dot_qwen/QWEN.md.tmpl` | `dot_gemini/GEMINI.md.tmpl` |
-| クライアント設定 | `dot_claude/settings.json` | `dot_codex/private_config.toml.tmpl` | `dot_qwen/settings.json` | `dot_gemini/settings.json.tmpl` |
+| クライアント設定 | `dot_claude/private_settings.json` | `dot_codex/private_config.toml.tmpl` | `dot_qwen/settings.json` | `dot_gemini/settings.json.tmpl` |
 
 判断ルール:
 - 共通運用ルール、保存方針、Plan ルールのように AI 間でそろえるべき内容は、対応ファイルを確認して必要なら反映する。

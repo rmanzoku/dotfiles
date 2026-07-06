@@ -35,13 +35,47 @@ if [ -z "$diff_output" ]; then
   exit 0
 fi
 
-# 差分ファイル一覧を抽出（最大20行）
-files="$(echo "$diff_output" | grep -E '^(---|\+\+\+) [ab]/' | sed 's|^... [ab]/|  |' | sort -u | head -20)"
+# アプリが実行時に書き換える app 管理ファイル。ドリフトは警告表示のみでブロックしない。
+# 追加・削除する場合は docs/adr/0051 の判断を更新すること。
+APP_MANAGED_DRIFT_ALLOWLIST=".codex/config.toml"
+
+# 差分ファイル一覧を抽出（mode のみの差分でも現れる diff --git 行を使う）
+drifted_files="$(echo "$diff_output" | sed -n 's|^diff --git a/\(.*\) b/.*|\1|p' | sort -u)"
+
+blocking_files=""
+allowed_files=""
+while IFS= read -r drifted; do
+  [ -z "$drifted" ] && continue
+  is_allowed=false
+  for allowed in $APP_MANAGED_DRIFT_ALLOWLIST; do
+    if [ "$drifted" = "$allowed" ]; then
+      is_allowed=true
+      break
+    fi
+  done
+  if [ "$is_allowed" = true ]; then
+    allowed_files="${allowed_files}  ${drifted}
+"
+  else
+    blocking_files="${blocking_files}  ${drifted}
+"
+  fi
+done <<< "$drifted_files"
+
+if [ -n "$allowed_files" ]; then
+  echo "app 管理ファイルのドリフトを検出しました（警告のみ、コミットはブロックしません）:"
+  printf '%s' "$allowed_files"
+  echo "取り込みや復元が必要な場合は scripts/chezmoi-drift を明示的に実行してください。"
+fi
+
+if [ -z "$blocking_files" ]; then
+  exit 0
+fi
 
 echo "chezmoi ドリフトを検出しました。コミット前に解消してください。"
 echo ""
 echo "差分のあるファイル:"
-echo "$files"
+printf '%s' "$blocking_files" | head -20
 echo ""
 echo "解消方法:"
 echo "  scripts/chezmoi-drift --apply   (外部の変更を取り込む)"
