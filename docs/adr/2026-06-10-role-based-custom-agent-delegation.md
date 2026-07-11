@@ -2,12 +2,14 @@
 title: "Role-Based Custom Agent Delegation"
 date: 2026-06-10
 agent_model: "GPT-5 Codex"
-status: "accepted"
-updated_at: 2026-06-12
-updated_by_agent_model: "Fable 5 (claude-fable-5)"
+status: "superseded"
+updated_at: 2026-07-08
+updated_by_agent_model: "OpenAI Codex GPT-5"
 ---
 
 # Role-Based Custom Agent Delegation
+
+> Superseded on 2026-07-08. このリポジトリの `AGENTS.md` では、role-based custom agent への委譲を必須または推奨する運用ルールとして持たない。private agent 定義や過去の設計判断は残せるが、repo 作業時の委譲義務としては扱わない。
 
 ## Context
 

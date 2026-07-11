@@ -46,9 +46,6 @@
 - 汎用 CLI / tool error は、失敗扱いする前に意味で分類すること。`rg` の exit code 1 は原則「検索一致なし」として検索仮説・検索範囲・次に広げる範囲を見直し、`apply_patch` の context mismatch は対象範囲を再読してから最小差分を作り直し、`sed` / `rg` の missing path は `rg --files` 等で実在 path を確認し、`git` の conflict / dirty state はユーザー変更保護を優先し、format / typecheck / test failure は対象 file・error shape・再実行 command を固定してから続行すること
 - コマンド、ツール、環境、権限、依存関係、検証でエラーが出た場合は、一時的な迂回で作業継続してよいが、同種エラーの再発、検証省略、環境・設定・権限・依存関係の不備、再現性低下、次回も必要になりそうな手順がある場合は恒久対策レビューの対象として扱うこと
 - 恒久対策レビューでは、エラー原因、一時迂回、恒久対策候補、git 管理へ反映すべき設定・文書・hook・Skill、machine-local に留める state、検証方法を分けて整理すること
-- サブエージェントや runner を使える環境では、恒久対策レビューを必要に応じて別 agent / reviewer / evaluator に委譲してよいが、親 Agent は提案をそのまま採用せず、既存実装・設定・文書・テストへ戻って妥当性を確認すること
-- 複数モデルの使い分け自体を目的にせず、調査、レビュー、設計評価、事業判断、秘書的整理など明確な役割へ切り出せる作業では、必要に応じて role-appropriate なサブエージェント、custom agent、または runner を積極的に使うこと
-- サブエージェントや custom agent へ委譲するときは、親 Agent が目的、背景、対象範囲、制約、許可する副作用、期待成果物、検証方法を明示し、最終判断・統合・ユーザーへの報告責任を保持すること
 
 # Phase / Step Artifact ルール
 

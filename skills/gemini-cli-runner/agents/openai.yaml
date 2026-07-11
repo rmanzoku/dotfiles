@@ -1,4 +1,4 @@
 interface:
   display_name: "Gemini CLI Runner"
-  short_description: "Run Gemini CLI with observable artifacts"
-  default_prompt: "Use $gemini-cli-runner to run a Gemini CLI subprocess with stream-json logs, timeout guards, and failure artifacts."
+  short_description: "Run supported Gemini CLI subprocesses with observable artifacts"
+  default_prompt: "Use $gemini-cli-runner only for supported Gemini CLI environments, with stream-json logs, timeout guards, and failure artifacts."

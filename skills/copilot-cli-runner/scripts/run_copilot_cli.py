@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import re
+import signal
 import shutil
 import subprocess
 import sys
@@ -94,6 +95,23 @@ def parse_args() -> argparse.Namespace:
         default=[],
         help="Additional Copilot CLI argument. Repeat for each token.",
     )
+    parser.add_argument(
+        "--max-ai-credits",
+        type=int,
+        default=None,
+        help="Hard Copilot session AI-credit cap. Required for real runs unless --allow-uncapped is explicit.",
+    )
+    parser.add_argument(
+        "--available-ai-credits-before",
+        type=int,
+        default=None,
+        help="Known remaining plan credits from an interactive /usage check; recorded and checked against the session cap.",
+    )
+    parser.add_argument(
+        "--allow-uncapped",
+        action="store_true",
+        help="Explicitly acknowledge an uncapped real Copilot run.",
+    )
     return parser.parse_args()
 
 
@@ -179,6 +197,36 @@ def record_is_error(record: dict[str, Any]) -> bool:
     )
 
 
+def extract_result_usage(records: list[dict[str, Any]]) -> tuple[str | None, dict[str, Any] | None]:
+    for record in reversed(records):
+        if record.get("type") != "result":
+            continue
+        session_id = record.get("sessionId")
+        usage = record.get("usage")
+        return (
+            str(session_id) if session_id else None,
+            usage if isinstance(usage, dict) else None,
+        )
+    return None, None
+
+
+def terminate_process_group(proc: subprocess.Popen[bytes], grace_seconds: float = 3.0) -> None:
+    if proc.poll() is not None:
+        return
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    try:
+        proc.wait(timeout=grace_seconds)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        proc.wait()
+
+
 def write_failure(path: Path, summary: dict[str, Any]) -> None:
     command = " ".join(summary["command"])
     last = summary.get("last_error_event") or summary.get("last_event") or {}
@@ -225,6 +273,30 @@ def main() -> int:
     cwd = Path(args.cwd).expanduser().resolve()
     timeout_bin = resolve_timeout_bin(args.timeout_bin)
 
+    if args.max_ai_credits is not None and args.max_ai_credits <= 0:
+        print("--max-ai-credits must be positive", file=sys.stderr)
+        return 2
+    if args.available_ai_credits_before is not None and args.available_ai_credits_before < 0:
+        print("--available-ai-credits-before must be non-negative", file=sys.stderr)
+        return 2
+    if args.max_ai_credits is not None and args.allow_uncapped:
+        print("use either --max-ai-credits or --allow-uncapped, not both", file=sys.stderr)
+        return 2
+    is_real_copilot = Path(args.copilot_bin).name == "copilot"
+    if is_real_copilot and args.max_ai_credits is None and not args.allow_uncapped:
+        print(
+            "real Copilot runs require --max-ai-credits or explicit --allow-uncapped",
+            file=sys.stderr,
+        )
+        return 2
+    if (
+        args.max_ai_credits is not None
+        and args.available_ai_credits_before is not None
+        and args.max_ai_credits > args.available_ai_credits_before
+    ):
+        print("--max-ai-credits exceeds --available-ai-credits-before", file=sys.stderr)
+        return 2
+
     if not prompt_file.exists() or not prompt_file.is_file():
         print(f"prompt file does not exist: {prompt_file}", file=sys.stderr)
         return 2
@@ -253,21 +325,31 @@ def main() -> int:
         command.extend(["--effort", args.effort])
     if args.agent:
         command.extend(["--agent", args.agent])
+    if args.max_ai_credits is not None:
+        command.extend(["--max-ai-credits", str(args.max_ai_credits)])
     command.extend(args.extra_copilot_arg)
     command.extend(["-p", short_prompt, "--output-format", "json"])
 
     start = time.monotonic()
+    interrupted = False
     with events_path.open("wb") as stdout_fh, stderr_path.open("wb") as stderr_fh:
-        proc = subprocess.run(
+        proc = subprocess.Popen(
             command,
             cwd=str(cwd),
             stdout=stdout_fh,
             stderr=stderr_fh,
-            check=False,
+            start_new_session=True,
         )
+        try:
+            returncode = proc.wait()
+        except KeyboardInterrupt:
+            interrupted = True
+            terminate_process_group(proc)
+            returncode = 130
     elapsed = round(time.monotonic() - start, 3)
 
     records = load_json_lines(events_path)
+    session_id, usage = extract_result_usage(records)
     error_events = [record for record in records if record_is_error(record)]
     last_event = records[-1] if records else None
     last_error_event = error_events[-1] if error_events else None
@@ -290,13 +372,15 @@ def main() -> int:
 
     expected_ok = all(item["exists"] and item["non_empty"] for item in expected)
     events_present = events_path.exists() and events_path.stat().st_size > 0
-    success_evidence_ok = proc.returncode == 0 and not error_events and events_present and expected_ok
+    success_evidence_ok = returncode == 0 and not error_events and events_present and expected_ok
 
     failure_reasons: list[str] = []
     nonfatal_reasons: list[str] = []
-    if proc.returncode == 124:
+    if interrupted:
+        failure_reasons.append("interrupted")
+    elif returncode == 124:
         failure_reasons.append("timeout")
-    elif proc.returncode != 0:
+    elif returncode != 0:
         failure_reasons.append("nonzero_exit")
     if stderr_error:
         if success_evidence_ok:
@@ -331,13 +415,20 @@ def main() -> int:
         "launch_prompt_path": str(launch_prompt_path),
         "prompt_profile": prompt_profile,
         "output_dir": str(output_dir),
-        "exit_code": proc.returncode,
+        "exit_code": returncode,
         "elapsed_seconds": elapsed,
         "events_path": str(events_path),
         "stderr_path": str(stderr_path),
         "events_bytes": events_path.stat().st_size if events_path.exists() else 0,
         "stderr_bytes": stderr_path.stat().st_size if stderr_path.exists() else 0,
         "record_count": len(records),
+        "session_id": session_id,
+        "usage": usage,
+        "budget": {
+            "max_ai_credits": args.max_ai_credits,
+            "available_ai_credits_before": args.available_ai_credits_before,
+            "allow_uncapped": args.allow_uncapped,
+        },
         "last_event": last_event,
         "last_error_event": last_error_event,
         "stderr_cli_error": stderr_error,

@@ -1,16 +1,19 @@
 ---
 name: gemini-cli-runner
-description: Run Gemini CLI subprocesses with observable stream-json logs, timeouts, config-preserving model and approval controls, prompt profiles, and artifact-based failure handling. Use when Claude Code or Codex needs to invoke `gemini -p`, call Gemini from the CLI, GeminiをCLIで呼ぶ, Gemini CLIをサブプロセス実行する, or delegate long-running research, review, generation, or file work to Gemini while distinguishing real hangs from silent execution.
+description: Run Gemini CLI subprocesses with observable stream-json logs, timeouts, config-preserving model and approval controls, prompt profiles, and artifact-based failure handling. Use only when Gemini CLI is explicitly still available, such as Gemini Code Assist Standard or Enterprise, paid Gemini / Gemini Enterprise Agent Platform API key access, or controlled fake-CLI validation. For individual Google login, Google AI Pro, Google AI Ultra, and free Gemini Code Assist accounts after 2026-06-18, do not use this skill; use Antigravity CLI (`agy`) migration guidance instead.
 ---
 
 # Gemini CLI Runner
 
-Use this skill when delegating work to Gemini CLI through non-interactive `gemini -p`. Keep the source prompt, launch prompt, stream-json output, stderr, summary, and failure notes under `.context/<task>/`.
+Use this skill when delegating work to Gemini CLI through non-interactive `gemini -p`, but only for environments where Gemini CLI remains supported. Google stopped serving individual Gemini Code Assist, Google AI Pro, Google AI Ultra, and free Google login usage for Gemini CLI on 2026-06-18; those accounts must migrate to Antigravity CLI (`agy`) instead.
+
+Keep the source prompt, launch prompt, stream-json output, stderr, summary, and failure notes under `.context/<task>/`.
 
 Frame each delegation as an outcome-first contract: source prompt, expected artifacts, timeout, success criteria, allowed side effects, evidence rules, output shape, and failure handling. Let caller-provided model, approval mode, Gemini config/profile, and explicit extra args control model selection and permission policy.
 
 ## Core Rules
 
+- Do not use this runner for individual OAuth / Google login flows that now report "This client is no longer supported"; install and authenticate Antigravity CLI (`agy`) instead.
 - Use `gemini -p <prompt> --output-format stream-json` for observable non-interactive runs.
 - Put every run under `.context/<task>/`.
 - Save the real assignment as `.context/<task>/prompt.md`.
@@ -98,6 +101,7 @@ Treat any of these as failure:
 - Non-zero process exit.
 - `run.stream.jsonl` or `run.err` contains `setRawMode EIO` or `setRawMode EBADF`; treat this as `raw_mode_tty_error`, a noninteractive TTY failure, not as task output.
 - stderr contains fatal authentication, model resolution, permission, quota, trust, policy, or rate-limit errors that do not recover into exit `0`, a final success result, and non-empty expected artifacts. Non-empty stderr and recovered CLI warnings alone are not failures when the process exits `0`, stream output is present, the final stream result is successful, and expected artifacts are non-empty.
+- stderr mentions that the Gemini CLI client is no longer supported or that the user must migrate to Antigravity; treat it as `unsupported_individual_client`, not as a transient authentication failure.
 - Parsed stream-json records contain obvious error records that do not recover into a final success result with non-empty expected artifacts.
 - `run.stream.jsonl` is missing or empty.
 - The final stream-json record is not a success result.

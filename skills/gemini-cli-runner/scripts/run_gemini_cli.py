@@ -19,10 +19,15 @@ FATAL_STDERR_RE = re.compile(
     r"(auth(?:entication)?\s+(?:failed|required|error)|api key|login\s+(?:required|failed)|"
     r"permission\s+(?:denied|required|error)|rate[- ]limit|quota|overloaded|"
     r"trust\s+(?:required|error)|policy\s+(?:violation|denied|error)|sandbox\s+(?:denied|error)|"
-    r"model\s+(?:not found|unsupported|unavailable|invalid|error))",
+    r"model\s+(?:not found|unsupported|unavailable|invalid|error)|"
+    r"client\s+is\s+no\s+longer\s+supported|migrate\s+to\s+(?:the\s+)?antigravity)",
     re.IGNORECASE,
 )
 RAW_MODE_RE = re.compile(r"setRawMode\s+(?:EIO|EBADF)", re.IGNORECASE)
+UNSUPPORTED_INDIVIDUAL_CLIENT_RE = re.compile(
+    r"(client\s+is\s+no\s+longer\s+supported|migrate\s+to\s+(?:the\s+)?antigravity)",
+    re.IGNORECASE,
+)
 
 GEMINI_ADAPTER = """\
 ## Gemini CLI Prompt Adapter
@@ -221,6 +226,10 @@ def has_raw_mode_error(*texts: str) -> bool:
     return any(RAW_MODE_RE.search(text) for text in texts if text)
 
 
+def has_unsupported_individual_client_error(*texts: str) -> bool:
+    return any(UNSUPPORTED_INDIVIDUAL_CLIENT_RE.search(text) for text in texts if text)
+
+
 def write_failure(path: Path, summary: dict[str, Any]) -> None:
     command = " ".join(summary["command"])
     last = summary.get("last_error_record") or summary.get("last_stream_record") or {}
@@ -329,6 +338,7 @@ def main() -> int:
     stream_text = stream_path.read_text(encoding="utf-8", errors="replace") if stream_path.exists() else ""
     stderr_error = stderr_has_cli_error(stderr_text)
     raw_mode_error = has_raw_mode_error(stderr_text, stream_text)
+    unsupported_individual_client = has_unsupported_individual_client_error(stderr_text, stream_text)
 
     expected = []
     for path in expected_artifact_paths:
@@ -365,6 +375,8 @@ def main() -> int:
             failure_reasons.append("stderr_cli_error")
     if raw_mode_error:
         failure_reasons.append("raw_mode_tty_error")
+    if unsupported_individual_client:
+        failure_reasons.append("unsupported_individual_client")
     if error_records:
         if success_evidence_ok:
             nonfatal_reasons.append("stream_error")
@@ -379,6 +391,8 @@ def main() -> int:
 
     if "timeout" in failure_reasons:
         recommended = "Inspect run.stream.jsonl for partial progress, then rerun with a tighter prompt or larger timeout."
+    elif "unsupported_individual_client" in failure_reasons:
+        recommended = "Gemini CLI no longer supports this individual login flow; migrate this use case to Antigravity CLI (`agy`) before rerunning."
     elif "raw_mode_tty_error" in failure_reasons:
         recommended = "Gemini CLI attempted raw terminal mode in a noninteractive run; inspect run.stream.jsonl/run.err and let the caller materialize a blocked artifact."
     elif "stderr_cli_error" in failure_reasons:
@@ -418,6 +432,7 @@ def main() -> int:
         "final_stream_success": final_stream_success,
         "stderr_cli_error": stderr_error,
         "raw_mode_tty_error": raw_mode_error,
+        "unsupported_individual_client": unsupported_individual_client,
         "expected_artifacts": expected,
         "success": not failure_reasons,
         "failure_reasons": failure_reasons,
