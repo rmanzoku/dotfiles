@@ -35,9 +35,9 @@ if [ -z "$diff_output" ]; then
   exit 0
 fi
 
-# アプリが実行時に書き換える app 管理ファイル。ドリフトは警告表示のみでブロックしない。
+# アプリが実行時に書き換える app 管理ファイル（glob 可）。ドリフトは警告表示のみでブロックしない。
 # 追加・削除する場合は docs/adr/0051 の判断を更新すること。
-APP_MANAGED_DRIFT_ALLOWLIST=".codex/config.toml"
+APP_MANAGED_DRIFT_ALLOWLIST=".codex/config.toml .codex/automations/*/automation.toml"
 
 # 差分ファイル一覧を抽出（mode のみの差分でも現れる diff --git 行を使う）
 drifted_files="$(echo "$diff_output" | sed -n 's|^diff --git a/\(.*\) b/.*|\1|p' | sort -u)"
@@ -48,10 +48,12 @@ while IFS= read -r drifted; do
   [ -z "$drifted" ] && continue
   is_allowed=false
   for allowed in $APP_MANAGED_DRIFT_ALLOWLIST; do
-    if [ "$drifted" = "$allowed" ]; then
-      is_allowed=true
-      break
-    fi
+    case "$drifted" in
+      $allowed)
+        is_allowed=true
+        break
+        ;;
+    esac
   done
   if [ "$is_allowed" = true ]; then
     allowed_files="${allowed_files}  ${drifted}
