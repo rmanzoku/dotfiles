@@ -300,5 +300,6 @@ opmaterialize add "$HOME/.config/gws/accounts/<profile>/credentials.json"
 ```
 
 freee MCP は Remote MCP 前提とし、Codex には `https://mcp.freee.co.jp/mcp` を登録します。
+事業所（company）を分ける場合は、`freee` / `freee_ow` のように事業所ごとの別名エントリを並行登録し、利用時に名前で事業所を明示します（OAuth セッションはエントリ名に紐づきます）。
 この dotfiles では local `freee-mcp` / `freee-sign-mcp` server、local OAuth profile wrapper、profile 別 token file の配備を管理しません。
 Freee / Google 操作での fallback 禁止（別 principal / 別 company / 別 profile への自動切替禁止）は、グローバル AI 指示の共通ルール（source: `.chezmoitemplates/common-rules.md`）を正本とします。
