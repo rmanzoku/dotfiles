@@ -18,6 +18,10 @@ if ! command -v chezmoi >/dev/null 2>&1; then
   exit 0
 fi
 
+# 以降の警告・ブロック理由は hook プロトコルに従い stderr へ出す
+# （exit 2 のとき Claude Code は stderr をフィードバックとして表示する）
+exec 1>&2
+
 if ! scripts/chezmoi-drift --check-ignore >/dev/null 2>&1; then
   echo "chezmoi の source state と .chezmoiignore の不整合を検出しました。"
   echo ""
