@@ -92,6 +92,17 @@ Default behavior:
 
 The Copilot adapter is short and outcome-first. It tells Copilot to execute the source prompt literally, write requested artifacts exactly where specified, respect allowed side effects, keep output concise unless the source prompt asks otherwise, and stop when the source contract is complete or blocked.
 
+## Default Response Format
+
+Every launch prompt supplies a default AI-to-AI handoff shape when `prompt.md` does not explicitly require another format:
+
+- `## Result`: outcome or direct answer.
+- `## Evidence`: verified facts, sources, or reasoning.
+- `## Changes`: files or actions changed; omit for no-change tasks.
+- `## Blockers`: missing input, failure, or next action; omit when none.
+
+Use only applicable sections, keep the response concise, and do not wrap the whole response in JSON or a Markdown code fence. An explicit source-prompt output format always overrides this default.
+
 ## Success Criteria
 
 Require all applicable checks:

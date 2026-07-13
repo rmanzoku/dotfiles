@@ -37,6 +37,19 @@ Complete the source prompt as an outcome-first task contract.
 - Keep final output concise unless the source prompt asks for a detailed report.
 """
 
+STRUCTURED_MARKDOWN_OUTPUT = """\
+## Default Final Response Format
+
+Unless the source prompt explicitly requires a different output format, respond in Markdown using only the applicable sections in this order:
+
+1. `## Result` - outcome or direct answer.
+2. `## Evidence` - verified facts, sources, or reasoning.
+3. `## Changes` - files or actions changed; omit for no-change tasks.
+4. `## Blockers` - missing input, failure, or next action; omit when none.
+
+Do not wrap the entire response in JSON or a Markdown code fence. Keep it concise.
+"""
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -154,6 +167,7 @@ def write_launch_prompt(path: Path, source_prompt: Path, profile: str) -> None:
     ]
     if profile == "gpt-5-5":
         sections.extend([GPT_5_5_ADAPTER, ""])
+    sections.extend([STRUCTURED_MARKDOWN_OUTPUT, ""])
     sections.extend(
         [
             "## Source Prompt",

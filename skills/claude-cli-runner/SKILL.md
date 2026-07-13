@@ -97,6 +97,17 @@ The Opus 4.7 adapter is intentionally short and positive. It tells Claude to exe
 
 The Opus 4.8 adapter is intentionally short and positive. It tells Claude to execute the source prompt literally, avoid fixed progress scaffolding, avoid unnecessary subagents/tool calls, preserve coverage in review/finding phases, respect explicit tool/output limits, and rely on the CLI `--effort` setting instead of prompt magic words.
 
+## Default Response Format
+
+Every launch prompt supplies a default AI-to-AI handoff shape when `prompt.md` does not explicitly require another format:
+
+- `## Result`: outcome or direct answer.
+- `## Evidence`: verified facts, sources, or reasoning.
+- `## Changes`: files or actions changed; omit for no-change tasks.
+- `## Blockers`: missing input, failure, or next action; omit when none.
+
+Use only applicable sections, keep the response concise, and do not wrap the whole response in JSON or a Markdown code fence. An explicit source-prompt output format always overrides this default.
+
 ## Success Criteria
 
 Require all applicable checks:

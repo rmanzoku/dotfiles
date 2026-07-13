@@ -51,6 +51,19 @@ Execute the source prompt literally and completely.
 - Do not emulate effort with phrases like "think hard"; rely on the CLI effort setting supplied by the caller.
 """
 
+STRUCTURED_MARKDOWN_OUTPUT = """\
+## Default Final Response Format
+
+Unless the source prompt explicitly requires a different output format, respond in Markdown using only the applicable sections in this order:
+
+1. `## Result` - outcome or direct answer.
+2. `## Evidence` - verified facts, sources, or reasoning.
+3. `## Changes` - files or actions changed; omit for no-change tasks.
+4. `## Blockers` - missing input, failure, or next action; omit when none.
+
+Do not wrap the entire response in JSON or a Markdown code fence. Keep it concise.
+"""
+
 
 def normalize_argv(argv: list[str]) -> list[str]:
     normalized: list[str] = []
@@ -197,6 +210,7 @@ def write_launch_prompt(path: Path, source_prompt: Path, profile: str) -> None:
         sections.extend([OPUS_4_7_ADAPTER, ""])
     elif profile == "opus-4-8":
         sections.extend([OPUS_4_8_ADAPTER, ""])
+    sections.extend([STRUCTURED_MARKDOWN_OUTPUT, ""])
     sections.extend(
         [
             "## Source Prompt",

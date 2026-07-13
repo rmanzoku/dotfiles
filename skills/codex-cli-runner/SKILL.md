@@ -77,6 +77,17 @@ Default behavior:
 
 The GPT-5.5 adapter is short and outcome-first. It tells Codex to honor the source prompt's outcome, success criteria, allowed side effects, evidence rules, output shape, and completion rule while relying on CLI/config effort rather than prompt magic words.
 
+## Default Response Format
+
+Every launch prompt supplies a default AI-to-AI handoff shape when `prompt.md` does not explicitly require another format:
+
+- `## Result`: outcome or direct answer.
+- `## Evidence`: verified facts, sources, or reasoning.
+- `## Changes`: files or actions changed; omit for no-change tasks.
+- `## Blockers`: missing input, failure, or next action; omit when none.
+
+Use only applicable sections, keep the response concise, and do not wrap the whole response in JSON or a Markdown code fence. An explicit source-prompt output format always overrides this default.
+
 ## Success Criteria
 
 Require all applicable checks:
