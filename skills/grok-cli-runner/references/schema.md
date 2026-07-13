@@ -27,7 +27,7 @@ Optional top-level fields:
 {
   "task": "grok-build-review-diff",
   "request": {
-    "model": "grok-build",
+    "model": "grok-4.5",
     "input": [
       {
         "role": "system",
@@ -68,7 +68,8 @@ Optional top-level fields:
 
 ### Request Notes
 
-- The wrapper resolves the model from `--model`, then `request.model`, then `GROK_BUILD_MODEL`, then `GROK_MODEL`, then `grok-build`.
+- The wrapper resolves the model from `--model`, then `request.model`, then `GROK_BUILD_MODEL`, then `GROK_MODEL`; when none is set it omits `-m` and Grok Build CLI uses its own default model.
+- Model ids change across Grok Build CLI releases; check `grok models` for currently valid ids before pinning one.
 - `request.input` is required.
 - `request.input` may be a string or a list of role/content objects.
 - `request.instructions` is rejected; put instruction text in `request.input`.
@@ -88,7 +89,7 @@ Required fields:
 - `response`: normalized Grok Build CLI response metadata
 - `output_text`: extracted final response text when available
 - `response_id`: always `null` unless Grok Build exposes a stable response id in a future output shape
-- `model`: copied from `request.model`
+- `model`: resolved model, or `null` when the wrapper omitted `-m` and delegated to the Grok Build CLI default model
 - `backend`: `grok-build`
 
 ### Response Notes

@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any
 
 
-DEFAULT_MODEL = "grok-build"
 DEFAULT_OUTPUT_FORMAT = "json"
 
 
@@ -33,7 +32,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--model",
         default=None,
-        help="Model override. Omit to use request.model, GROK_BUILD_MODEL, GROK_MODEL, or grok-build.",
+        help="Model override. Omit to use request.model, GROK_BUILD_MODEL, GROK_MODEL, or the Grok Build CLI default model.",
     )
     parser.add_argument("--timeout-seconds", type=int, default=600, help="Process timeout in seconds. Defaults to 600.")
     parser.add_argument("--cwd", default=os.getcwd(), help="Working directory passed to Grok Build and used for the subprocess.")
@@ -128,13 +127,13 @@ def require_string(data: dict[str, Any], key: str) -> str:
     return value.strip()
 
 
-def resolve_model(request_data: dict[str, Any], override: str | None) -> str:
+def resolve_model(request_data: dict[str, Any], override: str | None) -> str | None:
     if override:
         return override
     request_obj = request_data.get("request")
     if isinstance(request_obj, dict) and isinstance(request_obj.get("model"), str) and request_obj["model"].strip():
         return request_obj["model"].strip()
-    return os.getenv("GROK_BUILD_MODEL") or os.getenv("GROK_MODEL") or DEFAULT_MODEL
+    return os.getenv("GROK_BUILD_MODEL") or os.getenv("GROK_MODEL") or None
 
 
 def compact_json(value: Any, limit: int = 4000) -> str:
@@ -158,13 +157,16 @@ def content_to_text(content: Any) -> str:
     return compact_json(content)
 
 
-def load_request_payload(data: dict[str, Any], *, model: str) -> dict[str, Any]:
+def load_request_payload(data: dict[str, Any], *, model: str | None) -> dict[str, Any]:
     require_string(data, "task")
     request_data = data.get("request")
     if not isinstance(request_data, dict):
         raise ValueError("request artifact must include object 'request'")
     payload = dict(request_data)
-    payload["model"] = model
+    if model:
+        payload["model"] = model
+    else:
+        payload.pop("model", None)
     if "input" not in payload:
         raise ValueError("request.request must include 'input'")
     if "instructions" in payload:
@@ -222,9 +224,10 @@ def build_grok_command(args: argparse.Namespace, timeout_bin: str, payload: dict
         args.output_format,
         "--cwd",
         str(Path(args.cwd).expanduser().resolve()),
-        "-m",
-        str(payload.get("model")),
     ]
+    model = payload.get("model")
+    if model:
+        command.extend(["-m", str(model)])
     if args.permission_mode:
         command.extend(["--permission-mode", args.permission_mode])
     if args.no_plan:
@@ -423,7 +426,7 @@ def main() -> int:
     api_error: dict[str, Any] | None = None
     dry_run_payload: dict[str, Any] | None = None
     exit_code = 0
-    model_used = args.model or os.getenv("GROK_BUILD_MODEL") or os.getenv("GROK_MODEL") or DEFAULT_MODEL
+    model_used = args.model or os.getenv("GROK_BUILD_MODEL") or os.getenv("GROK_MODEL") or None
     command: list[str] = []
     prompt_bytes = 0
 

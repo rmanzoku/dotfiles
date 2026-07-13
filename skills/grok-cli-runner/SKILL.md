@@ -55,7 +55,7 @@ Before running Grok, make these decisions explicitly:
 - Task directory: choose `.context/<task>/`.
 - Request artifact: write `.context/<task>/grok-request.json` with top-level `task` and `request`.
 - Response artifact: pass `--response-artifact grok-response.json` when the response belongs inside `--output-dir`; use an absolute path only when the response must be written outside `--output-dir`.
-- Model: omit `--model` unless the caller or model registry requires an override. The wrapper resolves `--model`, then `request.model`, then `GROK_BUILD_MODEL`, then `GROK_MODEL`, then `grok-build`.
+- Model: omit `--model` unless the caller or model registry requires an override. The wrapper resolves `--model`, then `request.model`, then `GROK_BUILD_MODEL`, then `GROK_MODEL`; when none is set it omits `-m` and Grok Build CLI uses its own default model.
 - Timeout: rely on the 600-second wrapper default unless the task contract says otherwise.
 - Permission mode: rely on `--permission-mode auto --no-plan` unless the caller explicitly chooses another Grok Build permission mode.
 - Verbatim mode: keep the default `--verbatim`; use `--no-verbatim` only for compatibility testing.
@@ -83,11 +83,12 @@ The wrapper calls:
 grok --no-auto-update -p "<prompt derived from request artifact>" \
   --output-format json \
   --cwd <resolved-cwd> \
-  -m <resolved-model> \
   --permission-mode auto \
   --no-plan \
   --verbatim
 ```
+
+The wrapper adds `-m <resolved-model>` only when a model resolves from `--model`, `request.model`, `GROK_BUILD_MODEL`, or `GROK_MODEL`. Otherwise it omits `-m` so Grok Build CLI uses its own default model; check `grok models` for the current default and valid model ids.
 
 Add these only when needed:
 
@@ -133,7 +134,7 @@ Required request artifact fields:
 Important request rules:
 
 - `request.input` is required.
-- `request.model` is optional; wrapper model defaulting fills it when omitted.
+- `request.model` is optional; when it is omitted and no `--model` or env override is set, the wrapper omits `-m` and Grok Build CLI's default model applies.
 - `request.instructions` is rejected; put instruction text into `request.input`.
 - `meta` is optional and stays local; it is not sent to Grok Build as a structured field.
 - Keep one backend job per request artifact.
@@ -144,7 +145,7 @@ Require all applicable checks:
 
 - Process exit code is `0`.
 - For real runs, the resolved response artifact exists and is non-empty.
-- Response artifact contains `request`, `response`, `model`, `backend`, and `output_text` or parsed stdout sufficient for the caller to inspect.
+- Response artifact contains `request`, `response`, `model` (`null` when the run delegated to the Grok Build CLI default model), `backend`, and `output_text` or parsed stdout sufficient for the caller to inspect.
 - `summary.json.success` is `true`, `summary.json.failure_reasons` is empty, and `summary.json.response_non_empty` is `true`.
 - For `--dry-run`, success means the request validated and `summary.json.dry_run_payload` was written; no response artifact is expected.
 
