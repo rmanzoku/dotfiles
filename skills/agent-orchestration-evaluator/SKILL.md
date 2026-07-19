@@ -52,10 +52,12 @@ Flag or fix violations of these invariants:
 14. Execution-only roles such as `creator`, `apply_consensus`, formatter, or renderer should default to lightweight model settings such as low effort unless the resolver documents an eval-backed reason for a heavier setting.
 15. Review and finding roles should not filter findings by vague importance bars during the discovery phase. Prefer coverage-first finding prompts, then rank, dedupe, or verify in a separate role or phase.
 16. Tool-use policy should be explicit enough for required evidence gathering, but should not force fixed tool-call counts or stale progress scaffolds that fight newer model tool-triggering behavior.
-17. Long-running delegated work must leave enough artifacts, summaries, and failure reports for the parent orchestrator to recover after context compaction or a runner restart.
+17. Long-running delegated work must leave enough artifacts, summaries, and failure reports for the parent orchestrator to recover after context compaction or a runner restart. Artifacts carry references to canonical sources; a summary must not replace the source it summarizes.
 18. Error bypasses must not silently become the accepted workflow. If a command, tool, environment, permission, dependency, or validation error is bypassed and recurrence, skipped validation, setup drift, or reproducibility risk remains, the workflow must trigger an explicit bypass remediation review.
 19. Bypass remediation review may be delegated to a subagent, reviewer, evaluator, or runner when available, but the parent orchestrator must verify the proposed permanent fix against repository code, configuration, docs, tests, and managed state boundaries before adopting it.
 20. Repeated fallback, subline execution, delegated-role confusion, or runner bypass observed in session history or an AI-usage coach report is evidence for an orchestration audit, not proof of an orchestration defect by itself.
+21. Roles that generate changes must not weaken or rewrite their own acceptance criteria — tests, specs, or completion definitions — without a separate gate or role.
+22. Scaling generation throughput (fan-out, parallel workers, autonomous loops) must be paired with matching verification and cleanup capacity, and goal contracts must include stop conditions and cleanup of superseded artifacts.
 
 ## Audit Workflow
 
@@ -81,6 +83,9 @@ Flag or fix violations of these invariants:
    - Look for fixed tool-call quotas, forced progress checkpoints, or stale "always use tools" language that should be replaced by outcome/evidence-based tool guidance.
    - Look for wording that tells agents to "find another way", "work around", "skip", "continue anyway", "ignore", or "use a fallback" after errors without defining when a bypass remediation review is required.
    - Look for workflows where failed tests, missing tools, permission errors, dependency problems, authentication issues, broken hooks, or unavailable subagents/runners can be bypassed without recording the cause, validation gap, permanent-fix candidate, and owner.
+   - Look for workflows where the role implementing a change also edits its own acceptance tests or completion definition and self-approves.
+   - Look for handoff or artifact templates that pass only summaries without references to canonical sources.
+   - Look for fan-out or loop stages that increase generation volume without a paired verification or cleanup stage.
    - When a coach report, session audit, or structured usage report identifies repeated fallback or wasted subline execution, trace it back to resolver semantics, runner contracts, prompts, and docs before deciding whether the durable home is orchestration policy, a skill, a script, a test, or no promotion.
 
 4. **Evaluate model and effort policy**
@@ -248,7 +253,7 @@ Subagent or runner prompts should include:
 - Working directory.
 - Source prompt path for multi-line instructions.
 - Expected artifact paths.
-- Success criteria and blocked-state reporting.
+- Success criteria — including cleanup of superseded artifacts — stop conditions, and blocked-state reporting.
 - Allowed side effects.
 - Evidence rules.
 - Compaction/restart recovery expectations for long-running work.
@@ -296,5 +301,6 @@ Stop only when:
 - Dependent skills/prompts no longer contradict the canonical resolver.
 - Review/finding roles preserve discovery coverage before final filtering.
 - Long-running runner or subagent roles leave recoverable artifacts for compaction or restart.
+- Generating roles cannot rewrite their own acceptance criteria without a separate gate, and artifact contracts pass canonical references rather than summary-only handoffs.
 - Error bypasses that may recur, skip validation, or reduce reproducibility trigger an explicit bypass remediation review with cause, temporary bypass, permanent-fix candidates, ownership boundary, and verification plan.
 - Durable architectural changes are recorded in the target repo's ADR or equivalent long-lived documentation when the repo requires it.

@@ -1,8 +1,8 @@
 ---
 name: evaluation-rubric
 description: General codebase evaluation rubric for the code-evaluator skill.
-version: "2.0"
-updated: 2026-07-05
+version: "2.1"
+updated: 2026-07-18
 ---
 
 # Evaluation Rubric
@@ -35,10 +35,11 @@ Use this rubric to evaluate code quality while keeping the final report evidence
    - Treat bare default values, magic numbers, Boolean parameters, sentinel values, stringly typed modes, unitless values, implicit fallbacks, and env/config reads from deep layers as observation points for anonymous specification decisions. For domain-significant branches or values, prefer named constants, types, enums, policies, explicit inputs, and boundary validation; comments explain background and tradeoffs, not missing intent.
    - Flag fallback paths that hide the primary path's failure cause, silently switch execution routes, or weaken idempotency. If the alternate path is more reliable, the finding is "promote it to primary," not "keep it as fallback." Explicitly modeled redundant providers (equivalent endpoints, mirrors, replicas) with clear selection rules are not fallback smells.
    - Public component, directory, function, and module names should describe responsibility or ownership, not authoring method, AI involvement, or generator provenance.
-   - Semantic UI object names should own the object contract they imply, such as relevant state, variants, accessibility, interaction, layout/composition, and data/source responsibility; leaf text, formatter, wrapper, or selector helpers should use names and placement that reflect their narrower role.
+   - Semantic UI object names should own the object contract they imply, such as relevant state, variants, accessibility, interaction, layout/composition, and data/source responsibility; leaf text, formatter, wrapper, or selector helpers should use names and placement that reflect their narrower role. If a component named as a UI object only shares a leaf helper while callers duplicate the object grammar, report the abstraction as insufficient rather than successful reuse.
 
 3. **Tests and verification**
    - Critical behavior coverage, edge cases, deterministic tests, test isolation, useful fixtures, checks that can run in CI, and local/CI parity.
+   - Tests are evidence of spec conformance only when independent of the implementation they gate: tests derived solely from current code fix current behavior, not intent. Treat weakened or deleted assertions, and spec/test edits that ride along with the implementation change they gate, as first-class findings.
    - Report checks not run and how that affects confidence.
    - Local audit/lint checks should enforce current low-false-positive invariants and avoid broad regex guesses for semantic ownership.
    - Stable test selectors and automation contracts may intentionally keep historical wording; evaluate them separately from internal implementation responsibility names.
@@ -62,12 +63,14 @@ Use this rubric to evaluate code quality while keeping the final report evidence
    - Feedback loops exist and are agent-usable: validators, tests, and checks that an agent can run, with verbose, self-repair-friendly error messages ("field X not found; available: ...") rather than bare failures.
    - No voodoo constants: configuration values carry their justification; if the right value is unknowable from the code, an agent cannot maintain it either.
    - When the repository contains agent scaffolding (prompts, skills, harness scripts), evaluate whether its instruction specificity matches task fragility: fixed scripts for fragile operations, principles for judgment work; and whether prompts hold a useful altitude instead of hardcoding brittle case logic.
+   - Existing code is conditioning input for future AI changes: duplicated implementations, old paths left beside their replacements, and workarounds without an adjacent comment stating reason, scope, and removal condition will be read as precedent and amplified. Weigh such findings by how likely the pattern is to be imitated, not only by local impact.
    - Treat this as supplementary to human readability, domain idiom, and maintainability; do not reward AI convenience at their expense.
    - Future agents should be able to identify source taxonomy, ownership layer, canonical docs, and verification gates before editing.
 
 8. **Future-context fit**
    - Backward compatibility, commonization, staged migration, feature flags, abstraction layers, and fallback paths are not inherently good; each must name the constraint it protects. Where change is cheap and reversible, rebuilding at time of need may beat embedding future support now.
    - Do not present human-era development conventions (effort-based phasing, ceremony-heavy process) as optimal by default when change velocity is high and the change is reversible.
+   - When a change replaces a path, removing the superseded path is part of its definition of done; old and new left side by side both remain candidates for the next change. A healthy current state lets a fresh agent resume routine work from current specs, code, and tests alone — routine work that requires chat history or git archaeology signals a deficiency in the current canonical state.
    - This relaxation never applies to high-damage-depth domains: billing, authentication/authorization, audit, migrations, data models, external API contracts, legal/regulatory requirements, security, PII, money movement, and irreversible production data operations are judged by damage depth with explicit specifications, boundary validation, auditability, rollback, and human approval.
 
 ## Dependency Triage

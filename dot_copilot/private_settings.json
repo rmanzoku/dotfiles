@@ -1,0 +1,11 @@
+{
+  "allowedUrls": [
+    "https://ja.wikipedia.org"
+  ],
+  "model": "claude-opus-4.8",
+  "enabledPlugins": {
+    "document-skills@anthropic-agent-skills": true,
+    "codex@openai-codex": true
+  },
+  "effortLevel": "high"
+}

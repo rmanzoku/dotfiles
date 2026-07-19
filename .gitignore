@@ -4,6 +4,10 @@ __pycache__/
 dot_codex/automations/*
 !dot_codex/automations/daily-ai-brew-upgrade/
 !dot_codex/automations/daily-ai-brew-upgrade/automation.toml.tmpl
-dot_claude/agents/
-dot_codex/agents/
+dot_claude/agents/*
+!dot_claude/agents/private_worker.md
+!dot_claude/agents/private_mechanical.md
+dot_codex/agents/*
+!dot_codex/agents/private_worker.toml
+!dot_codex/agents/private_mechanical.toml
 dot_config/private_private-secretary/
