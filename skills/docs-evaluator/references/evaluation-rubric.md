@@ -1,8 +1,8 @@
 ---
 name: evaluation-rubric
 description: Documentation-system evaluation rubric for the docs-evaluator skill.
-version: "2.0"
-updated: 2026-07-05
+version: "2.1"
+updated: 2026-07-18
 ---
 
 # Docs Evaluator Rubric
@@ -15,6 +15,7 @@ Use this rubric to score the documentation system as a graph of active guidance,
 - Not every criterion applies to every repository. Record non-applicable criteria as `N/A` with a one-line reason instead of scoring them.
 - Every finding must cite trace evidence the reader can open: path, line or heading, and the observed wording. No finding without evidence.
 - Judge severity by impact and damage depth, not by how much prose the finding needs. Long explanations do not make a finding more severe, and report length must not scale with repository size.
+- Weight severity by conditioning surface: a defect in a document loaded automatically every session (AGENTS.md, CLAUDE.md, entrypoints) conditions every future agent output and outweighs the same defect in an on-demand or historical document.
 - Prefer fewer evidenced findings over many speculative ones; findings the maintainer dismisses as nitpicks erode trust in the whole report.
 - Present low/medium-confidence structural concerns as conditional smell hypotheses: "acceptable while condition A holds; hurts when condition B becomes true."
 - For every P0/P1 issue, include revisit conditions: the concrete observation that would flip or retire the judgment.
@@ -47,6 +48,7 @@ Use this rubric to score the documentation system as a graph of active guidance,
 - Canonical claims name the current source, not just historical rationale.
 - Detailed schemas for skills, gates, artifacts, or workflow contracts have one identifiable canonical owner; summaries and ADRs link to or summarize that owner instead of repeating the full schema.
 - Active canonical docs and active skill instructions do not keep deprecated, temporary, fallback, retired, historical, or override vocabulary as current policy options.
+- Exceptions granted in active docs carry a reason, scope, and removal condition; an unconditional exception reads as a standard option to future agents and is a finding (`policy-contamination` or `temporary-legitimacy`), not a style note.
 - Negative references to retired vocabulary are classified as `allowed-negative-reference`, `migration-map`, `historical-reference`, or `search-only-audit-pattern`; unclassified cases are `QUESTION`, and current-option usage is `current-policy-contamination`.
 
 ### AI Readability
@@ -56,6 +58,7 @@ Evaluate this pillar as context economy: agent context is a finite resource, and
 - Documents are necessary and sufficient for an AI agent to complete common tasks without reading excessive unrelated history, and they do not re-explain what a competent agent already knows.
 - Reading order is explicit enough to avoid both missed rules and unnecessary deep dives.
 - Entrypoints work as pointer sets (path plus one-line purpose) that support just-in-time retrieval: an agent can decide which file to load next without loading everything.
+- Entrypoint hub files hold only invariants and pointers. Procedures that belong in skills, decision rationale that belongs in ADRs, and executable expectations that belong in tests or specs parked in a hub file are placement findings, not neutral convenience.
 - The docs system maps to a three-layer shape: index/table-of-contents entrypoints, focused per-topic documents, and deep reference material loaded only on demand.
 - Structure signals are checkable: entry documents stay concise, documents are reachable within the layers the entrypoints declare (index to topic to reference) rather than through undeclared nested reference chains, and long reference documents open with a table of contents or an equivalent scannable heading structure.
 - Critical rules sit where agents will see them — near the beginning or end of a document — not buried mid-file.

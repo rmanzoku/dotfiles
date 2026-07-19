@@ -20,6 +20,7 @@ Frame each delegation as an outcome-first contract: source prompt, expected arti
 - Do not treat 0-byte `run.events.jsonl` or `run.err` as a hang by itself.
 - Treat tokens and AI credits as part of the run contract. Real Copilot runs must pass `--max-ai-credits` or explicitly acknowledge `--allow-uncapped`; prefer a hard cap.
 - When the user's budget matters, check Copilot `/usage` before and after the run, pass the known remainder with `--available-ai-credits-before`, and report used/total/remaining credits.
+- Use `claude-fable-5` only when the caller explicitly requests long-horizon autonomous work or a zero-base audit, accepts the provider's Fable-specific data-retention boundary, and supplies a hard AI-credit cap. The task contract must enumerate allowed inputs, paths, and URLs; exclude secrets, personal/private data, and confidential source unless the user explicitly approves that retention boundary for those inputs. Do not make Fable an implicit fallback.
 
 ## Caller Checklist
 
@@ -34,6 +35,7 @@ Before running Copilot, make these decisions explicitly:
 - Permission overrides: add `--allow-tool`, `--allow-url`, `--add-dir`, or broader flags only when explicitly supplied by the caller. Do not infer grants inside this runner.
 - Timeout: rely on the 600-second wrapper default unless the task contract says otherwise.
 - Budget: choose an effort level, timeout, and `--max-ai-credits` together. Reserve time and credits for required artifacts; run optional repository-wide diagnostics only after required outputs exist.
+- Fable budget: do not assume that a nominal minimum cap can complete one model turn. Size the hard cap from a comparable observed run or the current available balance, and require the model to write required artifacts before optional exploration.
 - Prompt profile: use `--prompt-profile auto` by default; pass `--prompt-profile none` only when the source prompt already contains a complete Copilot-specific launch contract.
 - Extra Copilot args: pass each Copilot CLI token as its own `--extra-copilot-arg=<token>` value, especially for leading-hyphen tokens.
 

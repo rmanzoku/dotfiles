@@ -2,8 +2,9 @@
 title: "Restore Private Agent Definitions From 1Password"
 date: 2026-06-01
 agent_model: "GPT-5 Codex"
-updated_at: 2026-06-03
-updated_by_agent_model: "GPT-5 Codex"
+updated_at: 2026-07-19
+worked_at: 2026-07-19 11:55 JST
+updated_by_agent_model: "OpenAI Codex GPT-5.6 Sol"
 ---
 
 # ADR 0039: Restore Private Agent Definitions From 1Password
@@ -19,6 +20,8 @@ In this repository, those targets correspond to source paths under `dot_claude/a
 ## Decision
 
 Private agent definitions under `dot_claude/agents/` and `dot_codex/agents/` are git-ignored source files. Files that may contain private content should use chezmoi's `private_` source attribute so their deployed targets are not group/world-readable.
+
+Only agents that contain personal judgment, private context, or private facts belong to this 1Password-backed set. Generic role agents may live in the same source directories as explicit git-tracked exceptions; `private_` may still be used there solely to keep the deployed target mode at 0600.
 
 Private secretary facts are stored as an AI-optimized JSONL file under `dot_config/private_private-secretary/private_facts.jsonl`, deployed to `~/.config/private-secretary/facts.jsonl`. This file is also git-ignored and 1Password-backed.
 
