@@ -29,6 +29,7 @@ Use these terms consistently:
 | Self-Elision | Runtime optimization when a delegated role resolves to the same provider/model as the parent. Skip external CLI, but still delegate to a same-provider/model subagent. |
 | Runner skill | A wrapper skill for observable Claude / Codex / Gemini / Grok / Copilot CLI or API-backed subprocess execution, stream logs, timeouts, expected artifacts, and failure reports. |
 | Resolver | Logic that maps role -> alias -> provider/model/config/execution mode. It should not become a raw command cookbook when runner skills exist. |
+| Executor / billing source | The CLI, subagent surface, or service that actually serves a resolved model, plus how that execution is billed (provider subscription, metered API budget, or credit pool). The same model can be servable by more than one executor; the runner contract and budget rules follow the executor, not the model vendor. |
 | Bypass remediation review | A separate review triggered when the parent or a delegated worker bypasses an error in a way that may recur, skip validation, reduce reproducibility, or reveal missing setup, permissions, dependencies, docs, hooks, or skills. |
 | Promotion candidate | A repeated orchestration failure or waste pattern that may deserve a durable home such as resolver policy, runner hardening, AGENTS guidance, a skill, a script, a test, or an evaluator backlog item. |
 
@@ -58,6 +59,9 @@ Flag or fix violations of these invariants:
 20. Repeated fallback, subline execution, delegated-role confusion, or runner bypass observed in session history or an AI-usage coach report is evidence for an orchestration audit, not proof of an orchestration defect by itself.
 21. Roles that generate changes must not weaken or rewrite their own acceptance criteria — tests, specs, or completion definitions — without a separate gate or role.
 22. Scaling generation throughput (fan-out, parallel workers, autonomous loops) must be paired with matching verification and cleanup capacity, and goal contracts must include stop conditions and cleanup of superseded artifacts.
+23. Model-generation behavior compensation — delegation encouragement or suppression, mandatory self-check passes, forced progress scaffolds — belongs in the resolver, model adapters, or runner prompt profiles, not in role prompts or skill text; a newer model generation can invert the bias the compensation was written for.
+24. Role resolution covers model, executor, and billing source as separate dimensions. When a model is served through another provider's CLI or surface, the runner contract, budget guard, and usage reporting follow the executor, not the model vendor.
+25. Subscription-covered standard models are the routine default; metered or credit-billed execution paths — API budgets, credit pools, premium tiers with special retention or pricing — require an explicit per-run budget contract and never become silent defaults or fallbacks. Concrete standard-model and executor choices live in the resolver/registry/ADR, not in skill text, and per-project executor overrides are declared in that project's resolver.
 
 ## Audit Workflow
 
@@ -67,7 +71,7 @@ Flag or fix violations of these invariants:
    - Record assumptions in `.context/agent-orchestration-evaluator/<task>/scope.md` for non-trivial audits unless the user explicitly forbids file edits; in no-edit audits, include assumptions in the response instead.
 
 2. **Map role resolution**
-   - Build a table: skill/command, phase, role, role type, configured alias/model/provider, execution mode, artifact contract, fallback.
+   - Build a table: skill/command, phase, role, role type, configured alias/model/provider, executor and billing source, execution mode, artifact contract, fallback.
    - Classify each role as `self`, delegated AI agent role, runner invocation, or non-agent tool work.
    - Treat role names like `researcher_*`, `reviewer_*`, `creator`, `worker`, `judge`, `agent`, `subagent`, and `assistant` as likely delegated AI roles unless the local docs clearly define otherwise.
    - Identify execution-only roles that consume an already planned prompt or consensus output, such as `creator`, `apply_consensus`, doc renderer, formatter, or conversion worker.
@@ -81,6 +85,10 @@ Flag or fix violations of these invariants:
    - Look for skills that hard-code concrete model names, provider names, effort settings, timeout defaults, or CLI flags that should come from a resolver/registry or runner skill.
    - Look for code-review prompts that tell finding roles to report only high-severity, important, or certain issues before a separate ranking or verification phase.
    - Look for fixed tool-call quotas, forced progress checkpoints, or stale "always use tools" language that should be replaced by outcome/evidence-based tool guidance.
+   - Look for model-generation compensation hard-coded in role prompts or skills — "delegate more", mandatory double-check or self-verification passes, forced verification subagents — that inverts on a generation with the opposite bias and should move to a model adapter or runner prompt profile.
+   - Look for fan-out or delegation stages that leave spawn count and delegation criteria to model discretion instead of an explicit cap and delegation condition.
+   - Look for roles that treat model and executor as the same thing — assuming a model vendor's own CLI is the only execution path — when the resolver may route the same model through another provider's CLI with a different billing source and runner contract.
+   - Look for per-project executor overrides (for example, a project that routes one vendor's models through another provider's CLI) that are inherited implicitly instead of being declared in that project's resolver/registry together with the executor's budget contract.
    - Look for wording that tells agents to "find another way", "work around", "skip", "continue anyway", "ignore", or "use a fallback" after errors without defining when a bypass remediation review is required.
    - Look for workflows where failed tests, missing tools, permission errors, dependency problems, authentication issues, broken hooks, or unavailable subagents/runners can be bypassed without recording the cause, validation gap, permanent-fix candidate, and owner.
    - Look for workflows where the role implementing a change also edits its own acceptance tests or completion definition and self-approves.
@@ -94,6 +102,8 @@ Flag or fix violations of these invariants:
    - Require a documented reason, eval result, or risk argument before `creator`-like roles use high/xhigh/deep reasoning by default.
    - For review, researcher, and judge roles, check whether effort escalation is tied to task risk, evidence needs, or eval results rather than prompt magic words.
    - Keep model allocation changes in the resolver/registry, not scattered across skill text.
+   - Check that per-model-generation behavioral compensation (delegation rate, self-verification, progress narration) resolves through model adapters or runner prompt profiles so a model upgrade only changes the adapter, not every role prompt.
+   - Check that routine roles default to subscription-covered standard models, and that metered or credit-billed paths carry an explicit per-run budget contract; the concrete standard-model list lives in the resolver/registry/ADR.
 
 5. **Evaluate execution contracts**
    - Delegated work should have an outcome-first prompt, source prompt file when large, expected artifacts, success criteria, allowed side effects, evidence rules, timeout/budget guard, and blocked-state reporting.
@@ -207,6 +217,24 @@ Expected runner mapping:
 
 Prefer runners that provide prompt-file handoff, timeout control, expected artifact checks, summary, and failure reporting. Keep the skill text at the level of "use the runner skill"; do not inline runner command details.
 
+The runner follows the executor, not the model vendor: a Claude model routed through the Copilot CLI uses `copilot-cli-runner` and its credit contract, not `claude-cli-runner`.
+
+### Resolve Executor And Billing Separately From Model
+
+Bad:
+
+```text
+reviewer_deep runs a Claude flagship model, so call the Claude CLI.
+```
+
+Good:
+
+```text
+reviewer_deep resolves through the registry to model, executor, and billing source. When the executor is the Copilot CLI, use the Copilot runner contract (credit cap, usage reporting) even though the model is a Claude model.
+```
+
+Non-authoritative example of a policy this pattern supports (authoritative allocation lives in the resolver/registry and ADRs): subscription-covered current-generation flagships are the routine standard per entrypoint (for example an Opus-generation model for Claude Code and a GPT-5.6-generation model for Codex as of 2026-07); premium tiers such as Fable-generation models require explicit opt-in with a budget and retention contract; specific projects declare an executor override that routes Claude models through the Copilot CLI under Copilot's credit contract.
+
 ### Separate Finding From Filtering
 
 For review harnesses and bug-finding roles, check whether the prompt separates broad discovery from downstream ranking:
@@ -227,6 +255,22 @@ Use repository search before claiming a symbol is unused. Use web fetch only for
 ```
 
 Avoid stale scaffolds such as mandatory progress updates every N tool calls or unconditional tool use when the task can be completed directly.
+
+### Keep Model-Generation Compensation in Adapters
+
+Bad:
+
+```text
+Actively delegate to subagents, and double-check your work with a verification pass before finishing.
+```
+
+Good:
+
+```text
+Deliver the outcome at the requested scope. Delegation criteria, parallelism caps, and any model-specific verification compensation come from the model adapter or runner prompt profile selected by the resolver.
+```
+
+Independent verifier roles kept for risk reasons are a workflow design decision and stay. What must not be hard-coded is compensation for one model generation's bias: a later generation can invert it, turning under-delegation guidance into over-delegation waste and self-check reminders into redundant over-verification.
 
 ### Detect Silent Error Bypasses
 
@@ -300,6 +344,8 @@ Stop only when:
 - Fallbacks are explicit and do not silently assign worker roles to the parent orchestrator.
 - Dependent skills/prompts no longer contradict the canonical resolver.
 - Review/finding roles preserve discovery coverage before final filtering.
+- Model-generation behavior compensation lives in model adapters, runner prompt profiles, or the resolver; role prompts and skills do not hard-code delegation-rate or self-verification compensation for a specific generation.
+- Roles resolve model, executor, and billing source separately; subscription-standard defaults and per-project executor overrides are declared in the resolver/registry/ADR, and metered or credit-billed paths carry explicit per-run budget contracts.
 - Long-running runner or subagent roles leave recoverable artifacts for compaction or restart.
 - Generating roles cannot rewrite their own acceptance criteria without a separate gate, and artifact contracts pass canonical references rather than summary-only handoffs.
 - Error bypasses that may recur, skip validation, or reduce reproducibility trigger an explicit bypass remediation review with cause, temporary bypass, permanent-fix candidates, ownership boundary, and verification plan.

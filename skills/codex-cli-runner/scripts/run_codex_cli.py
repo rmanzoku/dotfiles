@@ -24,6 +24,7 @@ ERROR_RE = re.compile(
 )
 
 GPT_5_5_MODEL_RE = re.compile(r"gpt[-_.]?5[-_.]?5", re.IGNORECASE)
+GPT_5_6_MODEL_RE = re.compile(r"gpt[-_.]?5[-_.]?6", re.IGNORECASE)
 
 GPT_5_5_ADAPTER = """\
 ## GPT-5.5 Prompt Adapter
@@ -32,6 +33,19 @@ Complete the source prompt as an outcome-first task contract.
 
 - Treat the source prompt's outcome, success criteria, allowed side effects, evidence rules, output shape, and completion rule as the contract.
 - Prefer the smallest sufficient plan and tool use that completes the contract.
+- Do not emulate reasoning effort with phrases like "think hard" or mandatory step-by-step narration; rely on the CLI/config effort setting supplied by the caller.
+- If a required input is missing, mark that item blocked with the missing input instead of guessing.
+- Keep final output concise unless the source prompt asks for a detailed report.
+"""
+
+GPT_5_6_ADAPTER = """\
+## GPT-5.6 Prompt Adapter
+
+Complete the source prompt as an outcome-first task contract.
+
+- Treat the source prompt's outcome, success criteria, allowed side effects, evidence rules, output shape, and completion rule as the contract.
+- Prefer the smallest sufficient plan and tool use that completes the contract; state each instruction once and add no boilerplate the contract does not need.
+- Handle routine local actions within the allowed side effects without asking; treat external writes, destructive actions, and scope expansion as out of contract unless the source prompt explicitly authorizes them.
 - Do not emulate reasoning effort with phrases like "think hard" or mandatory step-by-step narration; rely on the CLI/config effort setting supplied by the caller.
 - If a required input is missing, mark that item blocked with the missing input instead of guessing.
 - Keep final output concise unless the source prompt asks for a detailed report.
@@ -98,9 +112,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--prompt-profile",
-        choices=("auto", "gpt-5-5", "none"),
+        choices=("auto", "gpt-5-5", "gpt-5-6", "none"),
         default="auto",
-        help="Prompt adapter profile. Auto applies the GPT-5.5 adapter for explicit GPT-5.5 models.",
+        help="Prompt adapter profile. Auto applies a GPT adapter for explicit GPT-5.5 or GPT-5.6 models.",
     )
     parser.add_argument(
         "--extra-codex-arg",
@@ -153,6 +167,8 @@ def resolve_prompt_profile(requested: str, model: str | None) -> str:
         return requested
     if model and GPT_5_5_MODEL_RE.search(model):
         return "gpt-5-5"
+    if model and GPT_5_6_MODEL_RE.search(model):
+        return "gpt-5-6"
     return "none"
 
 
@@ -167,6 +183,8 @@ def write_launch_prompt(path: Path, source_prompt: Path, profile: str) -> None:
     ]
     if profile == "gpt-5-5":
         sections.extend([GPT_5_5_ADAPTER, ""])
+    elif profile == "gpt-5-6":
+        sections.extend([GPT_5_6_ADAPTER, ""])
     sections.extend([STRUCTURED_MARKDOWN_OUTPUT, ""])
     sections.extend(
         [

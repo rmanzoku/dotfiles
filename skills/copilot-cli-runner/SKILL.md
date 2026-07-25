@@ -35,8 +35,8 @@ Before running Copilot, make these decisions explicitly:
 - Permission overrides: add `--allow-tool`, `--allow-url`, `--add-dir`, or broader flags only when explicitly supplied by the caller. Do not infer grants inside this runner.
 - Timeout: rely on the 600-second wrapper default unless the task contract says otherwise.
 - Budget: choose an effort level, timeout, and `--max-ai-credits` together. Reserve time and credits for required artifacts; run optional repository-wide diagnostics only after required outputs exist.
-- Fable budget: do not assume that a nominal minimum cap can complete one model turn. Size the hard cap from a comparable observed run or the current available balance, and require the model to write required artifacts before optional exploration.
-- Prompt profile: use `--prompt-profile auto` by default; pass `--prompt-profile none` only when the source prompt already contains a complete Copilot-specific launch contract.
+- Fable budget: do not assume that a nominal minimum cap can complete one model turn. Size the hard cap from a comparable observed run or the current available balance, and require the model to write required artifacts before optional exploration. Fable turns can run for minutes; size `--timeout-seconds` together with the credit cap instead of relying on the 600-second default.
+- Prompt profile: use `--prompt-profile auto` by default; it adds an Opus 5 or Fable 5 generation adapter when `--model` names that generation. Pass `--prompt-profile none` only when the source prompt already contains a complete Copilot-specific launch contract.
 - Extra Copilot args: pass each Copilot CLI token as its own `--extra-copilot-arg=<token>` value, especially for leading-hyphen tokens.
 
 Do not add "think hard", fixed progress-update scaffolds, or mandatory step-by-step narration to simulate reasoning. Use `--effort` only when the caller explicitly asks for an effort override.
@@ -88,11 +88,19 @@ The wrapper writes `.context/<task>/run.prompt.md`, then passes only a file-refe
 
 Default behavior:
 
-- `--prompt-profile auto` is the default and applies the Copilot adapter.
-- `--prompt-profile copilot` forces the Copilot adapter.
+- `--prompt-profile auto` is the default. It applies the Copilot adapter, and adds a model-generation adapter when `--model` explicitly looks like Claude Opus 5 (`claude-opus-5`, `opus-5`) or Claude Fable 5 (`claude-fable-5`, `fable-5`).
+- `--prompt-profile copilot` forces the Copilot adapter only.
+- `--prompt-profile opus-5` and `--prompt-profile fable-5` force the Copilot adapter plus that generation adapter. Use them when the caller knows the Copilot CLI configured default model is that generation but does not pass `--model`.
+- `auto` does not treat bare aliases such as `opus` or `fable` as a specific generation; pass an explicit prompt profile when the configured default is known.
 - `--prompt-profile none` suppresses prompt adaptation.
 
 The Copilot adapter is short and outcome-first. It tells Copilot to execute the source prompt literally, write requested artifacts exactly where specified, respect allowed side effects, keep output concise unless the source prompt asks otherwise, and stop when the source contract is complete or blocked.
+
+The Opus 5 generation adapter tells the model to deliver at the requested scope, avoid verification passes and extra review agents beyond the source prompt, delegate only authorized independent parallel work, avoid fixed progress scaffolding, and preserve coverage in review/finding phases.
+
+The Claude Fable 5 generation adapter tells the model to execute the source prompt as a goal-and-constraints contract, act without waiting for step-by-step direction, stay at the requested scope, ground progress claims in tool results, proceed autonomously on reversible in-scope work, and never stop early on account of perceived context limits.
+
+Generation adapters carry model-generation behavior compensation only; doctrine for what belongs in them is maintained in the `opus-5-tuning` and `fable-5-tuning` skills.
 
 ## Default Response Format
 

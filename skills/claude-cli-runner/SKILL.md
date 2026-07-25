@@ -89,13 +89,16 @@ Default behavior:
 - `--prompt-profile auto` is the default.
 - When `--model` explicitly looks like Opus 4.7 (`claude-opus-4-7`, `opus-4.7`), `auto` applies the Opus 4.7 adapter to `run.prompt.md`.
 - When `--model` explicitly looks like Opus 4.8 (`claude-opus-4-8`, `opus-4.8`), `auto` applies the Opus 4.8 adapter to `run.prompt.md`.
-- `auto` does not treat a bare `opus` alias as either version; pass an explicit prompt profile when the CLI default is known.
-- When `--model` is omitted, `auto` cannot know the Claude CLI configured default. If the configured default is Opus 4.7 or Opus 4.8, pass `--prompt-profile opus-4-7` or `--prompt-profile opus-4-8` explicitly.
+- When `--model` explicitly looks like Claude Opus 5 (`claude-opus-5`, `opus-5`), `auto` applies the Opus 5 adapter to `run.prompt.md`.
+- `auto` does not treat a bare `opus` alias as any specific version; pass an explicit prompt profile when the CLI default is known.
+- When `--model` is omitted, `auto` cannot know the Claude CLI configured default. If the configured default is Opus 4.7, Opus 4.8, or Claude Opus 5, pass `--prompt-profile opus-4-7`, `--prompt-profile opus-4-8`, or `--prompt-profile opus-5` explicitly.
 - Pass `--prompt-profile none` to suppress model-specific prompt adaptation.
 
 The Opus 4.7 adapter is intentionally short and positive. It tells Claude to execute the source prompt literally, avoid fixed progress scaffolding, avoid unnecessary subagents/tool calls, respect explicit tool/output limits, and rely on the CLI `--effort` setting instead of prompt magic words.
 
 The Opus 4.8 adapter is intentionally short and positive. It tells Claude to execute the source prompt literally, avoid fixed progress scaffolding, avoid unnecessary subagents/tool calls, preserve coverage in review/finding phases, respect explicit tool/output limits, and rely on the CLI `--effort` setting instead of prompt magic words.
+
+The Opus 5 adapter is intentionally short and positive. It tells Claude to execute the source prompt literally, deliver at the requested scope, avoid fixed progress scaffolding, avoid verification passes and subagents beyond what the source prompt requires, preserve coverage in review/finding phases, respect explicit tool/output limits, and rely on the CLI `--effort` setting instead of prompt magic words.
 
 ## Default Response Format
 
@@ -166,7 +169,7 @@ For Claude researcher roles, include:
 - `summary.json.cwd` records the resolved `--cwd`; the shell directory that launched the wrapper is not recorded as a separate field.
 - Omit `--model`, `--effort`, `--permission-mode`, and `--safe-mode` by default so Claude CLI uses its configured defaults.
 - Pass `--model <model>`, `--effort <level>`, `--permission-mode <mode>`, or `--safe-mode` from the caller when a model registry, role, or task explicitly requires overrides.
-- Use `--prompt-profile opus-4-7` or `--prompt-profile opus-4-8` when the caller knows the CLI default model is that Opus version but does not pass `--model`.
+- Use `--prompt-profile opus-4-7`, `--prompt-profile opus-4-8`, or `--prompt-profile opus-5` when the caller knows the CLI default model is that Opus version but does not pass `--model`.
 - Pass each expected output as `--expected-artifact`; use an absolute path or a path relative to the wrapper output directory.
 - Use `--extra-claude-arg` for narrow additions such as `--tools` or `--add-dir` when needed. When the extra Claude argument itself starts with `-`, either `--extra-claude-arg --tools=...` or `--extra-claude-arg=--tools=...` is accepted.
 - Pass value-taking Claude options in combined `=` form (for example `--extra-claude-arg --tools=WebSearch,WebFetch`). A space-separated value token is appended just before the positional prompt, and variadic Claude options such as `--tools` and `--add-dir` absorb the prompt and break the run.

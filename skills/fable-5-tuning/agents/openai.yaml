@@ -1,0 +1,6 @@
+interface:
+  display_name: "Fable 5 Tuning"
+  short_description: "Audit docs/skills/prompts for Claude Fable 5 readiness"
+  default_prompt: "Use $fable-5-tuning to audit this repo's docs, skills, and prompts for Claude Fable 5 readiness and propose replacements."
+policy:
+  allow_implicit_invocation: false

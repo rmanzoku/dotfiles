@@ -30,7 +30,7 @@ Before running Codex, make these decisions explicitly:
 - When `--output-dir .context/<task>` is used, pass `--expected-artifact result.md`, not `--expected-artifact .context/<task>/result.md`; the latter resolves under `.context/<task>/.context/<task>/`.
 - Defaults: omit `--model`, `--effort`, and `--profile` unless the caller, model registry, or role explicitly requires an override.
 - Timeout: rely on the 600-second wrapper default unless the task contract says otherwise.
-- Prompt profile: rely on `--prompt-profile auto` when passing an explicit GPT-5.5 model; use `--prompt-profile gpt-5-5` only when the CLI default is GPT-5.5 and `--model` is omitted.
+- Prompt profile: rely on `--prompt-profile auto` when passing an explicit GPT-5.5 or GPT-5.6 model; use `--prompt-profile gpt-5-5` or `--prompt-profile gpt-5-6` only when the CLI default is that generation and `--model` is omitted.
 - Extra Codex args: pass each Codex CLI token as its own `--extra-codex-arg=<token>` value, especially for leading-hyphen tokens.
 
 Do not add "think hard", fixed progress-update scaffolds, or mandatory step-by-step narration to simulate effort. Use `--effort` only when the caller explicitly asks for an effort override.
@@ -72,10 +72,13 @@ Default behavior:
 
 - `--prompt-profile auto` is the default.
 - When `--model` explicitly looks like GPT-5.5 (`gpt-5.5`, `gpt-5-5`, or similar), `auto` applies the GPT-5.5 adapter to `run.prompt.md`.
-- When `--model` is omitted, `auto` cannot know the Codex configured default. If the configured default is GPT-5.5, pass `--prompt-profile gpt-5-5` explicitly.
+- When `--model` explicitly looks like GPT-5.6 (`gpt-5.6`, `gpt-5-6`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, or similar), `auto` applies the GPT-5.6 adapter to `run.prompt.md`.
+- When `--model` is omitted, `auto` cannot know the Codex configured default. If the configured default is GPT-5.5 or GPT-5.6, pass `--prompt-profile gpt-5-5` or `--prompt-profile gpt-5-6` explicitly.
 - Pass `--prompt-profile none` to suppress model-specific prompt adaptation.
 
 The GPT-5.5 adapter is short and outcome-first. It tells Codex to honor the source prompt's outcome, success criteria, allowed side effects, evidence rules, output shape, and completion rule while relying on CLI/config effort rather than prompt magic words.
+
+The GPT-5.6 adapter is short, lean, and outcome-first. In addition to the GPT-5.5 contract it tells Codex to state each instruction once without boilerplate, handle routine local actions within the allowed side effects without asking, and treat external writes, destructive actions, and scope expansion as out of contract unless the source prompt explicitly authorizes them. Generation doctrine is maintained in the `gpt-5-6-tuning` skill.
 
 ## Default Response Format
 
@@ -155,7 +158,7 @@ Use these patterns when testing the wrapper itself without spending Codex API bu
 - `summary.json.cwd` records the resolved `--cwd`; the shell directory that launched the wrapper is not recorded as a separate field.
 - Omit `--model`, `--effort`, and `--profile` by default so Codex CLI uses its configured defaults.
 - Pass `--model <model>` and `--effort <level>` from the caller when a model registry, role, or task explicitly requires overrides.
-- Use `--prompt-profile gpt-5-5` when the caller knows the CLI default model is GPT-5.5 but does not pass `--model`.
+- Use `--prompt-profile gpt-5-5` or `--prompt-profile gpt-5-6` when the caller knows the CLI default model is that generation but does not pass `--model`.
 - Pass each expected output as `--expected-artifact`; use an absolute path or a path relative to the wrapper output directory.
 - Use `--extra-codex-arg` for narrow additions when explicitly required. Pass one Codex CLI token per wrapper argument, for example `--extra-codex-arg=--sandbox --extra-codex-arg=read-only`, `--extra-codex-arg=--ask-for-approval --extra-codex-arg=never`, or `--extra-codex-arg=--config --extra-codex-arg=key=value`.
 - Keep final orchestration in the caller. This skill only runs Codex and records observable artifacts.

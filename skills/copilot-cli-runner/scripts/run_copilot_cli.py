@@ -24,6 +24,9 @@ ERROR_RE = re.compile(
     re.IGNORECASE,
 )
 
+OPUS_5_MODEL_RE = re.compile(r"opus[-_.]?5(?!\d)|(?<![\d.])5[-_.]?opus", re.IGNORECASE)
+FABLE_5_MODEL_RE = re.compile(r"fable[-_.]?5(?!\d)|(?<![\d.])5[-_.]?fable", re.IGNORECASE)
+
 COPILOT_ADAPTER = """\
 ## Copilot CLI Prompt Adapter
 
@@ -35,6 +38,26 @@ Complete the source prompt as an outcome-first task contract.
 - Do not emulate reasoning effort with phrases like "think hard" or mandatory step-by-step narration; rely on the CLI/config effort setting supplied by the caller.
 - If a required input is missing, mark that item blocked with the missing input instead of guessing.
 - Keep final output concise unless the source prompt asks for a detailed report.
+"""
+
+OPUS_5_ADAPTER = """\
+## Claude Opus 5 Generation Adapter
+
+- Deliver at the requested scope. If a scope change seems needed, note it in one sentence and continue the task as asked.
+- Do not add verification passes, double-checks, or extra review agents beyond what the source prompt requires.
+- Delegate only independent, sizable, parallelizable work the source prompt authorizes; prefer direct completion otherwise.
+- Do not add fixed progress-update scaffolding. Report progress only if the source prompt asks for it or a real blocker requires it.
+- For review or finding tasks, do not silently filter findings by importance unless the source prompt explicitly asks for filtering at that phase.
+"""
+
+FABLE_5_ADAPTER = """\
+## Claude Fable 5 Generation Adapter
+
+- Treat the source prompt as a goal-and-constraints contract; when you have enough information to act, act without waiting for step-by-step direction.
+- Stay at the requested scope. Do not take unrequested adjacent actions or add unrequested tidying, refactors, or features. When asked to assess, report findings and stop.
+- Before reporting progress, audit each claim against a tool result from this run; mark unverified items as unverified and report outcomes faithfully.
+- Proceed on reversible in-scope actions without asking, and do not end the turn with only a plan or a promise while in-scope work remains.
+- Do not stop, summarize, or suggest a new session on account of perceived context limits.
 """
 
 STRUCTURED_MARKDOWN_OUTPUT = """\
@@ -98,9 +121,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--prompt-profile",
-        choices=("auto", "copilot", "none"),
+        choices=("auto", "copilot", "opus-5", "fable-5", "none"),
         default="auto",
-        help="Prompt adapter profile. Auto applies the Copilot adapter.",
+        help="Prompt adapter profile. Auto applies the Copilot adapter, plus a generation adapter for explicit opus-5 or fable-5 models.",
     )
     parser.add_argument(
         "--extra-copilot-arg",
@@ -165,10 +188,14 @@ def compact_json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True)[:4000]
 
 
-def resolve_prompt_profile(requested: str) -> str:
-    if requested == "auto":
-        return "copilot"
-    return requested
+def resolve_prompt_profile(requested: str, model: str | None) -> str:
+    if requested != "auto":
+        return requested
+    if model and OPUS_5_MODEL_RE.search(model):
+        return "opus-5"
+    if model and FABLE_5_MODEL_RE.search(model):
+        return "fable-5"
+    return "copilot"
 
 
 def write_launch_prompt(path: Path, source_prompt: Path, profile: str) -> None:
@@ -180,8 +207,12 @@ def write_launch_prompt(path: Path, source_prompt: Path, profile: str) -> None:
         "---",
         "",
     ]
-    if profile == "copilot":
+    if profile in ("copilot", "opus-5", "fable-5"):
         sections.extend([COPILOT_ADAPTER, ""])
+    if profile == "opus-5":
+        sections.extend([OPUS_5_ADAPTER, ""])
+    elif profile == "fable-5":
+        sections.extend([FABLE_5_ADAPTER, ""])
     sections.extend([STRUCTURED_MARKDOWN_OUTPUT, ""])
     sections.extend(
         [
@@ -321,7 +352,7 @@ def main() -> int:
     launch_prompt_path = output_dir / f"{args.stream_name}.prompt.md"
     summary_path = output_dir / "summary.json"
     failure_path = output_dir / "failure.md"
-    prompt_profile = resolve_prompt_profile(args.prompt_profile)
+    prompt_profile = resolve_prompt_profile(args.prompt_profile, args.model)
     write_launch_prompt(launch_prompt_path, prompt_file, prompt_profile)
 
     short_prompt = (
