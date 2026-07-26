@@ -1,6 +1,6 @@
 ---
 title: "Skill Install Manifest"
-updated_at: 2026-07-25
+updated_at: 2026-07-26
 ---
 
 # Skill Install Manifest
@@ -9,6 +9,9 @@ updated_at: 2026-07-25
 
 当面は script を作らず、docs-only の install manifest として維持する。
 将来 `gh` 側に manifest 機能が入ったら、そちらへ移行を検討する。
+
+この manifest で管理する repo オリジナル skill と external skill は、Claude Code と Codex に同じ skill セット・同じ ref / version で配備する。
+Codex `.system` skill、Claude / Codex の plugin 同梱 skill、各 host の組み込み skill は parity 対象外とする。
 
 ## First-party publisher skills
 
@@ -28,6 +31,7 @@ gh skill install . opus-5-tuning --from-local --agent claude-code --scope user
 gh skill install . fable-5-tuning --from-local --agent claude-code --scope user
 gh skill install . gpt-5-5-tuning --from-local --agent claude-code --scope user
 gh skill install . gpt-5-6-tuning --from-local --agent claude-code --scope user
+gh skill install . claude-cli-runner --from-local --agent claude-code --scope user
 gh skill install . codex-cli-runner --from-local --agent claude-code --scope user
 gh skill install . gemini-cli-runner --from-local --agent claude-code --scope user
 gh skill install . copilot-cli-runner --from-local --agent claude-code --scope user
@@ -58,8 +62,10 @@ gh skill install . fable-5-tuning --from-local --agent codex --scope user
 gh skill install . gpt-5-5-tuning --from-local --agent codex --scope user
 gh skill install . gpt-5-6-tuning --from-local --agent codex --scope user
 gh skill install . claude-cli-runner --from-local --agent codex --scope user
+gh skill install . codex-cli-runner --from-local --agent codex --scope user
 gh skill install . gemini-cli-runner --from-local --agent codex --scope user
 gh skill install . copilot-cli-runner --from-local --agent codex --scope user
+gh skill install . agent-orchestration-evaluator --from-local --agent codex --scope user
 gh skill install . ai-usage-coach --from-local --agent codex --scope user
 gh skill install . soundcore-minutes --from-local --agent codex --scope user
 gh skill install . ghq-repo-placement --from-local --agent codex --scope user

@@ -71,7 +71,9 @@
 - external skill はこの repo に vendoring せず、`gh skill` による install / update / remove を標準運用とすること
 - third-party external skill が upstream publisher layout を持たない場合は、`docs/skills-install-manifest.md` に `fetch + gh skill install --from-local` 手順を残して管理すること
 - Codex `.system/skill-installer` は Codex-only の補助入口として認識し、恒久的な外部 skill 管理は `gh skill` と `docs/skills-install-manifest.md` を正本にすること
-- 各 AI ツール間のスキル同期は skill-manager スキルの責務であり、本リポジトリでは扱わない
+- `docs/skills-install-manifest.md` で管理する repo オリジナル skill と external skill は、Claude Code と Codex に同じ skill セット・同じ ref / version で配備すること。追加・更新・削除は両者を同じターンで変更すること
+- Codex `.system` skill、Claude / Codex の plugin 同梱 skill、各 host が提供する組み込み skill は parity 対象外とする。例外的に manifest 管理 skill を片方だけへ配備する場合は、理由と期限を manifest または ADR に明記すること
+- Claude Code / Codex 間のスキル同期と parity 検証は skill-manager スキルの責務とする
 - `dotfile-update` は chezmoi 管理の dotfile 更新専用とし、repo ローカル skill の編集責務を持たせない
 - `.claude/skills/` 配下の repo ローカル skill と `skills/` 配下の publisher skill を追加・更新・構成変更する場合は、既存 Skill の更新であっても `skill-creator` スキルの手順に従うこと
 - Skill 更新時は `SKILL.md` だけでなく、必要に応じて `scripts/`、`references/`、`assets/`、`agents/openai.yaml` の整合も確認すること

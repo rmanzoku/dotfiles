@@ -6,9 +6,9 @@ description: "Manage external and local agent skills across Claude Code, Codex, 
 # Skill Manager
 
 External skill management workflow centered on `gh skill`, with Codex `.system/skill-installer` recognized as a Codex-only helper.
-This skill no longer assumes that Claude Code and Codex must have the same skill set.
-Treat agent differences as normal, and track why each skill exists where it does.
-When a repository has its own skill policy in `AGENTS.md`, ADRs, or equivalent docs, follow that local policy instead of hard-coding repo-specific rules into this skill.
+Do not infer whether Claude Code and Codex should have the same skill set.
+Resolve that policy from the repository's `AGENTS.md`, install manifest, ADRs, or equivalent docs.
+When parity is required, treat any unmanaged set or version difference as drift; otherwise track intentional agent differences with their reasons.
 
 ## Core model
 
@@ -27,8 +27,9 @@ Manage skills with three concepts:
    - Codex only
    - multiple agents
 
-Do not assume parity across agents.
-A skill may intentionally exist only in Claude, only in Codex, or in both.
+Determine the required agent placement from repository policy before changing installs.
+If policy requires parity, install the same managed skill set and versions for every named agent.
+Otherwise, a skill may intentionally exist only in Claude, only in Codex, or in both.
 
 ## Primary backend
 
@@ -114,7 +115,7 @@ Output should show:
 - Codex plugin status such as `enabled`, `configured`, `cached`, `available`
 
 Important:
-- If a skill exists in Claude but not Codex, report that as inventory data, not as an error by default.
+- If repository policy requires Claude/Codex parity, report a managed skill present in only one as drift; otherwise report it as inventory data rather than an error by default.
 - If a skill name collides with Codex `.system`, mark it `system-preferred`.
 - Treat valid direct installs in Codex as healthy even if no mirror manifest entry exists.
 - Aggregate skills in a source-aware way. Preserve plugin namespace and origin metadata instead of merging entries by bare skill name.
@@ -216,6 +217,7 @@ Check:
 - stale mirror metadata
 - vendored skills missing from expected agent directories
 - agent-specific installs that appear accidental
+- managed skill set or version differences between agents when repository policy requires parity
 - broken Codex plugin cache or config entries
 - Codex plugin declarations whose `skills`, `apps`, or `mcpServers` payload is missing
 - collisions with Codex `.system`
@@ -231,9 +233,10 @@ Do not use this as the default way to understand whether a skill is healthy in C
 The standard Codex path is a valid install under `~/.codex/skills` or `.agents/skills`, including direct copies created by `gh skill install`.
 
 Use only for skills whose policy is explicitly `mirror`.
-Do not assume all Claude skills should sync into Codex.
+When repository policy requires Claude/Codex parity, sync the complete managed set in both directions and verify versions as well as names.
+Otherwise, do not assume all Claude skills should sync into Codex.
 Skip:
-- agent-specific Claude-only skills
+- agent-specific skills explicitly allowed by repository policy
 - Codex `.system` collisions
 - trial installs that have not been adopted into git
 
@@ -265,7 +268,7 @@ When helping the user choose a management path:
 - Prefer `gh skill install` for new installs
 - Use Codex `.system/skill-installer` only as a Codex-only convenience path for curated/experimental OpenAI skills or one-off GitHub-path installs
 - Follow repository-local policy docs for the boundary between external installs and git-managed copies
-- Prefer reporting agent differences instead of automatically syncing them away
+- Enforce parity when repository policy requires it; otherwise report agent differences instead of automatically syncing them away
 - Keep plugin management separate from skill installs, but include Claude and Codex plugins when the user is auditing actual availability
 - For Codex plugins, treat `~/.codex/config.toml` plus marketplace metadata as the control plane and `~/.codex/plugins/cache` as the local realized state
 
