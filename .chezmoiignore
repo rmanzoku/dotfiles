@@ -64,6 +64,8 @@ ghq/**/*.p8
 .codex/automations/*
 !.codex/automations/daily-ai-brew-upgrade
 !.codex/automations/daily-ai-brew-upgrade/automation.toml
+!.codex/automations/changer-issue-intake
+!.codex/automations/changer-issue-intake/automation.toml
 .codex/automations/*/memory.md
 .codex/archived_sessions
 .codex/history.jsonl
