@@ -2,6 +2,8 @@
 title: "Use 1Password For Secret Handoff"
 date: 2026-05-20
 agent: "Codex GPT-5"
+updated_at: 2026-07-27T14:09:48Z
+updated_by: "Codex GPT-5"
 status: "accepted"
 ---
 
@@ -36,6 +38,8 @@ The default 1Password vault for this workflow is `Dotfiles Secrets`.
 Use `--vault <vault>` only when overriding the default.
 `opmaterialize diff` checks whether manifest-declared files are missing or changed before restore without printing secret contents.
 AI agents use the `onepassword-secret-materialize` skill as the workflow entrypoint. The `~/.local/bin/opmaterialize` command is only a convenience wrapper that delegates to the installed skill script.
+Machines sharing the `Dotfiles Secrets` vault may restore the same complete set of secret-backed files, including multiple device-specific VPN configurations.
+The manifest does not require per-machine filtering solely to prevent those files from being materialized on every participating machine.
 
 # Consequences
 
@@ -44,6 +48,7 @@ AI agents use the `onepassword-secret-materialize` skill as the workflow entrypo
 - Commands that need API keys should be launched with `oprun <command>` or a direct `op run --env-file ... -- <command>`.
 - Resolved config files produced by `op inject` must stay outside git and under ignored local paths such as `~/.config/op/injected/`.
 - File-based secrets such as VPN configs should be restored with `opmaterialize` into stable `~/.config/...` paths.
+- Device-specific secret files must use distinct 1Password Documents and distinct output paths when they are restored together.
 - New file-based secrets should be registered with `opmaterialize add` instead of editing the manifest by hand when possible.
 - Run `opmaterialize diff` before restore when deciding whether local secret-backed files will change.
 - Keep the repo-local `onepassword-secret-materialize` skill aligned with `opmaterialize` behavior when the workflow changes.
