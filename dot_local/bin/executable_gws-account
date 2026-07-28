@@ -81,7 +81,21 @@ if [ "$allow_missing_credentials" = false ] &&
   exit 66
 fi
 
-mkdir -p "$config_dir"
+# Create the profile config dir only when credentials already exist for the
+# profile or the command is about to create them (auth login / auth setup).
+# Otherwise a typo'd profile name would leave an empty directory behind that
+# later looks like a real profile.
+if [ "$credentials_file" ] ||
+   [ -r "$config_dir/credentials.enc" ] ||
+   [ -r "$config_dir/credentials.json" ]; then
+  mkdir -p "$config_dir"
+else
+  case "${1:-}:${2:-}" in
+    auth:login|auth:setup)
+      mkdir -p "$config_dir"
+      ;;
+  esac
+fi
 
 printf '%s\n' "gws-account: profile=$profile_name fallback=disabled" >&2
 
