@@ -49,12 +49,32 @@ def redact_arg(arg: str) -> str:
     return redact_text(arg)
 
 
-def classify(text: str, exit_code: int | None, timed_out: bool) -> str | None:
+def is_diff_reporting_differences(command: list[str], exit_code: int | None) -> bool:
+    """`opmaterialize diff` exits 1 when it finds differences, like diff(1).
+
+    That is a result, not a failure, so it must not be reported as command_failed.
+    """
+    return (
+        exit_code == 1
+        and command_name(command) == "opmaterialize"
+        and len(command) >= 2
+        and command[1] == "diff"
+    )
+
+
+def classify(
+    text: str,
+    exit_code: int | None,
+    timed_out: bool,
+    command: list[str] | None = None,
+) -> str | None:
     if timed_out:
         return "timeout"
     for name, pattern in AUTH_SIGNATURES:
         if pattern.search(text):
             return name
+    if command is not None and is_diff_reporting_differences(command, exit_code):
+        return "differences_found"
     if exit_code not in (None, 0):
         return "command_failed"
     return None
@@ -169,6 +189,34 @@ def verify_signin(args: argparse.Namespace, command: list[str], log_path: Path) 
     return False, failure, combined
 
 
+def session_is_usable(args: argparse.Namespace, log_path: Path) -> bool:
+    """Probe whether the 1Password session actually works.
+
+    A command can report "account is not signed in" while the session is in fact usable.
+    This was observed immediately after `op signin`, where the signed-in state takes a
+    moment to propagate: the same command succeeded seconds later without any further
+    authentication. Re-running the caller's command would be unsafe for writes, so probe
+    with a read-only whoami instead and leave the caller's command alone.
+    """
+    account = os.environ.get("OP_ACCOUNT")
+    probe = ["op", "whoami"] + (["--account", account] if account else [])
+    log_line(log_path, "[auth-recheck] probing session with read-only whoami")
+    try:
+        proc = subprocess.run(
+            probe,
+            cwd=args.cwd_path,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=min(args.timeout_seconds, 30),
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        log_line(log_path, "[auth-recheck] probe timed out")
+        return False
+    return proc.returncode == 0
+
+
 def run_direct(args: argparse.Namespace, command: list[str], out_dir: Path, log_path: Path) -> dict:
     started = time.monotonic()
     log_line(log_path, f"[start] direct cwd={args.cwd}")
@@ -203,7 +251,10 @@ def run_direct(args: argparse.Namespace, command: list[str], out_dir: Path, log_
             exit_code = 1
 
     elapsed = round(time.monotonic() - started, 3)
-    failure_kind = verify_failure or classify(combined, exit_code, timed_out)
+    failure_kind = verify_failure or classify(combined, exit_code, timed_out, command)
+    if failure_kind == "auth_required" and session_is_usable(args, log_path):
+        log_line(log_path, "[auth-recheck] session is usable; reclassifying as auth_transient")
+        failure_kind = "auth_transient"
     log_line(log_path, f"[done] direct exit_code={exit_code} elapsed={elapsed}s failure_kind={failure_kind or 'none'}")
     return {
         "mode": "direct",

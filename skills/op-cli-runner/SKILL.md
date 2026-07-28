@@ -58,7 +58,7 @@ python3 skills/op-cli-runner/scripts/run_op_cli.py \
   -- op whoami --account my.1password.com
 ```
 
-If the wrapper returns `auth_required`, `prompt_error`, `authorization_dismissed`, `auth_timeout`, or `timeout`, do not retry the same command repeatedly. Preserve the artifacts and fix the underlying 1Password CLI/session/app-integration issue outside this skill.
+If the wrapper returns `auth_required`, `prompt_error`, `authorization_dismissed`, `auth_timeout`, or `timeout`, do not retry the same command repeatedly. Preserve the artifacts and fix the underlying 1Password CLI/session/app-integration issue outside this skill. `auth_transient` is the exception: the wrapper already confirmed the session is usable, so re-running the original command once is the correct response rather than troubleshooting authentication.
 
 When the command is `op signin`, the wrapper verifies success with `op whoami --account <account>`. Treat `op signin` exit 0 as insufficient unless `whoami` confirms the session.
 
@@ -102,11 +102,26 @@ sh ~/.codex/skills/onepassword-secret-materialize/scripts/opmaterialize diff
 
 Use this only for wrapper availability. Do not use it as an authentication fallback.
 
+## Authorization Prompts and Human Wait Time
+
+Every `op` call may raise a 1Password authorization prompt that a human must approve with biometrics or a password. Plan the work around that cost, because an unattended prompt becomes `auth_timeout` and takes the whole command with it.
+
+Measured on macOS with desktop app integration: one `opmaterialize diff` spanning 21 separate `op` processes over 61 seconds needed a single approval. Authorization is not per file and not per process — one approval covers the processes that follow until the app locks again.
+
+So the thing that multiplies prompts is not call volume, it is elapsed time between calls. Scattering `op` invocations across a long session lets the app lock in between, and each one prompts again.
+
+- Group `op` work into one contiguous stretch. Do not interleave long non-`op` work between `op` calls; batch the operations instead so one approval covers them all.
+- Say that a prompt is coming before starting, and roughly how many to expect. A prompt nobody is watching is a failed prompt.
+- Set `--timeout-seconds` for a human who may be away from the keyboard, not for the command's own runtime. The default is 300.
+- After a gap in `op` activity, expect the first call to prompt again. That is the app locking, not a broken setup.
+
 ## Failure Handling
 
 Classify failures from `summary.json.failure_kind`:
 
-- `auth_required`: CLI is not signed in for the selected account.
+- `auth_required`: CLI is not signed in for the selected account, and a read-only probe confirmed the session is unusable.
+- `auth_transient`: the command reported "account is not signed in", but a read-only `op whoami` probe right afterwards succeeded, so the session is in fact usable. Observed immediately after `op signin`, where the signed-in state takes a moment to propagate. Re-run the original command rather than troubleshooting authentication. The wrapper never re-runs it for you, because re-running a write would not be safe.
+- `differences_found`: `opmaterialize diff` exited `1` because it found differences. This is a result, not a failure — `diff(1)` uses the same convention. Read the `changed:` / `unchanged:` lines in `run.log` for the detail.
 - `prompt_error`: 1Password app integration prompt could not be displayed or completed from the current process.
 - `authorization_dismissed`: the auth prompt was dismissed or not completed.
 - `auth_timeout`: the auth prompt did not complete before 1Password CLI timed out.
