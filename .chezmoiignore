@@ -108,3 +108,6 @@ ghq/**/*.p8
 .CFUserTextEncoding
 .emulator_console_auth_token
 .lmstudio-home-pointer
+
+# Python bytecode cache (created by tooling that byte-compiles source files)
+__pycache__

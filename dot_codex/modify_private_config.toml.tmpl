@@ -1,0 +1,165 @@
+#!/usr/bin/env python3
+"""chezmoi modify_ script for ~/.codex/config.toml.
+
+Merges the managed settings below into whatever is already on disk instead of
+replacing the file. Codex Desktop writes MCP servers, plugins, marketplaces and
+desktop state into this file at runtime, and Codex records interactively granted
+project trust levels here too. A plain chezmoi-managed file would delete all of
+that on every apply, which is why this file drifted and was never applied.
+
+Managed keys win. Every other key and section already present is preserved.
+
+Project trust levels are deliberately not managed here. Codex resolves
+`[projects."<path>"]` by exact match only — there is no ancestor inheritance and
+no glob — so listing paths in source neither scales nor survives contact with
+day-to-day work. Trust stays machine-local.
+"""
+
+from __future__ import annotations
+
+import re
+import sys
+from collections import OrderedDict
+
+MANAGED = r"""
+model = "gpt-5.6-sol"
+model_reasoning_effort = "medium"
+personality = "pragmatic"
+service_tier = "fast"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+
+notify = ["{{ .chezmoi.homeDir }}/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
+
+[features]
+codex_hooks = true
+collaboration_modes = true
+multi_agent = true
+goals = true
+
+[mcp_servers.pencil]
+command = "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64"
+args = [ "--app", "desktop" ]
+
+[mcp_servers.freee_self]
+url = "https://mcp.freee.co.jp/mcp"
+
+[mcp_servers.freee_ow]
+enabled = true
+url = "https://mcp.freee.co.jp/mcp"
+
+[plugins."github@openai-curated"]
+enabled = true
+
+[plugins."computer-use@openai-bundled"]
+enabled = true
+
+[plugins."documents@openai-primary-runtime"]
+enabled = true
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = true
+
+[plugins."presentations@openai-primary-runtime"]
+enabled = true
+
+[plugins."slack@openai-curated"]
+enabled = true
+
+[plugins."google-calendar@openai-curated"]
+enabled = true
+
+[plugins."gmail@openai-curated"]
+enabled = true
+
+[plugins."browser@openai-bundled"]
+enabled = true
+
+[plugins."chrome@openai-bundled"]
+enabled = true
+"""
+
+SECTION_RE = re.compile(r"\[([^\]]+)\]\s*$")
+KEY_RE = re.compile(r'\s*((?:[A-Za-z0-9_.\-]+|"[^"]*"))\s*=')
+
+
+def parse(text: str) -> tuple[list[str], "OrderedDict[str, list[str]]"]:
+    """Split TOML into leading key lines and an ordered map of section -> lines."""
+    preamble: list[str] = []
+    sections: OrderedDict[str, list[str]] = OrderedDict()
+    current: str | None = None
+    for line in text.splitlines():
+        match = SECTION_RE.match(line)
+        if match:
+            current = match.group(1)
+            sections.setdefault(current, [])
+        elif current is None:
+            preamble.append(line)
+        else:
+            sections[current].append(line)
+    return preamble, sections
+
+
+def key_of(line: str) -> str | None:
+    match = KEY_RE.match(line)
+    return match.group(1) if match else None
+
+
+def merge(base: list[str], managed: list[str]) -> list[str]:
+    """Overwrite base lines whose key is managed; keep base-only keys; append new ones."""
+    managed_by_key: "OrderedDict[str, str]" = OrderedDict()
+    for line in managed:
+        key = key_of(line)
+        if key:
+            managed_by_key[key] = line
+
+    out: list[str] = []
+    applied: set[str] = set()
+    for line in base:
+        key = key_of(line)
+        if key and key in managed_by_key:
+            if key not in applied:
+                out.append(managed_by_key[key])
+                applied.add(key)
+        else:
+            out.append(line)
+
+    for key, line in managed_by_key.items():
+        if key not in applied:
+            out.append(line)
+    return out
+
+
+def trim(lines: list[str]) -> list[str]:
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    while lines and not lines[-1].strip():
+        lines.pop()
+    return lines
+
+
+def main() -> int:
+    existing = sys.stdin.read()
+    base_pre, base_sections = parse(existing)
+    managed_pre, managed_sections = parse(MANAGED)
+
+    out: list[str] = trim(merge(base_pre, managed_pre))
+
+    # Managed sections first, in the order this script declares them.
+    for name, managed_lines in managed_sections.items():
+        body = trim(merge(base_sections.get(name, []), managed_lines))
+        out += ["", f"[{name}]"] + body
+
+    # Then whatever the existing file had that this script does not manage:
+    # Desktop-written sections and project trust levels.
+    for name, lines in base_sections.items():
+        if name in managed_sections:
+            continue
+        out += ["", f"[{name}]"] + trim(lines)
+
+    sys.stdout.write("\n".join(out) + "\n")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

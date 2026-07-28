@@ -1,11 +1,7 @@
 .context/
 .DS_Store
 __pycache__/
-dot_codex/automations/*
-!dot_codex/automations/daily-ai-brew-upgrade/
-!dot_codex/automations/daily-ai-brew-upgrade/automation.toml.tmpl
-!dot_codex/automations/changer-issue-intake/
-!dot_codex/automations/changer-issue-intake/automation.toml.tmpl
+dot_codex/automations/
 dot_claude/agents/*
 !dot_claude/agents/private_worker.md
 !dot_claude/agents/private_mechanical.md
