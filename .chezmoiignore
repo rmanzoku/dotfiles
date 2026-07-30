@@ -13,6 +13,7 @@ skills
 .DS_Store
 
 # Secrets (managed outside chezmoi)
+.aws/credentials
 .zshenv.local
 .config/op/dotfiles.env
 .config/op/materialize.tsv
