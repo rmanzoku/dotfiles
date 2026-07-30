@@ -32,6 +32,7 @@ Before running Codex, make these decisions explicitly:
 - Timeout: rely on the 600-second wrapper default unless the task contract says otherwise.
 - Prompt profile: rely on `--prompt-profile auto` when passing an explicit GPT-5.5 or GPT-5.6 model; use `--prompt-profile gpt-5-5` or `--prompt-profile gpt-5-6` only when the CLI default is that generation and `--model` is omitted.
 - Extra Codex args: pass each Codex CLI token as its own `--extra-codex-arg=<token>` value, especially for leading-hyphen tokens.
+- Web search: `codex exec` does not accept `--search` (it exits 2 with `unexpected argument '--search'`). For research tasks that need web access, pass `--extra-codex-arg=--config --extra-codex-arg=tools.web_search=true`.
 
 Do not add "think hard", fixed progress-update scaffolds, or mandatory step-by-step narration to simulate effort. Use `--effort` only when the caller explicitly asks for an effort override.
 

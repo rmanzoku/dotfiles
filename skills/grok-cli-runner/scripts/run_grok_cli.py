@@ -81,7 +81,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--always-approve",
         action="store_true",
-        help="Pass --always-approve to Grok Build. Use only when the caller explicitly accepts tool side effects.",
+        help=(
+            "Pass --always-approve to Grok Build and omit --permission-mode "
+            "(grok 0.2.112 lets an explicit --permission-mode override --always-approve). "
+            "Use only when the caller explicitly accepts tool side effects."
+        ),
     )
     return parser.parse_args()
 
@@ -228,7 +232,9 @@ def build_grok_command(args: argparse.Namespace, timeout_bin: str, payload: dict
     model = payload.get("model")
     if model:
         command.extend(["-m", str(model)])
-    if args.permission_mode:
+    # grok 0.2.112: an explicit --permission-mode overrides --always-approve
+    # (contrary to its docs), so the two flags must never be sent together.
+    if args.permission_mode and not args.always_approve:
         command.extend(["--permission-mode", args.permission_mode])
     if args.no_plan:
         command.append("--no-plan")
@@ -293,6 +299,22 @@ def extract_text_from_value(value: Any) -> str | None:
     return None
 
 
+def extract_stop_reason(parsed_stdout: Any) -> str | None:
+    if not isinstance(parsed_stdout, dict):
+        return None
+    value = parsed_stdout.get("stopReason")
+    if isinstance(value, str) and value:
+        return value
+    events = parsed_stdout.get("events")
+    if isinstance(events, list):
+        for event in reversed(events):
+            if isinstance(event, dict):
+                value = event.get("stopReason")
+                if isinstance(value, str) and value:
+                    return value
+    return None
+
+
 def run_grok_build(
     args: argparse.Namespace,
     command: list[str],
@@ -300,7 +322,7 @@ def run_grok_build(
     payload: dict[str, Any],
     response_path: Path,
     stderr_path: Path,
-) -> int:
+) -> tuple[int, str | None]:
     if not shutil.which(args.grok_bin):
         raise RuntimeError(
             f"Grok Build executable not found: {args.grok_bin}. Install with `curl -fsSL https://x.ai/cli/install.sh | bash` "
@@ -318,9 +340,10 @@ def run_grok_build(
         )
     if proc.returncode != 0:
         log_progress(f"Grok Build headless run failed exit_code={proc.returncode}")
-        return proc.returncode
+        return proc.returncode, None
     stdout_text = proc.stdout.decode("utf-8", errors="replace")
     parsed_stdout, output_text = parse_stdout(stdout_text, args.output_format)
+    stop_reason = extract_stop_reason(parsed_stdout)
     artifact = {
         "task": require_string(request_artifact, "task"),
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -338,8 +361,11 @@ def run_grok_build(
         "backend": "grok-build",
     }
     write_json(response_path, artifact)
-    log_progress(f"completed Grok Build headless run bytes={len(proc.stdout)}")
-    return 0
+    if args.output_format in {"json", "streaming-json"} and stop_reason != "EndTurn":
+        log_progress(f"Grok Build turn did not complete stop_reason={stop_reason}")
+    else:
+        log_progress(f"completed Grok Build headless run bytes={len(proc.stdout)}")
+    return 0, stop_reason
 
 
 def classify_failure_reasons(
@@ -348,6 +374,8 @@ def classify_failure_reasons(
     api_error: dict[str, Any] | None,
     response_non_empty: bool,
     dry_run: bool,
+    stop_reason: str | None,
+    output_format: str,
 ) -> list[str]:
     reasons: list[str] = []
     if exit_code == 124:
@@ -362,6 +390,13 @@ def classify_failure_reasons(
             reasons.append("invalid_request")
         else:
             reasons.append("grok_build_error")
+    if (
+        not dry_run
+        and exit_code == 0
+        and output_format in {"json", "streaming-json"}
+        and stop_reason != "EndTurn"
+    ):
+        reasons.append("stop_reason_not_end_turn")
     if not dry_run and not response_non_empty and "missing_grok" not in reasons and "invalid_request" not in reasons:
         reasons.append("missing_response_artifact")
     return reasons
@@ -376,6 +411,12 @@ def recommended_next_action(failure_reasons: list[str], *, dry_run: bool) -> str
         return "Inspect request size and Grok Build state, then rerun with a smaller request or larger --timeout-seconds."
     if "invalid_request" in failure_reasons:
         return "Fix grok-request.json against references/schema.md, then rerun with --dry-run before a real call."
+    if "stop_reason_not_end_turn" in failure_reasons:
+        return (
+            "Grok Build ended the turn without completing (stop_reason != EndTurn; Cancelled usually means a headless "
+            "permission prompt nobody could answer). For tasks with shell or file side effects rerun with "
+            "--permission-mode bypassPermissions, and inspect events.jsonl under ~/.grok/sessions/ for permission_cancelled."
+        )
     if "missing_response_artifact" in failure_reasons:
         return "Inspect run.err and Grok Build stdout behavior, then rerun after fixing auth, model, permission mode, or request shape."
     return "Inspect summary.json and grok-response.json, then integrate the response in the caller."
@@ -389,6 +430,7 @@ def write_failure(path: Path, summary: dict[str, Any]) -> None:
         "",
         f"- Command: `{' '.join(summary['command'])}`",
         f"- Exit code: `{summary['exit_code']}`",
+        f"- Stop reason: `{summary.get('stop_reason')}`",
         f"- Elapsed seconds: `{summary['elapsed_seconds']}`",
         f"- Request bytes: `{summary['request_bytes']}`",
         f"- Response artifact: `{summary['response_artifact']}`",
@@ -426,6 +468,7 @@ def main() -> int:
     api_error: dict[str, Any] | None = None
     dry_run_payload: dict[str, Any] | None = None
     exit_code = 0
+    stop_reason: str | None = None
     model_used = args.model or os.getenv("GROK_BUILD_MODEL") or os.getenv("GROK_MODEL") or None
     command: list[str] = []
     prompt_bytes = 0
@@ -446,7 +489,7 @@ def main() -> int:
             }
             stderr_path.write_text("", encoding="utf-8")
         else:
-            exit_code = run_grok_build(args, command, request_data, payload, response_path, stderr_path)
+            exit_code, stop_reason = run_grok_build(args, command, request_data, payload, response_path, stderr_path)
     except Exception as exc:  # noqa: BLE001 - convert all local/backend failures to artifacts
         exit_code = 1
         api_error = {"type": exc.__class__.__name__, "message": str(exc)}
@@ -461,6 +504,8 @@ def main() -> int:
         api_error=api_error,
         response_non_empty=response_non_empty,
         dry_run=args.dry_run,
+        stop_reason=stop_reason,
+        output_format=args.output_format,
     )
     recommended = recommended_next_action(failure_reasons, dry_run=args.dry_run)
     summary = {
@@ -473,7 +518,7 @@ def main() -> int:
         "backend": "grok-build",
         "grok_bin": args.grok_bin,
         "output_format": args.output_format,
-        "permission_mode": args.permission_mode,
+        "permission_mode": None if args.always_approve else args.permission_mode,
         "no_plan": args.no_plan,
         "verbatim": not args.no_verbatim,
         "session_id": args.session_id,
@@ -484,6 +529,7 @@ def main() -> int:
         "dry_run_payload": dry_run_payload,
         "prompt_bytes": prompt_bytes,
         "exit_code": exit_code,
+        "stop_reason": stop_reason,
         "elapsed_seconds": elapsed,
         "request_bytes": request_bytes,
         "response_bytes": response_bytes,
