@@ -41,8 +41,10 @@ Do not add "think hard", fixed progress-update scaffolds, or mandatory step-by-s
 Use this form, with `<prompt>` kept short and pointing to the generated launch prompt:
 
 ```bash
-timeout 600 codex exec --json -o <artifact>.last-message.md "<prompt>" > <artifact>.events.jsonl 2> <artifact>.err
+timeout 600 codex exec --json -o <artifact>.last-message.md "<prompt>" > <artifact>.events.jsonl 2> <artifact>.err < /dev/null
 ```
+
+Keep `< /dev/null` on raw `codex exec` commands: with an open non-TTY stdin (typical in background shells), `codex exec` blocks on `Reading additional input from stdin...` until timeout. The bundled wrapper already forces stdin from `/dev/null`.
 
 For repeatable runs, prefer the bundled wrapper:
 
@@ -129,6 +131,8 @@ On failure, inspect `.context/<task>/summary.json` first:
 - `expected_artifacts`
 - `recommended_next_action`
 
+Stdin-hang signature: when `run.err` contains only `Reading additional input from stdin...` and `run.events.jsonl` is 0 bytes with a timeout exit, `codex exec` blocked reading an open stdin instead of running. This should not occur through the wrapper (it forces stdin from `/dev/null`); if seen on a raw `codex exec` run, rerun with `< /dev/null`.
+
 If a higher-level workflow needs a downstream blocked artifact, create it in the caller using that workflow's schema or template. Do not invent a downstream schema in this runner and do not modify runner evidence artifacts. If no caller schema was supplied, report the runner as blocked with links to `summary.json` and `failure.md` instead of fabricating an artifact format.
 
 The wrapper also writes `.context/<task>/failure.md` with:
@@ -177,6 +181,7 @@ For runtime validation, run:
 
 - no-API command construction
 - no-API fake Codex success
+- no-API fake Codex success with the caller's stdin held open (stdin-hang regression)
 - real short smoke prompt
 - real file read/write prompt
 - forced timeout failure

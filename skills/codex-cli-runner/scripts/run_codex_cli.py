@@ -303,6 +303,8 @@ def main() -> int:
         proc = subprocess.run(
             command,
             cwd=str(cwd),
+            # codex exec blocks reading an open non-TTY stdin (e.g. background shells); force immediate EOF.
+            stdin=subprocess.DEVNULL,
             stdout=stdout_fh,
             stderr=stderr_fh,
             check=False,
