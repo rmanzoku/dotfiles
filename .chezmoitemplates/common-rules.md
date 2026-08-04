@@ -16,7 +16,7 @@
 - AI 間や CLI 間で複数行や構造化された内容を受け渡すときは、作業 worktree 内の `.context/` に置いた実ファイル経由を標準とし、`-p` などの引数へのインライン展開や here-doc 直書きを避けること。パイプは単一コマンドが標準入力をただちに 1 回だけ読む単発処理に限ること
 - 長時間実行や外部通信を伴うスクリプトには、開始・反復・リトライ・完了・失敗を判別できる進捗ログを必須とし、静かな成功や無出力に見える待機を作らないこと。ログには秘密情報を含めず、再実行判断に足る情報を含めること
 - script / skill に、主経路の失敗原因を隠す暗黙 fallback を追加しないこと。代替経路が必要な場合は目的・発動条件・観測ログ・再実行時の挙動を明示し、安定した代替経路は fallback ではなく主経路へ昇格すること。同等性と選択条件が明示された冗長 provider（同一データへの複数 RPC / mirror / replica 等）は例外とする
-- 外部サービスへの作成・更新・削除・送信・承認・共有・権限変更では、失敗や権限エラーを別 principal / 別 company / 別 profile への自動切替で回避しないこと。読み取り診断でも自動切替はせず、必要なら principal を明示して再実行し、解消しなければ停止して確認すること
+- 外部サービスへの作成・更新・削除・送信・承認・共有・権限変更では、失敗や権限エラーを別 principal / 別 company / 別 profile への自動切替で回避しないこと。読み取り診断でも自動切替はせず、必要なら principal を明示して再実行し、解消しなければ停止してユーザーに確認すること
 - コマンドやツールのエラーは、失敗と断定する前に意味（一致なし、context 不一致、path 不存在、conflict / dirty state、検証 failure 等）で分類し、原因を確認してから続行すること
 - エラーへの一時的な迂回は許容するが、同種エラーの再発、検証省略、環境・設定・権限・依存の不備、再現性低下が絡む場合は恒久対策レビューの対象とし、原因・一時迂回・恒久対策・git 反映対象・検証方法を分けて整理すること
 - 調査、レビュー、設計評価、事業判断、秘書的整理、恒久対策レビューなど役割を切り出せる作業は、role-appropriate なサブエージェント、custom agent、runner へ積極的に委譲してよいこと。複数モデルの使い分け自体を目的にしないこと
@@ -28,7 +28,7 @@
 - 新しい永続的な Skill / Runner / wrapper を作る前に、既存 docs / Skill / wrapper / runner adapter で足りるか確認すること
 - Phase / Step を持つ作業では、対応する中間成果物 artifact を `.context/` へ保存してから次の Phase / Step へ進むこと。口頭合意、推論上の完了宣言、Memory 内だけの状態遷移で進めてはならない
 - artifact の初期必須項目は `task`、`phase_or_step`、`created_at`（Markdown は Front Matter、JSON は同名キー）とし、命名は `.context/<task-or-date>/<nn>-<phase-name>.(md|json)` を推奨すること
-- 非 Phase 作業は artifact 必須対象外とする。単発例外として artifact gate を明示的にバイパスする場合だけ `.context/single-step/<task>.json` を使い、`enabled=true`、`task`、`reason`、`expires_at` を必須とすること
+- Plan や依頼で Phase / Step が明示されない作業は非 Phase 作業として扱い、artifact 必須対象外とする。単発例外として artifact gate を明示的にバイパスする場合だけ `.context/single-step/<task>.json` を使い、`enabled=true`、`task`、`reason`、`expires_at` を必須とすること
 - Phase / Step 遷移の最小原則は現在作業中のリポジトリの正規指示ファイル（通常は `AGENTS.md`）を、各 Skill 固有の required artifact は `SKILL.md` を正本とすること。競合時は `SKILL.md` をその Skill 実行中の具体契約として優先し、正規指示ファイルは下限ルールとして常に適用すること
 - `*.md` ファイルを編集した際は、ファイル全体を見直し、矛盾・重複・ルール漏れがないか確認し、必要なら同じターンで修正すること
 - `*.md` ファイルのメタデータは本文に書かず、必ず Front Matter で管理すること

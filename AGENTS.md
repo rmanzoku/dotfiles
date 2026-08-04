@@ -43,7 +43,7 @@
 
 - Phase / Step を持つ作業では、対応する中間成果物 artifact を `.context/` へ保存してから次の Phase / Step へ進むこと。口頭合意、推論上の完了宣言、Memory 内だけの状態遷移で進めてはならない
 - artifact の初期必須項目は `task`、`phase_or_step`、`created_at`（Markdown は Front Matter、JSON は同名キー）とし、命名は `.context/<task-or-date>/<nn>-<phase-name>.(md|json)` を推奨すること
-- 非 Phase 作業は artifact 必須対象外とする。単発例外として artifact gate を明示的にバイパスする場合だけ `.context/single-step/<task>.json` を使い、`enabled=true`、`task`、`reason`、`expires_at` を必須とすること
+- Plan や依頼で Phase / Step が明示されない作業は非 Phase 作業として扱い、artifact 必須対象外とする。単発例外として artifact gate を明示的にバイパスする場合だけ `.context/single-step/<task>.json` を使い、`enabled=true`、`task`、`reason`、`expires_at` を必須とすること
 - Phase / Step 遷移の最小原則は現在作業中のリポジトリの正規指示ファイル（通常は `AGENTS.md`）を、各 Skill 固有の required artifact は `SKILL.md` を正本とすること。競合時は `SKILL.md` をその Skill 実行中の具体契約として優先し、正規指示ファイルは下限ルールとして常に適用すること
 
 # スキル管理
