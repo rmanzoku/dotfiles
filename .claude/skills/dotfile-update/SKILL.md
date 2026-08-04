@@ -3,8 +3,7 @@ name: dotfile-update
 description: >
   chezmoi 管理の dotfiles リポジトリで dotfile を追加・変更・削除するためのワークフロースキル。
   `dot_*` ファイル、`.chezmoiignore`、`Brewfile`、共通ルールファイル
-  （`.chezmoitemplates/common-rules.md`、`dot_claude/CLAUDE.md`、`dot_codex/AGENTS.md.tmpl`、
-  `dot_qwen/QWEN.md.tmpl`、`dot_gemini/GEMINI.md.tmpl`）を
+  （`.chezmoitemplates/common-rules.md`、`dot_claude/CLAUDE.md`、`dot_codex/AGENTS.md.tmpl`）を
   編集する依頼で必ず使用すること。
   AI 間の設定対応、`json` から `toml` への変換、chezmoi の
   `private_` / `dot_` / `symlink_` 属性や source / target の対応確認が関わる依頼にも適用すること。
@@ -54,10 +53,10 @@ Step artifact:
 
 対応表:
 
-| 設定カテゴリ | Claude | Codex | Qwen | Gemini |
-|---|---|---|---|---|
-| 指示ファイル | `dot_claude/CLAUDE.md` | `dot_codex/AGENTS.md.tmpl` | `dot_qwen/QWEN.md.tmpl` | `dot_gemini/GEMINI.md.tmpl` |
-| クライアント設定 | `dot_claude/private_settings.json` | `dot_codex/private_config.toml.tmpl` | `dot_qwen/settings.json` | `dot_gemini/settings.json.tmpl` |
+| 設定カテゴリ | Claude | Codex |
+|---|---|---|
+| 指示ファイル | `dot_claude/CLAUDE.md` | `dot_codex/AGENTS.md.tmpl` |
+| クライアント設定 | `dot_claude/private_settings.json` | `dot_codex/private_config.toml.tmpl` |
 
 判断ルール:
 - 共通運用ルール、保存方針、Plan ルールのように AI 間でそろえるべき内容は、対応ファイルを確認して必要なら反映する。
@@ -77,7 +76,7 @@ Step artifact:
 ### 3. 共通ルールの同期
 
 共通ルール（`# 共通ルール` と `# Plan 共通ルール`）の正本は `.chezmoitemplates/common-rules.md` である。
-`dot_codex/AGENTS.md.tmpl`、`dot_gemini/GEMINI.md.tmpl`、`dot_qwen/QWEN.md.tmpl` は
+`dot_codex/AGENTS.md.tmpl` は
 `includeTemplate "common-rules.md"` で共通ブロックを取り込み、AI 固有セクションだけを各ファイルに持つ。
 `dot_claude/CLAUDE.md` は配備後の `~/.codex/AGENTS.md` を import するため、template を include しない。
 
@@ -98,7 +97,7 @@ Step artifact:
 
 ### 4. グローバル配備文書のレビュー
 
-`.chezmoitemplates/common-rules.md`、`dot_claude/CLAUDE.md`、`dot_codex/AGENTS.md.tmpl`、`dot_qwen/QWEN.md.tmpl`、`dot_gemini/GEMINI.md.tmpl`、
+`.chezmoitemplates/common-rules.md`、`dot_claude/CLAUDE.md`、`dot_codex/AGENTS.md.tmpl`、
 および `.chezmoiignore` の解釈を説明する文書を更新した場合は、最終利用者向け文面として不自然な説明が混入していないかレビューする。
 
 固定レビュー観点:

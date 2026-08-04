@@ -210,11 +210,9 @@ Conductor などのツールが git worktree を立ち上げて dotfiles を編�
 | `.local/bin/oprun` | `dot_local/bin/executable_oprun` |
 | `.local/bin/opmaterialize` | `dot_local/bin/executable_opmaterialize` |
 | `.local/bin/gws-account` | `dot_local/bin/executable_gws-account` |
-| `.qwen/QWEN.md` | `dot_qwen/QWEN.md.tmpl` |
-| `.qwen/settings.json` | `dot_qwen/settings.json` |
 
 `dot_` はドットファイル化です。`private_` はファイル名変換ではなく、target の group / world 権限を外す属性です。
-AI 指示ファイル（`.codex/AGENTS.md`、`.gemini/GEMINI.md`、`.qwen/QWEN.md`）の共通ルールは `.chezmoitemplates/common-rules.md` を正本とし、各 `*.tmpl` が template include で取り込みます。
+AI 指示ファイル（`.codex/AGENTS.md`）の共通ルールは `.chezmoitemplates/common-rules.md` を正本とし、各 `*.tmpl` が template include で取り込みます。
 `./.claude/skills/` は repo ローカル運用とし、chezmoi ではホームディレクトリへ配備しません。配布する first-party skill は `skills/` を正本とし、`gh skill install --from-local` で `~/.claude/skills/` や `~/.codex/skills/` へ入れます。
 詳細は [chezmoi-knowledge/SKILL.md](.claude/skills/chezmoi-knowledge/SKILL.md) と [semantics.md](.claude/skills/chezmoi-knowledge/references/semantics.md) を参照してください。
 

@@ -34,7 +34,7 @@
 # 恒久指示の反映運用
 
 - 恒久性のあるユーザー指示、再発しやすい運用判断、複数回参照しそうな手順は、原則その作業ターン内で git 管理ファイルへ反映すること
-- 反映先は、運用ルールや判断基準なら `AGENTS.md` と AI 別指示ファイル、背景や継続判断なら `docs/adr/`、反復手順や更新フローなら対応 Skill を使い分けること
+- 反映先は、運用ルールや判断基準なら現在作業中のリポジトリの正規指示ファイル（通常は `AGENTS.md`）と AI 別指示ファイル、背景や継続判断なら `docs/adr/`、反復手順や更新フローなら対応 Skill を使い分けること
 - 反映不要とする例外は、一過性の事情、既存文書に重複する内容、ユーザーが今回は文書化不要と明示した場合に限ること
 - 例外を適用した場合は、反映しなかった理由を作業結果に残すこと
 - AI 間や CLI 間で複数行や構造化された内容を受け渡すときは、作業 worktree 内の `.context/` に置いた実ファイル経由を標準とし、`-p` などの引数へのインライン展開や here-doc 直書きは原則避けること
@@ -55,7 +55,7 @@
 - artifact の初期必須項目は `task`、`phase_or_step`、`created_at` とし、Markdown は Front Matter、JSON は同名キーで保持すること
 - artifact の推奨命名は `.context/<task-or-date>/<nn>-<phase-name>.(md|json)` とし、同名更新時は最新更新時刻のファイルのみを有効扱いにすること
 - 非 Phase 作業は artifact 必須対象外とする。ただし単発例外として artifact gate を明示的にバイパスする場合だけ `.context/single-step/<task>.json` を使い、`enabled=true`、`task`、`reason`、`expires_at` を必須とすること
-- Phase / Step 遷移の最小原則は `AGENTS.md` を正本とし、各 Skill 固有の required artifact は `SKILL.md` を正本とすること
+- Phase / Step 遷移の最小原則は現在作業中のリポジトリの正規指示ファイル（通常は `AGENTS.md`）を正本とし、各 Skill 固有の required artifact は `SKILL.md` を正本とすること
 - `AGENTS.md` と `SKILL.md` が競合する場合は `SKILL.md` をその Skill 実行中の具体契約として優先し、`AGENTS.md` は下限ルールとして常に適用すること
 
 # スキル管理

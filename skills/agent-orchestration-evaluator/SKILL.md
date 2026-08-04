@@ -211,7 +211,6 @@ Expected runner mapping:
 |---|---|
 | Claude Code CLI | `claude-cli-runner` |
 | Codex CLI | Use `codex-cli-runner` when available; do not inline `codex exec` details in dependent skills. If unavailable, keep only an explicit resolver fallback contract. |
-| Gemini CLI | `gemini-cli-runner` |
 | Grok CLI or API-backed handoff | `grok-cli-runner` |
 | Copilot CLI | `copilot-cli-runner` |
 
