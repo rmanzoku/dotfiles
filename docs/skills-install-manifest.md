@@ -30,7 +30,6 @@ gh skill install . fable-5-tuning --from-local --agent claude-code --scope user
 gh skill install . gpt-5-6-tuning --from-local --agent claude-code --scope user
 gh skill install . claude-cli-runner --from-local --agent claude-code --scope user
 gh skill install . codex-cli-runner --from-local --agent claude-code --scope user
-gh skill install . gemini-cli-runner --from-local --agent claude-code --scope user
 gh skill install . copilot-cli-runner --from-local --agent claude-code --scope user
 gh skill install . agent-orchestration-evaluator --from-local --agent claude-code --scope user
 gh skill install . ai-usage-coach --from-local --agent claude-code --scope user
@@ -57,7 +56,6 @@ gh skill install . fable-5-tuning --from-local --agent codex --scope user
 gh skill install . gpt-5-6-tuning --from-local --agent codex --scope user
 gh skill install . claude-cli-runner --from-local --agent codex --scope user
 gh skill install . codex-cli-runner --from-local --agent codex --scope user
-gh skill install . gemini-cli-runner --from-local --agent codex --scope user
 gh skill install . copilot-cli-runner --from-local --agent codex --scope user
 gh skill install . agent-orchestration-evaluator --from-local --agent codex --scope user
 gh skill install . ai-usage-coach --from-local --agent codex --scope user
