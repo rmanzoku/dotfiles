@@ -17,6 +17,8 @@ Codex `.system` skill、Claude / Codex の plugin 同梱 skill、各 host の組
 
 repo root を install source にして実行する。
 
+`claude-cli-runner` は Codex 専用として Codex にのみ install する(Claude 内の claude_code 解決は Self-Elision で subagent を使うため。ADR-0058 parity の明示的例外)。
+
 ### Claude Code
 
 ```bash
@@ -28,7 +30,6 @@ gh skill install . code-evaluator --from-local --agent claude-code --scope user
 gh skill install . opus-5-tuning --from-local --agent claude-code --scope user
 gh skill install . fable-5-tuning --from-local --agent claude-code --scope user
 gh skill install . gpt-5-6-tuning --from-local --agent claude-code --scope user
-gh skill install . claude-cli-runner --from-local --agent claude-code --scope user
 gh skill install . codex-cli-runner --from-local --agent claude-code --scope user
 gh skill install . copilot-cli-runner --from-local --agent claude-code --scope user
 gh skill install . agent-orchestration-evaluator --from-local --agent claude-code --scope user
