@@ -8,16 +8,6 @@
 - trust 設定は原則 `~/.codex/config.toml` に集約し、`[projects."<path>"]` は常用しないこと。project 固有の Codex 設定が本当に必要な repo / worktree だけ、例外として `trust_level = "trusted"` を追加すること
 - 通常運用で権限不足が出た場合は、恒久設定を緩めず、その実行時だけ `danger-full-access` を使うこと
 
-## Subagents / Custom Agents 運用
-
-- custom agent は親スレッドの context を暗黙に継承しない前提で使い、必要な repo context、依頼内容、対象ファイル、関連ルール・ADR・docs・検証ログ・既知の制約は親が明示的に渡すこと
-- custom agent が利用できない場合は、利用不能理由と代替方針を明示し、委譲したものとして扱わず、親 Codex の限定判断として作業範囲と検証方法を示すこと
-- 複数 role にまたがる依頼は主論点で primary custom agent を選び、不足観点だけ別 role へ追加委譲すること（例: 事業判断は `biz`、技術リスク・不可逆性は `tech`）
-- `tech` へ委譲するときは、関連する事業前提（該当しない場合は「該当なし」）、規模、フェーズ、体制、不可逆リスク、既存 ADR の有無、参照してほしい evaluator / skill を親 prompt に含めること
-- `tech` のレビューにおける仕様判断の観測点と是正方針は、code-evaluator スキルの `references/evaluation-rubric.md`（Future-context fit）を正本として参照し、この文書には再掲しないこと
-- `personal` などの委譲先に、secret 実値、認証情報、secret reference 自体とその解決結果、認証済みセッション情報を扱わせないこと。ユーザーが親 Codex に 1Password や secret 閲覧を許可しても、委譲先への共有許可とは扱わないこと
-- `personal` へ渡す個人情報は必要最小限に要約し、予定・連絡文脈は raw の本文・参加者一覧・連絡先一覧ではなく、日時、相手、期限、要対応事項、文案目的に絞ること
-
 ## Automations 運用
 
 - Codex Desktop の automation は `~/.codex/automations/<automation-id>/automation.toml` の宣言的設定だけを dotfiles で管理し（secret を含まないこと）、`memory.md` や `.run-jitter-salt` などの実行 state は管理対象外にすること

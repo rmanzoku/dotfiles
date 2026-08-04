@@ -195,6 +195,10 @@ def check_agent_drift() -> None:
         if not toml.exists():
             fail(f"{name}: toml 側が存在しない")
             continue
+        md_desc = re.search(r"^description:\s*(.+)$", md.read_text(), re.M)
+        toml_desc = re.search(r'^description\s*=\s*"(.+)"$', toml.read_text(), re.M)
+        if md_desc and toml_desc and md_desc.group(1).strip() != toml_desc.group(1).strip():
+            warn(f"{name}: description が md/toml で非一致")
         if _md_body(md) != _toml_instructions(toml):
             # personal / tech は意図的なホスト別分岐を含む(memory 前提や
             # Codex context handoff 節)ため、乖離は fail ではなく warn に留める
@@ -204,6 +208,26 @@ def check_agent_drift() -> None:
     if checked:
         ok(f"{checked} agents verbatim-synced")
     info("1Password 側との突合は `opmaterialize diff` を別途実行(op 認証が必要)")
+
+
+# 5b. layer violation: role names must not appear in global instruction sources
+
+
+ROLE_TERMS = ["`tech`", "`biz`", "`personal`", "`worker`", "`mechanical`"]
+GLOBAL_SOURCES = [".chezmoitemplates/common-rules.md", "dot_codex/AGENTS.md.tmpl"]
+
+
+def check_layer_violation() -> None:
+    section("5b. role names in global instructions (ADR-0063)")
+    hits = 0
+    for f in GLOBAL_SOURCES:
+        text = (REPO / f).read_text()
+        for term in ROLE_TERMS:
+            if term in text:
+                fail(f"{f}: role 名 {term} が残存(委譲契約は agent 定義が正本)")
+                hits += 1
+    if hits == 0:
+        ok("global instructions are role-agnostic")
 
 
 # 6. description length --------------------------------------------------------
@@ -257,6 +281,7 @@ def main() -> int:
     check_agents_md_sync()
     check_stale_terms()
     check_agent_drift()
+    check_layer_violation()
     check_description_length()
     if not no_doctor:
         check_doctor()
