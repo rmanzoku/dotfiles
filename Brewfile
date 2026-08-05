@@ -43,6 +43,7 @@ cask "google-chrome"
 cask "maestro"
 cask "ngrok/ngrok/ngrok"
 cask "slack"
+cask "tailscale-app"
 cask "visual-studio-code"
 mas "WireGuard", id: 1451685025
 vscode "antfu.browse-lite"
