@@ -82,42 +82,66 @@ def local_branches(cwd: Path) -> list[dict[str, str]]:
     return rows
 
 
-def merged_status(cwd: Path, branch: str, base_ref: str) -> str:
+def remote_branches(cwd: Path) -> list[dict[str, str]]:
+    fmt = "%00".join(
+        [
+            "%(refname:short)",
+            "%(committerdate:iso8601)",
+            "%(objectname)",
+            "%(objectname:short)",
+            "%(subject)",
+        ]
+    )
+    result = git(
+        cwd,
+        "for-each-ref",
+        "refs/remotes/origin",
+        f"--format={fmt}",
+        "--sort=-committerdate",
+        check=True,
+    )
+    rows: list[dict[str, str]] = []
+    for line in result.stdout.splitlines():
+        ref, updated, oid, sha, subject = (line.split("\0") + [""] * 5)[:5]
+        if ref == "origin/HEAD" or not ref.startswith("origin/"):
+            continue
+        rows.append(
+            {
+                "ref": ref,
+                "name": ref.removeprefix("origin/"),
+                "updated": updated,
+                "oid": oid,
+                "sha": sha,
+                "subject": subject,
+            }
+        )
+    return rows
+
+
+def is_ancestor(cwd: Path, branch: str, base_ref: str) -> bool | None:
     if not base_ref:
-        return "unknown"
+        return None
     result = git(cwd, "merge-base", "--is-ancestor", branch, base_ref)
     if result.code == 0:
-        return f"merged into {base_ref}"
+        return True
     if result.code == 1:
+        return False
+    return None
+
+
+def merged_status(cwd: Path, branch: str, base_ref: str) -> str:
+    merged = is_ancestor(cwd, branch, base_ref)
+    if merged is True:
+        return f"merged into {base_ref}"
+    if merged is False:
         return f"not merged into {base_ref}"
     return "unknown"
 
 
-def pr_for_branch(cwd: Path, branch: str) -> str:
-    if shutil.which("gh") is None:
-        return "gh unavailable"
-    result = run(
-        [
-            "gh",
-            "pr",
-            "list",
-            "--state",
-            "all",
-            "--head",
-            branch,
-            "--json",
-            "number,state,mergedAt,isDraft,url,title,baseRefName,updatedAt",
-            "--limit",
-            "5",
-        ],
-        cwd,
-    )
-    if result.code != 0:
-        return "gh error"
-    try:
-        prs = json.loads(result.stdout or "[]")
-    except json.JSONDecodeError:
-        return "gh parse error"
+def pr_for_branch(prs: list[dict[str, object]], branch: str, lookup_status: str) -> str:
+    if lookup_status != "ok":
+        return lookup_status
+    prs = [pr for pr in prs if pr.get("headRefName") == branch]
     if not prs:
         return "no PR found"
     parts: list[str] = []
@@ -128,6 +152,111 @@ def pr_for_branch(cwd: Path, branch: str) -> str:
         draft = " draft" if pr.get("isDraft") else ""
         parts.append(f"#{pr.get('number')} {state}{draft} {pr.get('url')}")
     return "<br>".join(parts)
+
+
+def same_repository_prs(prs: list[dict[str, object]], branch: str) -> list[dict[str, object]]:
+    return [
+        pr
+        for pr in prs
+        if pr.get("headRefName") == branch and pr.get("isCrossRepository") is not True
+    ]
+
+
+def repository_prs(cwd: Path) -> tuple[list[dict[str, object]], str]:
+    if shutil.which("gh") is None:
+        return [], "gh unavailable"
+    result = run(
+        [
+            "gh",
+            "pr",
+            "list",
+            "--state",
+            "all",
+            "--json",
+            "number,state,mergedAt,isDraft,url,title,baseRefName,headRefName,headRefOid,headRepositoryOwner,isCrossRepository,updatedAt",
+            "--limit",
+            "1000",
+        ],
+        cwd,
+    )
+    if result.code != 0:
+        return [], "gh error"
+    try:
+        prs = json.loads(result.stdout or "[]")
+    except json.JSONDecodeError:
+        return [], "gh parse error"
+    if not isinstance(prs, list):
+        return [], "gh parse error"
+    return prs, "ok"
+
+
+def protected_branches(cwd: Path) -> tuple[set[str], str]:
+    if shutil.which("gh") is None:
+        return set(), "gh unavailable"
+    result = run(
+        [
+            "gh",
+            "api",
+            "--paginate",
+            "repos/{owner}/{repo}/branches?protected=true&per_page=100",
+            "--jq",
+            ".[].name",
+        ],
+        cwd,
+    )
+    if result.code != 0:
+        return set(), "gh error"
+    return set(result.stdout.splitlines()), "ok"
+
+
+def remote_branch_classification(
+    cwd: Path,
+    row: dict[str, str],
+    default_remote: str,
+    prs: list[dict[str, object]],
+    pr_lookup_status: str,
+    protected: set[str],
+    protection_status: str,
+) -> tuple[str, str]:
+    if row["ref"] == default_remote:
+        return "keep", "default remote branch"
+    if not default_remote:
+        return "unknown", "ambiguous default remote branch"
+    if pr_lookup_status != "ok" or protection_status != "ok":
+        gaps = sorted(
+            {
+                status
+                for status in (pr_lookup_status, protection_status)
+                if status != "ok"
+            }
+        )
+        return "unknown", ", ".join(gaps)
+    if row["name"] in protected:
+        return "keep", "protected branch"
+
+    branch_prs = same_repository_prs(prs, row["name"])
+    open_prs = [pr for pr in branch_prs if pr.get("state") == "OPEN" and not pr.get("mergedAt")]
+    if open_prs:
+        numbers = ", ".join(f"#{pr.get('number')}" for pr in open_prs)
+        return "keep", f"open or draft PR {numbers}"
+
+    merged = is_ancestor(cwd, row["ref"], default_remote)
+    default_name = default_remote.removeprefix("origin/") if default_remote else ""
+    merged_prs = [
+        pr
+        for pr in branch_prs
+        if pr.get("mergedAt")
+        and pr.get("headRefOid") == row["oid"]
+        and pr.get("baseRefName") == default_name
+    ]
+    if merged is True:
+        return "safe deletion candidate", f"merged into {default_remote}"
+    if merged_prs:
+        numbers = ", ".join(f"#{pr.get('number')}" for pr in merged_prs)
+        return "safe deletion candidate", f"current tip matches merged PR {numbers}"
+    if merged is None:
+        return "unknown", "cannot compare with default remote branch"
+    return "needs confirmation", "not merged and no open PR"
 
 
 def maybe_fast_forward(cwd: Path, branch: str, upstream: str) -> str:
@@ -154,7 +283,11 @@ def main() -> int:
     parser.add_argument("repo", nargs="?", default=".", help="Repository path, default: current directory")
     parser.add_argument("--fast-forward-clean", action="store_true", help="Fast-forward the current branch only when clean and safe")
     parser.add_argument("--no-fetch", action="store_true", help="Skip git fetch --prune")
-    parser.add_argument("--no-pr", action="store_true", help="Skip GitHub PR lookup through gh")
+    parser.add_argument(
+        "--no-pr",
+        action="store_true",
+        help="Skip GitHub PR and protected-branch lookups through gh",
+    )
     args = parser.parse_args()
 
     cwd = Path(args.repo).expanduser().resolve()
@@ -194,16 +327,133 @@ def main() -> int:
     print(f"| default remote ref | {quote_cell(default_remote)} |")
     print(f"| fast-forward | {quote_cell(ff_result)} |")
 
+    branch_rows = local_branches(cwd)
+    remote_branch_rows = remote_branches(cwd)
+    repository_pr_rows: list[dict[str, object]] = []
+    pr_lookup_status = "skipped"
+    protected: set[str] = set()
+    protection_status = "skipped"
+    if not args.no_pr:
+        print("[git-branch-review] querying GitHub PRs")
+        repository_pr_rows, pr_lookup_status = repository_prs(cwd)
+        print("[git-branch-review] querying protected GitHub branches")
+        protected, protection_status = protected_branches(cwd)
+
+    open_pr_rows = [
+        pr for pr in repository_pr_rows if pr.get("state") == "OPEN" and not pr.get("mergedAt")
+    ]
+
+    print("\n## Remote Open PRs\n")
+    if pr_lookup_status != "ok":
+        print(f"GitHub PR lookup: {quote_cell(pr_lookup_status)}")
+    elif not open_pr_rows:
+        print("No open PRs found.")
+    else:
+        local_names = {row["name"] for row in branch_rows}
+        print("| PR | state | head | local branch | base | updated | title |")
+        print("| ---: | --- | --- | --- | --- | --- | --- |")
+        for pr in open_pr_rows:
+            head = str(pr.get("headRefName") or "")
+            state = str(pr.get("state") or "OPEN")
+            if pr.get("isDraft"):
+                state += " draft"
+            number = str(pr.get("number") or "")
+            url = str(pr.get("url") or "")
+            pr_link = f"[#{number}]({url})" if number and url else number or url
+            print(
+                "| "
+                + " | ".join(
+                    quote_cell(value)
+                    for value in [
+                        pr_link,
+                        state,
+                        head,
+                        "yes" if head in local_names else "no",
+                        str(pr.get("baseRefName") or ""),
+                        str(pr.get("updatedAt") or ""),
+                        str(pr.get("title") or ""),
+                    ]
+                )
+                + " |"
+            )
+
+    print("\n## Remote Branches\n")
+    remote_reviews: list[tuple[dict[str, str], str, str]] = []
+    if not remote_branch_rows:
+        print("No origin remote branches found.")
+    else:
+        local_upstreams: dict[str, list[str]] = {}
+        for local in branch_rows:
+            if local["upstream"]:
+                local_upstreams.setdefault(local["upstream"], []).append(local["name"])
+        print("| remote branch | classification | reason | protected | local branches | updated | tip | subject |")
+        print("| --- | --- | --- | --- | --- | --- | --- | --- |")
+        for row in remote_branch_rows:
+            classification, reason = remote_branch_classification(
+                cwd,
+                row,
+                default_remote,
+                repository_pr_rows,
+                pr_lookup_status,
+                protected,
+                protection_status,
+            )
+            remote_reviews.append((row, classification, reason))
+            protected_status = (
+                "unknown" if protection_status != "ok" else "yes" if row["name"] in protected else "no"
+            )
+            print(
+                "| "
+                + " | ".join(
+                    quote_cell(value)
+                    for value in [
+                        row["ref"],
+                        classification,
+                        reason,
+                        protected_status,
+                        ", ".join(local_upstreams.get(row["ref"], [])),
+                        row["updated"],
+                        row["sha"],
+                        row["subject"],
+                    ]
+                )
+                + " |"
+            )
+
+    print("\n## Recommended Next Actions\n")
+    deletion_candidates = [row["name"] for row, status, _ in remote_reviews if status == "safe deletion candidate"]
+    confirmation_needed = [row["name"] for row, status, _ in remote_reviews if status == "needs confirmation"]
+    unknown_branches = [row["name"] for row, status, _ in remote_reviews if status == "unknown"]
+    if deletion_candidates:
+        print(
+            "- Review these remote deletion candidates and obtain explicit approval before running "
+            f"`git push origin --delete`: {', '.join(deletion_candidates)}"
+        )
+    else:
+        print("- No remote branches currently qualify as safe deletion candidates.")
+    if confirmation_needed:
+        print(
+            "- Confirm ownership and intent before deleting unmerged branches: "
+            + ", ".join(confirmation_needed)
+        )
+    if unknown_branches:
+        print(
+            "- Resolve PR, protection, default-ref, or ancestry information gaps before deletion: "
+            + ", ".join(unknown_branches)
+        )
+    if dirty:
+        print("- Inspect the dirty worktree before updating the current branch.")
+
     print("\n## Local Branches\n")
     print("| branch | upstream | ahead | behind | merged | PR | updated | tip | subject |")
     print("| --- | --- | ---: | ---: | --- | --- | --- | --- | --- |")
-    for row in local_branches(cwd):
+    for row in branch_rows:
         upstream_name = row["upstream"]
         counts = ahead_behind(cwd, row["name"], upstream_name) if upstream_name else None
         row_ahead = str(counts[0]) if counts else "-"
         row_behind = str(counts[1]) if counts else "-"
         merged = merged_status(cwd, row["name"], default_remote)
-        pr = "skipped" if args.no_pr else pr_for_branch(cwd, row["name"])
+        pr = pr_for_branch(repository_pr_rows, row["name"], pr_lookup_status)
         print(
             "| "
             + " | ".join(
