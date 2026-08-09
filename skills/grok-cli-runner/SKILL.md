@@ -1,6 +1,6 @@
 ---
 name: grok-cli-runner
-description: Run Grok Build CLI headless handoffs through a file-based runner contract with observable request, response, summary, stderr, timeout, dry-run, and failure artifacts. Use when Codex or Claude needs to call Grok Build, GrokをCLIで呼ぶ, delegate coding/review/research work to `grok -p`, retrieve or inspect public X/Twitter post URLs through Grok Build, run Grok Build in scripts or automations, validate a Grok Build request shape without calling the backend, or preserve reproducible `.context/task/` artifacts around a Grok Build CLI invocation.
+description: "Run Grok Build CLI headless through a file-based runner contract with observable request, response, summary, and failure artifacts. Use when Claude or Codex needs `grok -p`, GrokをCLIで呼ぶ, delegates coding, review, or research to Grok Build, fetches public X/Twitter post URLs, or validates a request shape without calling the backend."
 ---
 
 # Grok CLI Runner

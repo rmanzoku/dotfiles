@@ -1,6 +1,6 @@
 ---
 name: copilot-cli-runner
-description: Run GitHub Copilot CLI subprocesses with observable JSONL logs, timeouts, config-preserving model, effort, agent, and permission controls, prompt profiles, and artifact-based failure handling. Use when Claude Code or Codex needs to invoke `copilot -p`, call Copilot from the CLI, CopilotをCLIで呼ぶ, Copilot CLIをサブプロセス実行する, or delegate long-running research, review, generation, or file work to Copilot while distinguishing real hangs from silent execution.
+description: "Run GitHub Copilot CLI subprocesses with observable JSONL logs, timeouts, model, effort, and permission controls, and artifact-based failure handling. Use when Claude Code or Codex needs `copilot -p`, CopilotをCLIで呼ぶ, or delegates long-running research, review, or generation work to Copilot."
 ---
 
 # Copilot CLI Runner

@@ -1,6 +1,6 @@
 ---
 name: agy-cli-runner
-description: Run Antigravity CLI (agy) headless handoffs through a file-based runner contract with observable prompt, response, summary, stderr, timeout, dry-run, and failure artifacts. Use when Claude or Codex needs to call Gemini through agy, geminiをCLIで呼ぶ, delegate research/review/web-search work to `agy -p`, run the GEO observation's gemini engine, run Antigravity in scripts or automations, validate an agy request shape without calling the backend, or preserve reproducible `.context/task/` artifacts around an Antigravity CLI invocation.
+description: "Run Antigravity CLI (agy) headless with observable prompt, response, summary, and failure artifacts under `.context/task/`. Use when Claude or Codex needs to call Gemini through agy, geminiをCLIで呼ぶ, run the GEO gemini engine, delegate research or web-search work to `agy -p`, or validate an agy request shape without calling the backend."
 ---
 
 # agy CLI Runner

@@ -1,6 +1,6 @@
 ---
 name: fable-5-tuning
-description: "Audit and rewrite repository docs, skills, prompts, and agent harness scaffolding so they fit Claude Fable 5 behavior and API guidance: explicit opt-in adoption above the Opus tier, always-on thinking with no thinking configuration, summarized-only reasoning visibility, no assistant prefill, 30-day data retention requirement, minutes-long turns with async check-ins, full effort sweeps where low/medium rival prior flagships, de-prescribed goal-and-constraints prompts, encouraged asynchronous subagent delegation, explicit self-verification harnesses with fresh-context verifiers, scope and autonomy boundaries, grounded progress claims, memory surfaces, refusal handling, and long-session readability. Use when the user wants to migrate or readiness-check prompts, AGENTS.md / CLAUDE.md / skill files, agent rules, or eval harnesses for Claude Fable 5 or Claude Mythos 5. Do not use for broad Claude SDK migrations or application feature rewrites beyond prompt, model, and orchestration guidance."
+description: "Audit and rewrite prompts, AGENTS.md / CLAUDE.md, skills, and agent harness scaffolding to fit Claude Fable 5: always-on thinking, summarized-only reasoning, no prefill, async subagent delegation, fresh-context verification, and de-prescribed goal-and-constraints prompts. Use to migrate or readiness-check prompts and eval harnesses for Claude Fable 5 or Mythos 5. Not for broad SDK migrations."
 ---
 
 # Fable 5 Tuning

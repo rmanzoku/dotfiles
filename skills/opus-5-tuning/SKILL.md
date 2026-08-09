@@ -1,6 +1,6 @@
 ---
 name: opus-5-tuning
-description: "Audit and rewrite repository docs, skills, prompts, and agent harness scaffolding so they fit Claude Opus 5 behavior and API guidance: thinking on by default, disabled-thinking capped at high effort, full low-to-max effort ladder with unusually strong low/medium, deletion of redundant verification and self-check scaffolding, subagent delegation caps instead of delegation encouragement, scope discipline, verbosity calibration by prompt, coverage-first code review harnesses, refusal stop-reason handling with default fallbacks, 512-token prompt-cache minimum, and Claude-API-only fast mode. Use when the user wants to migrate or readiness-check prompts, AGENTS.md / CLAUDE.md / skill files, agent rules, or eval harnesses for Claude Opus 5. Do not use for broad Claude SDK migrations or application feature rewrites beyond prompt, model, and orchestration guidance."
+description: "Audit and rewrite prompts, AGENTS.md / CLAUDE.md, skills, and agent harness scaffolding to fit Claude Opus 5: default-on thinking, low-to-max effort ladder, deletion of redundant self-check scaffolding, subagent delegation caps, refusal stop-reason handling, and prompt-cache minimums. Use to migrate or readiness-check prompts and eval harnesses for Claude Opus 5. Not for broad SDK migrations."
 ---
 
 # Opus 5 Tuning

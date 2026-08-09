@@ -1,6 +1,6 @@
 ---
 name: code-evaluator
-description: Evaluate a repository, package, subsystem, or substantial source tree when explicitly asked for a broad codebase assessment. Produces an artifact-backed Markdown report covering architecture, maintainability, tests, documentation, dependency necessity, license/distribution risk, security, framework idioms, AI/LLM ergonomics, and future-context fit. Use for whole-codebase or subsystem evaluations, architecture assessments, dependency/license audits, broad quality baselines, and broader-than-PR reviews; do not take over ordinary narrow PR/diff review unless the user asks for this evaluator or a broad assessment.
+description: "Evaluate a repository, package, or subsystem when a broad codebase assessment is explicitly requested: architecture, maintainability, tests, docs, dependencies, license risk, security, and AI/LLM ergonomics, delivered as an artifact-backed report. Use for whole-codebase or subsystem evaluations, architecture assessments, and audits; do not take over ordinary PR/diff review."
 ---
 
 # Code Evaluator

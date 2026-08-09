@@ -1,6 +1,6 @@
 ---
 name: agent-orchestration-evaluator
-description: Evaluate and tune AI agent orchestration rules, model resolvers, skill role assignments, slash commands, and prompt harnesses so parent agents stay focused on orchestration while researcher/reviewer/worker roles are delegated to subagents or observable CLI runners. Use when asked to review or extract resolver semantics, Self-Elision, self vs subagent boundaries, multi-agent skill design, Claude/Codex/Gemini/Grok/Copilot delegation, runner-skill migration, error-bypass remediation policy, or agent workflow evaluator/tuning guidance across projects.
+description: "Evaluate and tune AI agent orchestration assets: model resolvers, Self-Elision, skill role assignments, delegation boundaries, and prompt harnesses that keep parent agents orchestrating while researcher, reviewer, and worker roles go to subagents or observable CLI runners. Use when reviewing resolver semantics, multi-agent skill design, runner-skill migration, or agent workflow tuning."
 ---
 
 # Agent Orchestration Evaluator

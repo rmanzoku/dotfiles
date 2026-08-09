@@ -1,6 +1,6 @@
 ---
 name: docs-evaluator
-description: Evaluate a repository's documentation system when asked for a broad docs audit, AI-readability review, source-of-truth review, link/reachability audit, entrypoint conflict review, stale/deprecated document review, freshness governance review, knowledge-base schema review, agent-readable knowledge system review, provenance/confidence/freshness review, typed relationship hygiene review, TODO/deferred work governance review, ADR/history-vs-canonical separation review, instruction-strength drift review, agent-specific guidance separation review, skill contract precedence review, metadata/front matter hygiene review, reference integrity review, or contradiction/gap analysis across README, AGENTS, CLAUDE.md, docs, specs, skills, workbench notes, and other text documentation. Produces an artifact-backed Markdown report and does not edit the target docs.
+description: "Evaluate a repository's documentation system when a broad docs audit is requested: source-of-truth and entrypoint conflicts, link reachability, stale or contradicting documents, freshness and TODO governance, metadata hygiene, and agent readability across README, AGENTS, docs, specs, and skills. Produces an artifact-backed report; does not edit the target docs."
 ---
 
 # Docs Evaluator
