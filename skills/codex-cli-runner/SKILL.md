@@ -107,6 +107,50 @@ Require all applicable checks:
 
 These checks prove runner execution and non-empty artifact materialization only. The caller must still evaluate task-specific artifact quality against the source prompt.
 
+## Image Generation Route
+
+Codex exposes image generation as an **agent tool (`imggen`), not a CLI subcommand.** `codex imggen` is not a command; passing it only prints help. Request images through the normal prompt path.
+
+### Contract
+
+- **`--sandbox workspace-write`** is required. The agent writes the image file
+- **`--cd <output-dir>`** sets where the run happens. Pair it with an absolute destination path in the prompt
+- **`--skip-git-repo-check`** is required when the output directory is not inside a trusted git repository. Without it the run aborts with `Not inside a trusted directory`
+- **The image is not `last-message.md`.** The final message only reports the path. Track the image as an expected artifact and verify it yourself
+
+Run:
+
+```bash
+python3 <skill-dir>/scripts/run_codex_cli.py \
+  --prompt-file .context/<task>/prompt.md \
+  --output-dir .context/<task> \
+  --expected-artifact <name>.jpg
+```
+
+Raw form when the wrapper's flags do not cover the sandbox and repo-check needs:
+
+```bash
+timeout 600 codex exec --sandbox workspace-write --skip-git-repo-check --cd <output-dir> \
+  "imggen で <subject, composition, palette, mood>。<absolute-path>/<name>.jpg に保存してください。" < /dev/null
+```
+
+Prompt shape: purpose, subject and composition, palette and mood, aspect ratio, what must not appear, and the absolute destination path.
+
+### Success Criteria (additional)
+
+The normal runner checks prove the call ran, not that an image exists. Also require:
+
+- The named file exists at the stated path and is non-empty
+- It is actually an image (`file`, or a decode check) — a text file with an image name is a failure
+- The caller **looks at the image** before accepting it. Prompt adherence is not guaranteed and the runner cannot judge it
+
+### Cautions
+
+- **Generation is non-deterministic.** The same prompt produces a different image each run. Keep the accepted file; do not expect to regenerate it
+- Do not use generated images to depict real, identifiable places, facilities, people, or products. When the image stands in for something real, label it as an illustration where it is used
+- Do not ask for logos, brand marks, or text inside the image; render those as vector or live text instead
+- For diagrams, prefer authoring SVG directly over generating raster images. Vector output stays editable and does not degrade when scaled for print
+
 ## Failure Criteria
 
 Treat any of these as failure:

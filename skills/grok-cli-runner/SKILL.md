@@ -153,6 +153,54 @@ Require all applicable checks:
 
 These checks prove runner execution and non-empty response materialization only. The caller must still evaluate task-specific response quality against the request artifact.
 
+## Image Generation Route
+
+Grok Build exposes image generation as an **agent tool (`image_gen`, reached through its `imagine` skill), not a CLI subcommand.** `grok imagine` is not a command; passing it only prints help. Request images through the normal prompt path.
+
+### Contract
+
+- **Permission mode must be `bypassPermissions`.** Image generation is a tool call and the agent also writes the file. Under `auto` the run ends with exit 0 and `stopReason=Cancelled`.
+- **State the absolute output path and file name in `request.input`.** The agent generates into its own session folder first and then copies; without an explicit destination the file stays where the caller cannot find it.
+- **The generated image is not the response artifact.** `grok-response.json` holds the text reply. Track the image separately and verify it yourself.
+- Set `--cwd` to the directory that should receive the image.
+
+Request artifact shape:
+
+```json
+{
+  "task": "<task>",
+  "request": {
+    "input": "画像を1枚生成し、<absolute-path>/<name>.jpg に保存してください。\n\n用途: <where it will be used>\n\n生成する画像の内容:\n<subject, composition, palette, mood, aspect ratio>\n\n避けること:\n<what must not appear>\n\n生成後、保存したファイルのパスを報告してください。"
+  }
+}
+```
+
+Run:
+
+```bash
+python3 <skill-dir>/scripts/run_grok_cli.py \
+  --request-file .context/<task>/grok-request.json \
+  --output-dir .context/<task> \
+  --response-artifact grok-response.json \
+  --permission-mode bypassPermissions --no-plan \
+  --cwd .context/<task>
+```
+
+### Success Criteria (additional)
+
+The normal runner checks prove the call ran, not that an image exists. Also require:
+
+- The named file exists at the stated path and is non-empty
+- It is actually an image (`file`, or a decode check) — a text file with an image name is a failure
+- The caller **looks at the image** before accepting it. Prompt adherence is not guaranteed and the runner cannot judge it
+
+### Cautions
+
+- **Generation is non-deterministic.** The same request produces a different image each run. Keep the accepted file; do not expect to regenerate it
+- Do not use generated images to depict real, identifiable places, facilities, people, or products. When the image stands in for something real, label it as an illustration where it is used
+- Do not put a prompt in the request that asks for logos, brand marks, or text inside the image; render those as vector or live text instead
+- For diagrams, prefer authoring SVG directly over generating raster images. Vector output stays editable and does not degrade when scaled for print
+
 ## Failure Criteria
 
 Treat any of these as failure:
