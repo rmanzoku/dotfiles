@@ -1,0 +1,9 @@
+{
+  "updated_at": "2026-08-09",
+  "note": "常時露出面の字数予算(ADR-0065)。意図的に増やすときは同じ変更内でこのファイルを更新し、理由を commit message に書く",
+  "surfaces": {
+    "common_rules_chars": 4069,
+    "skill_descriptions_chars_firstparty": 7973,
+    "agent_descriptions_chars": 1830
+  }
+}
