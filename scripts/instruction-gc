@@ -13,6 +13,9 @@ check スクリプト。検出のみで修正はしない。定期実行は仕�
   6. skill description 長(first-party 400 字超 = warn / external = info)
   6b. 常時露出予算 vs docs/instruction-baseline.json(超過 = warn)
   7. skill-manager doctor の fail 集約(fail)
+  8. runner mapping parity(表と skills/*-cli-runner の 1:1 / fail)
+  9. runner skill 間の共有ブロック逐語検査(fail)
+  10. manifest parity 例外の revisit 条件(warn)
 
 usage: scripts/instruction-gc [--no-doctor]
 exit code: fail が 1 件以上あれば 1、なければ 0
@@ -323,6 +326,102 @@ def check_doctor() -> None:
         ok(f"doctor pass={summary.get('pass')} warn={summary.get('warn')} fail=0")
 
 
+
+
+# 8. runner mapping parity (ratchet R1, ADR-0065) --------------------------------
+
+
+def check_runner_mapping_parity() -> None:
+    section("8. runner mapping parity (skills/*-cli-runner vs orchestration table)")
+    doc = REPO / "skills/agent-orchestration-evaluator/SKILL.md"
+    text = doc.read_text()
+    m = re.search(r"Expected runner mapping:\n(.*?)(?=\n#|\Z)", text, re.S)
+    if not m:
+        fail("agent-orchestration-evaluator: Expected runner mapping 表が見つからない")
+        return
+    table_runners = set(re.findall(r"`([a-z0-9-]+-cli-runner)`", m.group(1)))
+    # op / gws はツール CLI runner でありモデル backend ではない。
+    # orchestration の runner mapping 表はモデル委譲経路だけを扱う
+    non_model = {"op-cli-runner", "gws-cli-runner"}
+    repo_runners = {p.name for p in (REPO / "skills").glob("*-cli-runner")} - non_model
+    missing = repo_runners - table_runners
+    retired = table_runners - repo_runners
+    for r in sorted(missing):
+        fail(f"runner mapping 表に {r} の行が無い(新設 runner の未反映)")
+    for r in sorted(retired):
+        fail(f"runner mapping 表に退役済み {r} が残存")
+    if not missing and not retired:
+        ok(f"{len(repo_runners)} runners all mapped")
+
+
+# 9. shared runner blocks verbatim (ratchet R2, ADR-0065) ------------------------
+
+THINK_HARD_SENTENCE = (
+    'Do not add "think hard", fixed progress-update scaffolds, '
+    "or mandatory step-by-step narration to simulate effort."
+)
+THINK_HARD_FILES = ["codex-cli-runner", "copilot-cli-runner", "grok-cli-runner", "agy-cli-runner"]
+SHARED_SECTIONS = [
+    ("Default Response Format", "## Default Response Format",
+     ["codex-cli-runner", "claude-cli-runner", "copilot-cli-runner"]),
+    ("Image Success Criteria (additional)", "### Success Criteria (additional)",
+     ["codex-cli-runner", "grok-cli-runner"]),
+    ("Image Cautions", "### Cautions",
+     ["codex-cli-runner", "grok-cli-runner"]),
+]
+
+
+def _section_body(text: str, heading: str) -> str | None:
+    idx = text.find(heading + "\n")
+    if idx < 0:
+        return None
+    level = heading.split(" ")[0]
+    rest = text[idx + len(heading) + 1:]
+    # 同レベル以上の次見出しで節を閉じる(## の直後に ### 節が終わるケースを含む)
+    m = re.search(rf"^#{{1,{len(level)}}} ", rest, re.M)
+    body = rest[: m.start()] if m else rest
+    return re.sub(r"\s+", " ", body).strip()
+
+
+def check_shared_blocks() -> None:
+    section("9. shared runner blocks verbatim (乖離 = fail)")
+    bad = 0
+    for name in THINK_HARD_FILES:
+        text = (REPO / "skills" / name / "SKILL.md").read_text()
+        if THINK_HARD_SENTENCE not in text:
+            fail(f"{name}: think-hard 句が基準形と乖離")
+            bad += 1
+    for label, heading, files in SHARED_SECTIONS:
+        bodies = {}
+        for name in files:
+            body = _section_body((REPO / "skills" / name / "SKILL.md").read_text(), heading)
+            if body is None:
+                fail(f"{name}: 共有節 '{label}' が見つからない")
+                bad += 1
+            else:
+                bodies[name] = body
+        if len(set(bodies.values())) > 1:
+            fail(f"共有節 '{label}' が {sorted(bodies)} 間で乖離(正本一本化するか同時更新すること)")
+            bad += 1
+    if bad == 0:
+        ok("think-hard 句 + 共有 3 節 verbatim-synced")
+
+
+# 10. manifest exception revisit (ratchet R6, ADR-0065) --------------------------
+
+
+def check_manifest_exception_revisit() -> None:
+    section("10. manifest parity exceptions carry revisit conditions")
+    bad = 0
+    for i, line in enumerate((REPO / "docs/skills-install-manifest.md").read_text().splitlines(), 1):
+        if "例外" in line and "install" in line and not line.lstrip().startswith(("`", "gh ")):
+            if "revisit" not in line and "期限" not in line:
+                warn(f"manifest:{i}: parity 例外に revisit 条件が無い")
+                bad += 1
+    if bad == 0:
+        ok("all parity exceptions carry revisit conditions")
+
+
 def main() -> int:
     no_doctor = "--no-doctor" in sys.argv
     print(f"instruction-gc @ {REPO}")
@@ -334,6 +433,9 @@ def main() -> int:
     check_layer_violation()
     desc_totals = check_description_length()
     check_exposure_budget(desc_totals)
+    check_runner_mapping_parity()
+    check_shared_blocks()
+    check_manifest_exception_revisit()
     if not no_doctor:
         check_doctor()
     print(f"\nresult: fail={len(FAILS)} warn={len(WARNS)}")
