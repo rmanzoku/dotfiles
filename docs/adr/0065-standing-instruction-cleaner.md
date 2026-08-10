@@ -29,6 +29,7 @@ agent_model: "Claude Fable 5 (Claude Code)"
 8. stale の判定基準は ADR-0061 の削除 4 クラス(死参照 / モデル既定挙動の教示 / 期限切れ一時ルール / 重複)を正とし、cleaner skill がこれを常設ルールブックとして参照する。
 9. **役割分担と層分離(2026-08-09 同日追記、ユーザー判断)**: 検知は 2 センサーが担う — instruction-gc(機械・毎回)と docs-evaluator(意味・明示起動。report-only 契約は変えない。検出と閉包で KPI 勾配が逆向きのため同一オーナーにしない)— cleaner は閉包だけを所有する。stale クラスに「description の取り合い(trigger 重複)」「skill 統廃合候補」「skill と docs の矛盾」を追加し、検知は evaluator と発火 probe に割り当てる。判断で検知した stale は可能な限り gc の check へ機械化してから閉じる(ratchet)。empirical-prompt-tuning は probe の設計規約(検証手法)として参照し、skill の再現性改善という別役割を cleaner に吸収しない。思想・根拠は ADR と role agent 層(層分離の正本: `docs/runner-skill-governance.md` §Layering)に置き、skill には再現可能な手順だけを書く。
    - 背景: 過去 13 run の docs-evaluator は思想(conditioning surface の重み付け)を持ちながら description 肥大を一度も検出できなかった。思想が判定文言(閾値)に落ちていなかったためで、evaluator 自身が出した具体候補(迷子 ~/CLAUDE.md、P1)も閉包オーナー不在で約 1 ヶ月放置された。
+10. **cleaner を doctrine-only 化する(2026-08-10 追記、ユーザー判断)**: agent 定義から dotfiles 固有の手段(センサー名の固定・skill 固定・repo 束縛・実行環境制約)を外し、agent はドメイン中立の掃除ドクトリンだけを持つ — 検出/閉包分離、KPI 3 点、増幅荷重の優先順位、stale 分類、**4 スロット要件(センサー / 露出指標 / 等価性ガード / ratchet 先を名指しできないドメインでは掃除しない)**、権限線、escalation。ドメイン束縛は末尾 1 節に限定: 指示面は instruction-cleaner に従い(実行環境制約はそちらへ)、他ドメイン(コード: guard=テスト・型検査、ratchet=linter/CI / 仕様書: guard=blank-slate 実装者 probe)は 4 スロットを満たす skill か親の明示契約があるときだけ実行する。instantiation skill は必要時に作り、先回りの一般化はしない。あわせて tech に掃除軸・層分離検査・sensor/closure routing を、biz に増幅と掃除・依頼先想起・賭けと採用分離の lens を追記した(private_ 定義のため本 ADR が変更記録を兼ねる。検証は blank-slate probe 3 本、全 critical 合格)。
 
 ## Consequences
 
