@@ -7,8 +7,6 @@ description: "Evaluate a repository's documentation system when a broad docs aud
 
 Produce an evidence-backed evaluation report for a repository's documentation system. Do not create patches, delete docs, rewrite canonical sources, or make commits. Recommendations should describe the ideal target state and identify gaps clearly enough for a later implementation pass.
 
-Use `docs-entrypoint-check` instead when the user only wants a lightweight check for README/docs index/agent entrypoints or bootstrap skeleton suggestions.
-
 In the dotfiles repo, this skill is the semantic sensor in the cleaning role split (ADR-0065): its findings are consumed by the `instruction-cleaner` workflow, which owns resolution. Keep this skill report-only; detection and closure stay separate so the two KPI gradients (comprehensive findings vs shrinking surface) never share one owner.
 
 ## Core Rules
@@ -42,15 +40,14 @@ Select the narrowest mode that matches the request:
 - `metadata-hygiene-review`: Focus on Markdown front matter, ADR metadata, skill metadata, metadata accidentally embedded in body text, and schema consistency for documentation artifacts.
 - `reference-integrity-review`: Focus on external references, documented dependencies, spec/contract traceability, and freshness signals without validating source implementation correctness.
 
-If the user gives no mode, infer it from the target and wording. If the request is only a lightweight entrypoint/bootstrap check, prefer `docs-entrypoint-check`.
+If the user gives no mode, infer it from the target and wording. Lightweight entrypoint or bootstrap-skeleton requests do not need this skill; handle them directly without it.
 
 Mode decision order:
 
 1. Use an explicitly requested mode when present.
-2. If the request is only a lightweight README/docs index/agent-entrypoint check or bootstrap skeleton request, use `docs-entrypoint-check` instead of this skill.
-3. If the user asks for a broad docs audit, contradiction/gap analysis across multiple doc types, or multiple narrow concerns at once, use `documentation-system-evaluation`.
-4. If multiple narrow modes are primary concerns and no explicit mode is provided, use `documentation-system-evaluation`. Keep a narrow mode only when the request has a clear primary target, and record secondary concerns in `Residual Gaps`.
-5. Otherwise choose the narrow mode matching the primary risk: navigation/linking -> `reachability-audit`; competing first-read claims -> `entrypoint-conflict-review`; current truth vs history -> `source-of-truth-review`; stale/deprecated active docs -> `stale-docs-review`; TODO/follow-up governance -> `todo-governance-review`; instruction drift or agent-specific separation -> `guidance-consistency-review`; front matter/schema issues -> `metadata-hygiene-review`; external reference/spec traceability -> `reference-integrity-review`.
+2. If the user asks for a broad docs audit, contradiction/gap analysis across multiple doc types, or multiple narrow concerns at once, use `documentation-system-evaluation`.
+3. If multiple narrow modes are primary concerns and no explicit mode is provided, use `documentation-system-evaluation`. Keep a narrow mode only when the request has a clear primary target, and record secondary concerns in `Residual Gaps`.
+4. Otherwise choose the narrow mode matching the primary risk: navigation/linking -> `reachability-audit`; competing first-read claims -> `entrypoint-conflict-review`; current truth vs history -> `source-of-truth-review`; stale/deprecated active docs -> `stale-docs-review`; TODO/follow-up governance -> `todo-governance-review`; instruction drift or agent-specific separation -> `guidance-consistency-review`; front matter/schema issues -> `metadata-hygiene-review`; external reference/spec traceability -> `reference-integrity-review`.
 
 ## Workflow
 

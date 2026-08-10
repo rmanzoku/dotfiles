@@ -23,7 +23,6 @@ repo root を install source にして実行する。
 
 ```bash
 gh skill install . skill-manager --from-local --agent claude-code --scope user
-gh skill install . docs-entrypoint-check --from-local --agent claude-code --scope user
 gh skill install . docs-evaluator --from-local --agent claude-code --scope user
 gh skill install . grok-cli-runner --from-local --agent claude-code --scope user
 gh skill install . agy-cli-runner --from-local --agent claude-code --scope user
@@ -50,7 +49,6 @@ gh skill install . gws-cli-runner --from-local --agent claude-code --scope user
 
 ```bash
 gh skill install . skill-manager --from-local --agent codex --scope user
-gh skill install . docs-entrypoint-check --from-local --agent codex --scope user
 gh skill install . docs-evaluator --from-local --agent codex --scope user
 gh skill install . grok-cli-runner --from-local --agent codex --scope user
 gh skill install . agy-cli-runner --from-local --agent codex --scope user
