@@ -41,7 +41,7 @@ Before running Copilot, make these decisions explicitly:
 - Prompt profile: use `--prompt-profile auto` by default; it adds an Opus 5 or Fable 5 generation adapter when `--model` names that generation. Pass `--prompt-profile none` only when the source prompt already contains a complete Copilot-specific launch contract.
 - Extra Copilot args: pass each Copilot CLI token as its own `--extra-copilot-arg=<token>` value, especially for leading-hyphen tokens.
 
-Do not add "think hard", fixed progress-update scaffolds, or mandatory step-by-step narration to simulate reasoning. Use `--effort` only when the caller explicitly asks for an effort override.
+Do not add "think hard", fixed progress-update scaffolds, or mandatory step-by-step narration to simulate effort. Use `--effort` only when the caller explicitly asks for an effort override.
 
 ## Standard Command Shape
 

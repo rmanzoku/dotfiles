@@ -30,7 +30,7 @@ docs-evaluator の report(`Issues & Risks` と mode 固有節)からは、「対
 | description の取り合い(trigger 重複) | 発火 probe で衝突を観測 | 修正後に発火 probe 再実行 | description 修正 PR |
 | skill 統廃合候補(役割重複・未使用) | evaluator(stale-docs-review)+ 使用実績 | 発火 probe + 移行手順 | 統廃合 PR(manifest・install を同時更新) |
 
-上 4 クラスの正本は ADR-0061、下 2 クラスは ADR-0065 の追記で追加。
+運用クラスの正本はこの表とする(設計根拠: 上 4 クラスは ADR-0061 の削除 4 分類を運用向けに再構成、下 2 クラスは ADR-0065 decision 9 で追加)。
 
 ## KPI(この 3 点だけ。削除量は KPI ではない)
 

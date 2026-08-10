@@ -65,7 +65,7 @@ Before running Grok, make these decisions explicitly:
 - Working directory: `--cwd` controls both the subprocess working directory and Grok Build `--cwd`.
 - Expected artifacts: if the target artifact is the Grok response itself, make it `--response-artifact`; if other files must be created after reading Grok output, track those outside this wrapper.
 
-Do not add "think hard", fixed progress-update scaffolds, or mandatory step-by-step narration to simulate model effort. Use model selection, request fields, permission mode, and explicit success criteria instead.
+Do not add "think hard", fixed progress-update scaffolds, or mandatory step-by-step narration to simulate effort. Use model selection, request fields, permission mode, and explicit success criteria instead.
 
 ## Standard Command Shape
 
@@ -196,9 +196,9 @@ The normal runner checks prove the call ran, not that an image exists. Also requ
 
 ### Cautions
 
-- **Generation is non-deterministic.** The same request produces a different image each run. Keep the accepted file; do not expect to regenerate it
+- **Generation is non-deterministic.** The same input produces a different image each run. Keep the accepted file; do not expect to regenerate it
 - Do not use generated images to depict real, identifiable places, facilities, people, or products. When the image stands in for something real, label it as an illustration where it is used
-- Do not put a prompt in the request that asks for logos, brand marks, or text inside the image; render those as vector or live text instead
+- Do not ask for logos, brand marks, or text inside the image; render those as vector or live text instead
 - For diagrams, prefer authoring SVG directly over generating raster images. Vector output stays editable and does not degrade when scaled for print
 
 ## Failure Criteria

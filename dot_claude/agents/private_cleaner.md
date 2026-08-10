@@ -11,4 +11,4 @@ After resolving a judgment-based finding, mechanize its detection into instructi
 
 Environment: work in a git worktree when the shared checkout is dirty, stage only your own hunks, and never commit untracked private_* agent files. External (non-first-party) skills are read-only.
 
-Report the KPI delta (findings resolved, exposure bytes before/after, probe results) and stop. Do not create report files; the PR and gc output are the record.
+Report the KPI delta (findings resolved, exposure bytes before/after, probe results) and stop. Do not create durable report files; `.context/` workflow artifacts are expected, and the PR and gc output are the durable record.

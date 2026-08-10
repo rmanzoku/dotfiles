@@ -55,7 +55,7 @@
 - グローバル配備される AI 指示ファイル（例: `dot_codex/AGENTS.md.tmpl`）は薄く保ち、tool 固有・repo 固有の詳細な runner / Skill 作成判断は、この repo の `AGENTS.md`、`docs/`、または該当 Skill に置くこと
 - `.claude/skills/` 配下のファイルは repo ローカル用途とし、chezmoi でグローバル配備しない
 - 配布する repo オリジナル skill は publisher layout の `skills/` 配下を正本として git 管理すること
-- publisher layout の skill は `gh skill install --from-local <repo-root> <skill> --agent <agent> --scope user` を標準配備経路とし、chezmoi で `~/.claude/skills/` や `~/.codex/skills/` へ直接配備しないこと
+- publisher layout の skill は `gh skill install <repo-root> <skill> --from-local --agent <agent> --scope user` を標準配備経路とし、chezmoi で `~/.claude/skills/` や `~/.codex/skills/` へ直接配備しないこと
 - 新しいマシン向けの復元情報は当面 script 化せず、`docs/skills-install-manifest.md` の docs-only manifest を正本として保存すること
 - external skill はこの repo に vendoring せず、`gh skill` による install / update / remove を標準運用とすること
 - third-party external skill が upstream publisher layout を持たない場合は、`docs/skills-install-manifest.md` に `fetch + gh skill install --from-local` 手順を残して管理すること

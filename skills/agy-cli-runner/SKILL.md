@@ -51,14 +51,14 @@ Before running agy, decide explicitly:
 - Task directory: choose `.context/<task>/`.
 - Prompt artifact: write the prompt markdown; keep one backend job per prompt file.
 - Response artifact: pass `--response-artifact agy-response.json` when it belongs inside `--output-dir`; use an absolute path only when it must land elsewhere.
-- Model: required. Pick from `agy models` — currently `gemini-3.6-flash-{high,medium,low}`, `gemini-3.5-flash-{high,medium,low}`, `gemini-3.1-pro-{high,low}`, plus non-Gemini ids. For registry-driven calls, resolve the id through `rules/model_registry.yaml` rather than hardcoding it in a caller script.
+- Model: required. Pick from `agy models` — currently `gemini-3.6-flash-{high,medium,low}`, `gemini-3.5-flash-{high,medium,low}`, `gemini-3.1-pro-{high,low}`, plus non-Gemini ids. For registry-driven calls, resolve the id through the working repository's model registry (for example `rules/model_registry.yaml`) rather than hardcoding it in a caller script.
 - Effort: `--effort low|medium|high` when the task warrants it; omit to use the model default.
 - Permissions: `--skip-permissions` for anything needing web search or file access; omit for prompt-only tasks.
 - Timeout: rely on the 600-second default unless the contract says otherwise.
 - Working directory: `--cwd` sets the subprocess working directory. Use a per-batch sandbox directory when running independent measurements.
 - Expected artifacts: if the target artifact is agy's response itself, make it `--response-artifact`. Files that agy writes must be tracked outside this wrapper.
 
-Do not add "think hard", progress-update scaffolds, or step-by-step narration to simulate effort. Use model selection, `--effort`, and explicit success criteria instead.
+Do not add "think hard", fixed progress-update scaffolds, or mandatory step-by-step narration to simulate effort. Use model selection, `--effort`, and explicit success criteria instead.
 
 ## Standard Command Shape
 

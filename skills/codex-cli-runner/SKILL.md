@@ -146,7 +146,7 @@ The normal runner checks prove the call ran, not that an image exists. Also requ
 
 ### Cautions
 
-- **Generation is non-deterministic.** The same prompt produces a different image each run. Keep the accepted file; do not expect to regenerate it
+- **Generation is non-deterministic.** The same input produces a different image each run. Keep the accepted file; do not expect to regenerate it
 - Do not use generated images to depict real, identifiable places, facilities, people, or products. When the image stands in for something real, label it as an illustration where it is used
 - Do not ask for logos, brand marks, or text inside the image; render those as vector or live text instead
 - For diagrams, prefer authoring SVG directly over generating raster images. Vector output stays editable and does not degrade when scaled for print
