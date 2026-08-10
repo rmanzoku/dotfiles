@@ -87,18 +87,11 @@ For 1Password-backed dotfiles:
      -- opmaterialize restore
    ```
 
-4. If restore reports target conflicts, do not force overwrite silently. Ask for explicit confirmation before `opmaterialize restore --force`.
-5. After restore, run `chezmoi apply` and drift checks through the owning dotfile workflow.
+4. For conflict confirmation and post-restore steps (`chezmoi apply`, drift checks), follow the Restore section of `$onepassword-secret-materialize`; it owns restore policy.
 
 ## Wrapper Availability
 
-Treat a missing `opmaterialize` wrapper separately from 1Password authentication failures. If `opmaterialize` is not found or exits 127 before contacting 1Password, use the bundled script path from the installed skill:
-
-```bash
-OP_ACCOUNT=my.1password.com \
-OP_DOTFILES_MATERIALIZE_VAULT="Dotfiles Secrets" \
-sh ~/.codex/skills/onepassword-secret-materialize/scripts/opmaterialize diff
-```
+Treat a missing `opmaterialize` wrapper separately from 1Password authentication failures. If `opmaterialize` is not found or exits 127 before contacting 1Password, use the bundled script from the installed `$onepassword-secret-materialize` skill; its path and usage conditions are defined in that skill's bundled-script sections.
 
 Use this only for wrapper availability. Do not use it as an authentication fallback.
 

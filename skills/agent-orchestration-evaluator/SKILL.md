@@ -192,7 +192,7 @@ Keep this as execution guidance, not model allocation:
 |---|---|
 | `claude_code` | Claude Code subagent / Agent tool, with the skill's artifact contract. |
 | `codex` | `spawn_agent`, with explicit ownership and expected artifacts. |
-| `gemini` | Gemini subagent mechanism if available; otherwise use the skill's explicit fallback. |
+| `gemini` | Gemini subagent mechanism if available; otherwise delegate through `agy-cli-runner`. |
 | Other | Define explicitly before relying on Self-Elision. |
 
 ### Preserve Runner Ownership
@@ -213,6 +213,7 @@ Expected runner mapping:
 | Codex CLI | Use `codex-cli-runner` when available; do not inline `codex exec` details in dependent skills. If unavailable, keep only an explicit resolver fallback contract. |
 | Grok CLI or API-backed handoff | `grok-cli-runner` |
 | Copilot CLI | `copilot-cli-runner` |
+| Gemini backend (Antigravity CLI) | `agy-cli-runner` |
 
 Prefer runners that provide prompt-file handoff, timeout control, expected artifact checks, summary, and failure reporting. Keep the skill text at the level of "use the runner skill"; do not inline runner command details.
 

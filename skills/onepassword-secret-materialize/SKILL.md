@@ -32,6 +32,8 @@ OP_ACCOUNT=my.1password.com op vault get "Dotfiles Secrets"
 
 If `opmaterialize` is not on `PATH`, use the bundled script form shown below. If `op` is not authenticated from the current agent process, stop after the readiness probe and ask the user to unlock or sign in from their normal terminal; repeated AI-side permission approvals are not a stable recovery path.
 
+When a non-interactive run needs timeouts, artifacts, or failure classification, call `opmaterialize` through the `$op-cli-runner` wrapper; that skill owns the execution mechanics.
+
 Run `opmaterialize add` for one file at a time. Do not pass multiple secret-backed files to one `add` invocation.
 
 ## Choose The Operation
@@ -59,8 +61,10 @@ Use this when the user says a file is ready and should be saved for other PCs.
    ```bash
    OP_ACCOUNT=my.1password.com \
    OP_DOTFILES_MATERIALIZE_VAULT="Dotfiles Secrets" \
-   sh ~/.codex/skills/onepassword-secret-materialize/scripts/opmaterialize add <path>
+   sh <installed-skill-dir>/scripts/opmaterialize add <path>
    ```
+
+   `<installed-skill-dir>` is `~/.claude/skills/onepassword-secret-materialize` for Claude Code and `~/.codex/skills/onepassword-secret-materialize` for Codex.
 
 3. Report only the created/updated item name and manifest status from command output. Do not show file contents.
 
@@ -105,6 +109,8 @@ Use this when setting up a new machine or rehydrating ignored local config files
    ```bash
    opmaterialize restore --force
    ```
+
+4. After restore, run `chezmoi apply` and drift checks through the repository `dotfile-update` workflow.
 
 ## Troubleshooting
 

@@ -17,7 +17,7 @@ Codex `.system` skill、Claude / Codex の plugin 同梱 skill、各 host の組
 
 repo root を install source にして実行する。
 
-`claude-cli-runner` は Codex 専用として Codex にのみ install する(Claude 内の claude_code 解決は Self-Elision で subagent を使うため。ADR-0058 parity の明示的例外)。
+`claude-cli-runner` は Codex 専用として Codex にのみ install する(Claude 内の claude_code 解決は Self-Elision で subagent を使うため。ADR-0058 parity の明示的例外)。revisit: Claude Code 側で CLI 経由の Claude 呼び出しが必要になったとき、または ADR-0058 の parity 方針を見直すとき(期限なしの条件付き例外として維持)。
 
 ### Claude Code
 
