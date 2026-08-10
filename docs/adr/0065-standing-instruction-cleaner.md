@@ -27,6 +27,8 @@ agent_model: "Claude Fable 5 (Claude Code)"
 6. **cleaner 自身の足跡を最小化する**: レポート時系列ファイルは作らない(PR 履歴と gc 出力が記録)。増える永続ファイルは baseline JSON 1 つ。cleaner の description も 400 字以下とする。
 7. **instruction-gc の check 6 を first-party / external で区別する**。external skill(vercel-cli 等)の description は編集権がないため warn ではなく info とする。また、md/toml の意図的ホスト分岐を持つ agent(personal / tech)は allowlist で info に落とし、warn は実際に対処可能な signal だけに保つ(恒常 warn は alert fatigue として掃除対象)。
 8. stale の判定基準は ADR-0061 の削除 4 クラス(死参照 / モデル既定挙動の教示 / 期限切れ一時ルール / 重複)を正とし、cleaner skill がこれを常設ルールブックとして参照する。
+9. **役割分担と層分離(2026-08-09 同日追記、ユーザー判断)**: 検知は 2 センサーが担う — instruction-gc(機械・毎回)と docs-evaluator(意味・明示起動。report-only 契約は変えない。検出と閉包で KPI 勾配が逆向きのため同一オーナーにしない)— cleaner は閉包だけを所有する。stale クラスに「description の取り合い(trigger 重複)」「skill 統廃合候補」「skill と docs の矛盾」を追加し、検知は evaluator と発火 probe に割り当てる。判断で検知した stale は可能な限り gc の check へ機械化してから閉じる(ratchet)。empirical-prompt-tuning は probe の設計規約(検証手法)として参照し、skill の再現性改善という別役割を cleaner に吸収しない。思想・根拠は ADR と role agent 層(層分離の正本: `docs/runner-skill-governance.md` §Layering)に置き、skill には再現可能な手順だけを書く。
+   - 背景: 過去 13 run の docs-evaluator は思想(conditioning surface の重み付け)を持ちながら description 肥大を一度も検出できなかった。思想が判定文言(閾値)に落ちていなかったためで、evaluator 自身が出した具体候補(迷子 ~/CLAUDE.md、P1)も閉包オーナー不在で約 1 ヶ月放置された。
 
 ## Consequences
 

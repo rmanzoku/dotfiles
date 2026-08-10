@@ -9,6 +9,8 @@ Produce an evidence-backed evaluation report for a repository's documentation sy
 
 Use `docs-entrypoint-check` instead when the user only wants a lightweight check for README/docs index/agent entrypoints or bootstrap skeleton suggestions.
 
+In the dotfiles repo, this skill is the semantic sensor in the cleaning role split (ADR-0065): its findings are consumed by the `instruction-cleaner` workflow, which owns resolution. Keep this skill report-only; detection and closure stay separate so the two KPI gradients (comprehensive findings vs shrinking surface) never share one owner.
+
 ## Core Rules
 
 - Treat this skill as report-only. Provide findings, risks, scores, inventories, and recommended directions; do not implement them.
@@ -36,7 +38,7 @@ Select the narrowest mode that matches the request:
 - `entrypoint-conflict-review`: Focus on competing "read first" claims, multiple active entrypoints, navigation branching, and whether the first-hop path is unambiguous for AI agents.
 - `stale-docs-review`: Focus on deprecated docs, obsolete skills, duplicated guidance, contradictory docs, and docs that still look active after replacement.
 - `todo-governance-review`: Focus on TODO, Deferred Work, known gaps, follow-up notes, owners, expiry, and whether task memory is stored in the right canonical place.
-- `guidance-consistency-review`: Focus on canonical claim conflicts, instruction-strength drift, terminology consistency, and separation between shared guidance and agent-specific guidance.
+- `guidance-consistency-review`: Focus on canonical claim conflicts, instruction-strength drift, terminology consistency, separation between shared guidance and agent-specific guidance, and overlapping skill descriptions competing for the same trigger space.
 - `metadata-hygiene-review`: Focus on Markdown front matter, ADR metadata, skill metadata, metadata accidentally embedded in body text, and schema consistency for documentation artifacts.
 - `reference-integrity-review`: Focus on external references, documented dependencies, spec/contract traceability, and freshness signals without validating source implementation correctness.
 
