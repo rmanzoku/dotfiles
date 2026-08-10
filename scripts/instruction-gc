@@ -145,7 +145,7 @@ def check_agents_md_sync() -> None:
 
 STALE_TERMS = [
     "gemini-cli-runner", "qwen-code", "dot_gemini", "dot_qwen",
-    "opus-4-7-tuning", "opus-4-8-tuning", "gpt-5-5-tuning",
+    "opus-4-7", "opus-4-8", "gpt-5-5-tuning",
 ]
 STALE_EXCLUDE_DIRS = {"docs/adr", ".context", ".git"}
 

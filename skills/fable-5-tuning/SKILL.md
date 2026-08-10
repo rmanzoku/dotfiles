@@ -59,7 +59,7 @@ API クライアントコードの自動移行は対象外。SDK や Messages AP
 12. **Refusal / fallback**
     research biology・cybersecurity の多くは対象外ドメインで、隣接する正当作業でも classifier が false positive しうる。`stop_reason: "refusal"` を content 読み取り前に処理し、fallback へのオプトインを既定とする。Fable の thinking block は他モデルへの replay 時に drop される(課金されない)。
 13. **実行経路は Claude CLI に限らない**
-    Fable 5 は `claude-cli-runner` だけでなく `copilot-cli-runner` など他 CLI runner 経由でも実行される。世代固有の挙動補正は各 runner の prompt profile(model adapter)が担う設計とし、role prompt や skill 本文へ固定しない。ただし `claude-cli-runner` の同梱 profile は現在 Opus 系(4.7/4.8/5)のみで Fable 5 profile は未実装(`--prompt-profile auto` は Fable を補正しない。必要なら明示 profile か `none` を渡す)。Copilot 経由では hard AI-credit cap・retention 境界の明示引き受けが必須(runner skill の契約に従う)。
+    Fable 5 は `claude-cli-runner` だけでなく `copilot-cli-runner` など他 CLI runner 経由でも実行される。世代固有の挙動補正は各 runner の prompt profile(model adapter)が担う設計とし、role prompt や skill 本文へ固定しない。ただし `claude-cli-runner` の同梱 profile は現在 Opus 5 のみで Fable 5 profile は未実装(`--prompt-profile auto` は Fable を補正しない。必要なら明示 profile か `none` を渡す)。Copilot 経由では hard AI-credit cap・retention 境界の明示引き受けが必須(runner skill の契約に従う)。
 
 ## Opus 5 との反転で事故りやすい点
 
