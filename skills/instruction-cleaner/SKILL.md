@@ -44,6 +44,7 @@ docs-evaluator の report(`Issues & Risks` と mode 固有節)からは、「対
 2. **classify**: 各 finding を上表のクラスへ割り当て、自動修正か提案かを決める
 3. **verify**: 削除・圧縮・統合ごとに probe を設計する
    - ルール本文の変更 → **挙動 probe**: blank-slate subagent に新 ruleset 全文と現実的シナリオを渡し、[critical] 付き固定チェックリストで判定(empirical-prompt-tuning の invocation contract に従う)
+   - 削除対象が保守側の規定のとき → [critical] にはその規定が守っているように見える結末そのものを置く。攻め側の結末だけで固定すると、規定が無くても harness 既定で結末が保たれるため probe が空振りで通る
    - description の変更 → **発火 probe**: 旧一覧と新一覧を別々の blank-slate 選択器に渡し、同一プロンプト集合(現実的発話 + 発火してはならない distractor)で選択を比較。critical 全一致、かつ新の正答数が旧を下回らないこと
 4. **propose**: 機械的修正は直接 commit。意味的変更は PR にし、本文へ probe 結果・before/after 字数・却下 warn の理由を書く
 5. **close**: gc を再実行し green を確認。baseline を実測値へ更新(下がった場合は必ず、上がった場合は意図的な時だけ)。**判断で検知した stale は、可能なら gc の check(STALE_TERMS・閾値・allowlist 等)へ機械化してから閉じる**(ratchet。同じ判断を二度させない)
