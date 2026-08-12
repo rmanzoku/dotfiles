@@ -26,7 +26,6 @@ error() { printf '\033[1;31m[error]\033[0m %s\n' "$1" >&2; }
 # dot_ プレフィックスを . に変換したパスと対応
 EXTRA_FILES=(
   "dot_claude/CLAUDE.md:.claude/CLAUDE.md:raw"
-  "dot_claude/settings.json:.claude/settings.json:raw"
 )
 
 EXPECTED_IGNORED_SOURCES=(
@@ -82,23 +81,6 @@ EOF
   return 0
 }
 
-render_template_to_file() {
-  local repo_file="$1"
-  local output_file="$2"
-  perl -0pe 's/\{\{ \.chezmoi\.homeDir \}\}/$ENV{HOME}/g' "$repo_file" >"$output_file"
-}
-
-normalize_codex_config_to_file() {
-  local input_file="$1"
-  local output_file="$2"
-
-  perl -0ne '
-    s/^notify = \[.*\]\n+//mg;
-    s/\n*\z/\n/s;
-    print;
-  ' "$input_file" >"$output_file"
-}
-
 files_differ() {
   local repo_file="$1"
   local actual_file="$2"
@@ -107,45 +89,6 @@ files_differ() {
   case "$mode" in
     raw)
       ! cmp -s "$repo_file" "$actual_file"
-      ;;
-    codex_config)
-      local normalized_repo normalized_actual
-      normalized_repo="$(mktemp)"
-      normalized_actual="$(mktemp)"
-      normalize_codex_config_to_file "$repo_file" "$normalized_repo"
-      normalize_codex_config_to_file "$actual_file" "$normalized_actual"
-      if cmp -s "$normalized_repo" "$normalized_actual"; then
-        rm -f "$normalized_repo" "$normalized_actual"
-        return 1
-      fi
-      rm -f "$normalized_repo" "$normalized_actual"
-      return 0
-      ;;
-    codex_config_template)
-      local rendered_repo normalized_repo normalized_actual
-      rendered_repo="$(mktemp)"
-      normalized_repo="$(mktemp)"
-      normalized_actual="$(mktemp)"
-      render_template_to_file "$repo_file" "$rendered_repo"
-      normalize_codex_config_to_file "$rendered_repo" "$normalized_repo"
-      normalize_codex_config_to_file "$actual_file" "$normalized_actual"
-      if cmp -s "$normalized_repo" "$normalized_actual"; then
-        rm -f "$rendered_repo" "$normalized_repo" "$normalized_actual"
-        return 1
-      fi
-      rm -f "$rendered_repo" "$normalized_repo" "$normalized_actual"
-      return 0
-      ;;
-    template)
-      local rendered_file
-      rendered_file="$(mktemp)"
-      render_template_to_file "$repo_file" "$rendered_file"
-      if cmp -s "$rendered_file" "$actual_file"; then
-        rm -f "$rendered_file"
-        return 1
-      fi
-      rm -f "$rendered_file"
-      return 0
       ;;
     *)
       warn "未知の比較モードです: $mode"
@@ -163,15 +106,9 @@ copy_actual_to_repo() {
     raw)
       cp "$actual_file" "$repo_file"
       ;;
-    codex_config)
-      normalize_codex_config_to_file "$actual_file" "$repo_file"
-      ;;
-    codex_config_template)
-      normalize_codex_config_to_file "$actual_file" "$repo_file"
-      perl -0pi -e 's/\Q$ENV{HOME}\E/\{\{ .chezmoi.homeDir \}\}/g' "$repo_file"
-      ;;
-    template)
-      perl -0pe 's/\Q$ENV{HOME}\E/\{\{ .chezmoi.homeDir \}\}/g' "$actual_file" >"$repo_file"
+    *)
+      warn "未知の比較モードです: $mode"
+      return 1
       ;;
   esac
 }
@@ -185,14 +122,9 @@ copy_repo_to_actual() {
     raw)
       cp "$repo_file" "$actual_file"
       ;;
-    codex_config)
-      cp "$repo_file" "$actual_file"
-      ;;
-    codex_config_template)
-      render_template_to_file "$repo_file" "$actual_file"
-      ;;
-    template)
-      render_template_to_file "$repo_file" "$actual_file"
+    *)
+      warn "未知の比較モードです: $mode"
+      return 1
       ;;
   esac
 }
