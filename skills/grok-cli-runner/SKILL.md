@@ -17,10 +17,12 @@ Frame each delegation as an outcome-first contract: request artifact, expected r
 - Use `--dry-run` for request-shape and command validation; it does not call Grok Build and intentionally does not create a response artifact.
 - In `--dry-run`, success is checked through `summary.json.dry_run_payload`; do not require `grok-response.json` to exist.
 - Use the wrapper's 600-second process timeout default, or pass `--timeout-seconds` when the task needs a shorter or longer limit.
-- Use `--permission-mode auto --no-plan` only for prompt-only tasks that need no tool calls. Pass `--plan` only when Grok Build plan mode is explicitly desired.
+- Use `--permission-mode auto` only for prompt-only tasks that need no tool calls.
+- `--no-plan` is the wrapper default; `--plan` is the opt-out and is only for when Grok Build plan mode is explicitly desired.
 - For any task that triggers a tool call — shell commands, file writes, and also read-only X post or Web fetches — pass `--permission-mode bypassPermissions`. Headless Grok cannot answer permission prompts: under `auto` the first tool call that needs approval is cancelled and the run ends with exit 0 and `stopReason=Cancelled`.
 - The wrapper passes `--verbatim` by default so Grok receives the derived prompt directly. Use `--no-verbatim` only when Grok Build's default prompt shaping is explicitly needed.
 - Pass `--always-approve` only when the caller explicitly accepts tool side effects. The wrapper then omits `--permission-mode` entirely, because grok 0.2.112 lets an explicit `--permission-mode` override `--always-approve` (contrary to its docs) and cancels headless runs.
+- `GROK_BIN`, `GROK_OUTPUT_FORMAT`, and `GROK_PERMISSION_MODE` supply defaults from the environment. `GROK_PERMISSION_MODE` silently changes the permission mode this skill otherwise makes explicit — check it before diagnosing a cancelled run.
 - Pass session flags only when session state is part of the task contract. Default to a stateless one-shot headless run.
 - Do not treat 0-byte `run.err` or a missing response artifact alone as a hang; use exit code, timeout, `summary.json`, and failure reasons.
 - Do not add fallback backends. If Grok Build CLI is missing, unauthenticated, or rejected by model/permission state, report that failure from the artifacts.
@@ -56,9 +58,9 @@ Before running Grok, make these decisions explicitly:
 - Task directory: choose `.context/<task>/`.
 - Request artifact: write `.context/<task>/grok-request.json` with top-level `task` and `request`.
 - Response artifact: pass `--response-artifact grok-response.json` when the response belongs inside `--output-dir`; use an absolute path only when the response must be written outside `--output-dir`.
-- Model: omit `--model` unless the caller or model registry requires an override. The wrapper resolves `--model`, then `request.model`, then `GROK_BUILD_MODEL`, then `GROK_MODEL`; when none is set it omits `-m` and Grok Build CLI uses its own default model.
+- Model: omit `--model` unless the caller or model registry requires an override. See the resolution chain under Standard Command Shape.
 - Timeout: rely on the 600-second wrapper default unless the task contract says otherwise.
-- Permission mode: rely on `--permission-mode auto --no-plan` only for prompt-only tasks with no tool calls; pass `--permission-mode bypassPermissions` when the task uses any tool, including shell commands, file writes, and read-only X post or Web fetches (for example when the expected artifact is written by Grok itself, or when the task retrieves a public X post URL).
+- Permission mode: rely on `--permission-mode auto` only for prompt-only tasks with no tool calls; pass `--permission-mode bypassPermissions` when the task uses any tool, including shell commands, file writes, and read-only X post or Web fetches (for example when the expected artifact is written by Grok itself, or when the task retrieves a public X post URL).
 - Verbatim mode: keep the default `--verbatim`; use `--no-verbatim` only for compatibility testing.
 - Output format: rely on `--output-format json`; use `streaming-json` only when incremental event capture matters, and `plain` only for compatibility.
 - Session state: omit `--session-id`, `--resume`, and `--continue-session` unless continuity is required and documented in the request.
@@ -117,10 +119,9 @@ The wrapper writes:
 
 - `grok-request.json`: caller-authored request artifact.
 - stdout progress lines: Grok Build start, completion, and failure status.
-- resolved response artifact, normally `grok-response.json`: normalized response artifact for successful real calls.
+- resolved response artifact, normally `grok-response.json`: normalized response artifact for real calls. Written before the `stop_reason` check, so it also exists on `Cancelled` runs.
 - `run.err`: Grok Build stderr and local wrapper diagnostics.
-- `summary.json`: redacted command, resolved `cwd`, exit code, `stop_reason`, elapsed time, byte counts, model, output format, effective permission mode (`null` when `--always-approve` suppressed it), session flags, dry-run payload, response artifact path/status, `failure_reasons`, and `recommended_next_action`.
-- `summary.json.no_plan` and `summary.json.verbatim`: whether `--no-plan` and `--verbatim` were used.
+- `summary.json`: run evidence — redacted command, exit code, `stop_reason`, `failure_reasons`, `recommended_next_action`, and the resolved flag state. `references/schema.md` documents every field.
 - `failure.md`: only when the wrapper run fails.
 
 ## Request Contract
@@ -148,7 +149,7 @@ Require all applicable checks:
 - For real runs with `json` or `streaming-json` output, `summary.json.stop_reason` is `EndTurn`.
 - For real runs, the resolved response artifact exists and is non-empty.
 - Response artifact contains `request`, `response`, `model` (`null` when the run delegated to the Grok Build CLI default model), `backend`, and `output_text` or parsed stdout sufficient for the caller to inspect.
-- `summary.json.success` is `true`, `summary.json.failure_reasons` is empty, and `summary.json.response_non_empty` is `true`.
+- `summary.json.success` is `true`. The wrapper defines it as an empty `failure_reasons`.
 - For `--dry-run`, success means the request validated and `summary.json.dry_run_payload` was written; no response artifact is expected.
 
 These checks prove runner execution and non-empty response materialization only. The caller must still evaluate task-specific response quality against the request artifact.
@@ -182,7 +183,7 @@ python3 <skill-dir>/scripts/run_grok_cli.py \
   --request-file .context/<task>/grok-request.json \
   --output-dir .context/<task> \
   --response-artifact grok-response.json \
-  --permission-mode bypassPermissions --no-plan \
+  --permission-mode bypassPermissions \
   --cwd .context/<task>
 ```
 
@@ -211,29 +212,12 @@ Treat any of these as failure:
 - Missing `request.input`.
 - Missing `grok` executable.
 - Grok Build auth, model, permission, policy, update, or rate-limit errors.
-- `stop_reason` other than `EndTurn`, normally `Cancelled` from a headless permission prompt that nothing could answer (exit code stays `0`; only `stop_reason` reveals the failure).
+- For real `json` or `streaming-json` runs, `stop_reason` other than `EndTurn`, normally `Cancelled` from a headless permission prompt that nothing could answer (exit code stays `0`; only `stop_reason` reveals the failure). `plain` output and `--dry-run` leave `stop_reason` `null` and are not judged on it.
 - Real run response artifact is missing or empty.
 
-On failure, inspect `.context/<task>/summary.json` first:
-
-- `command`
-- `cwd`
-- `exit_code`
-- `stop_reason`
-- `elapsed_seconds`
-- `request_bytes`, `prompt_bytes`, `response_bytes`, and `stderr_bytes`
-- `model`
-- `grok_bin`
-- `output_format`
-- `permission_mode`
-- `no_plan` and `verbatim`
-- `session_id`, `resume`, `continue_session`, and `always_approve`
-- `dry_run`
-- `failure_reasons`
-- `api_error`
-- `response_artifact`
-- `response_non_empty`
-- `recommended_next_action`
+On failure, inspect `.context/<task>/summary.json` first. Start with `failure_reasons`,
+`recommended_next_action`, `stop_reason`, `exit_code`, and `api_error`.
+`references/schema.md` documents every field.
 
 If a higher-level workflow needs a downstream blocked artifact, create it in the caller using that workflow's schema or template. Do not invent a downstream schema in this runner and do not modify runner evidence artifacts. If no caller schema was supplied, report the runner as blocked with links to `summary.json` and `failure.md`.
 
@@ -255,7 +239,6 @@ Do not hand-edit `summary.json`, `run.err`, the response artifact, or `failure.m
 - Pass `--cwd <project-root>` when the caller wants Grok Build launched from a specific repository.
 - `summary.json.command` redacts the prompt body as `<prompt from request artifact>`; the request artifact remains the source of truth.
 - The wrapper passes `--no-auto-update` on every real run to avoid background update checks in automation.
-- Known issue (grok 0.2.112): an explicit `--permission-mode` overrides `--always-approve`, contrary to the Grok docs statement that always-approve wins. The wrapper therefore never sends both flags together.
 - Keep final orchestration in the caller. This skill only calls Grok Build and records observable artifacts.
 
 ## Validation
@@ -272,4 +255,4 @@ For runtime validation, run:
 - no-call dry-run success
 - invalid request failure
 - optional real Grok Build smoke when `grok` is installed and authenticated
-- optional public X URL smoke with `--permission-mode bypassPermissions --no-plan` (X post fetch is a tool call; under `auto` it ends with `stopReason=Cancelled`)
+- optional public X URL smoke with `--permission-mode bypassPermissions` (X post fetch is a tool call; under `auto` it ends with `stopReason=Cancelled`)
