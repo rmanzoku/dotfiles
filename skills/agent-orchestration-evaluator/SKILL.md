@@ -1,6 +1,6 @@
 ---
 name: agent-orchestration-evaluator
-description: Evaluate and tune AI agent orchestration rules, model resolvers, skill role assignments, slash commands, and prompt harnesses so parent agents stay focused on orchestration while researcher/reviewer/worker roles are delegated to subagents or observable CLI runners. Use when asked to review or extract resolver semantics, Self-Elision, self vs subagent boundaries, multi-agent skill design, Claude/Codex/Gemini/Grok/Copilot delegation, runner-skill migration, error-bypass remediation policy, or agent workflow evaluator/tuning guidance across projects.
+description: "Evaluate and tune AI agent orchestration assets: model resolvers, Self-Elision, skill role assignments, delegation boundaries, and prompt harnesses that keep parent agents orchestrating while researcher, reviewer, and worker roles go to subagents or observable CLI runners. Use when reviewing resolver semantics, multi-agent skill design, runner-skill migration, or agent workflow tuning."
 ---
 
 # Agent Orchestration Evaluator
@@ -192,7 +192,7 @@ Keep this as execution guidance, not model allocation:
 |---|---|
 | `claude_code` | Claude Code subagent / Agent tool, with the skill's artifact contract. |
 | `codex` | `spawn_agent`, with explicit ownership and expected artifacts. |
-| `gemini` | Gemini subagent mechanism if available; otherwise use the skill's explicit fallback. |
+| `gemini` | Gemini subagent mechanism if available; otherwise delegate through `agy-cli-runner`. |
 | Other | Define explicitly before relying on Self-Elision. |
 
 ### Preserve Runner Ownership
@@ -211,9 +211,9 @@ Expected runner mapping:
 |---|---|
 | Claude Code CLI | `claude-cli-runner` |
 | Codex CLI | Use `codex-cli-runner` when available; do not inline `codex exec` details in dependent skills. If unavailable, keep only an explicit resolver fallback contract. |
-| Gemini CLI | `gemini-cli-runner` |
 | Grok CLI or API-backed handoff | `grok-cli-runner` |
 | Copilot CLI | `copilot-cli-runner` |
+| Gemini backend (Antigravity CLI) | `agy-cli-runner` |
 
 Prefer runners that provide prompt-file handoff, timeout control, expected artifact checks, summary, and failure reporting. Keep the skill text at the level of "use the runner skill"; do not inline runner command details.
 

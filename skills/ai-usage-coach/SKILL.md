@@ -1,6 +1,6 @@
 ---
 name: ai-usage-coach
-description: Evaluate and coach a human's AI work-delegation practice across prompts, context scoping, skill use, tool/subagent selection, verification, failure/waste recovery, privacy, learning loops, structured session signals, underused capabilities, and routing from observed AI failures to prompt, docs, code, orchestration, tooling, workflow, or durable-instruction improvements. Use when asked to review Claude/Codex usage, repeated AI mistakes, prompt habits, AI session logs, skill usage patterns, repository-specific AI friction, cross-repository AI workflow patterns, FDE/field-engineering AI usage habits, reusable improvement candidates, weekly/monthly AI usage, or "how should I use AI better"; supports trusted-local raw-log review and shareable abstracted reports. Do not use for HR/personnel evaluation, personality assessment, repository-quality evaluation, customer requirement judgment, commercial judgment, final technical philosophy judgment, or ranking people against a teacher.
+description: "Evaluate and coach the user's AI delegation practice: prompts, context scoping, tool and subagent selection, verification habits, waste recovery, and routing repeated AI failures to prompt, docs, orchestration, or workflow fixes. Use when asked to review Claude/Codex usage, prompt habits, session logs, or how to use AI better. Not for HR-style evaluation or ranking of people."
 ---
 
 # AI Usage Coach

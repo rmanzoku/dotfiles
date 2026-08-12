@@ -1,6 +1,6 @@
 ---
 name: gpt-5-6-tuning
-description: "Audit and rewrite repository docs, skills, prompts, and agent harness scaffolding so they fit GPT-5.6 behavior and API guidance: lean prompts that state each instruction once, trimming repeated rules and no-op examples, effort baselines carried from GPT-5.5 then tested one level lower, none-to-max effort ladder, default-concise output with intentional text.verbosity, explicit autonomy boundaries naming safe actions, eval-gated Pro Mode, persisted reasoning context, bounded programmatic tool calling, scoped tool exposure, cache-friendly static-first layout, and sol/terra/luna variant allocation kept in the resolver. Use when the user wants to migrate or readiness-check prompts, AGENTS.md / CLAUDE.md / skill files, agent rules, or eval harnesses for GPT-5.6. Do not use for broad OpenAI SDK migrations or application feature rewrites beyond prompt, model, and orchestration guidance."
+description: "Audit and rewrite prompts, AGENTS.md / CLAUDE.md, skills, and agent harness scaffolding to fit GPT-5.6: lean single-statement instructions, effort-ladder baselines, default-concise output, explicit autonomy boundaries, scoped tools, and cache-friendly layout, with sol/terra/luna allocation kept in the resolver. Use to migrate or readiness-check prompts for GPT-5.6. Not for broad SDK migrations."
 ---
 
 # GPT-5.6 Tuning

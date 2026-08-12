@@ -1,6 +1,6 @@
 ---
 title: "Skill Install Manifest"
-updated_at: 2026-07-26
+updated_at: 2026-08-09
 ---
 
 # Skill Install Manifest
@@ -17,23 +17,21 @@ Codex `.system` skill、Claude / Codex の plugin 同梱 skill、各 host の組
 
 repo root を install source にして実行する。
 
+`claude-cli-runner` は Codex 専用として Codex にのみ install する(Claude 内の claude_code 解決は Self-Elision で subagent を使うため。ADR-0058 parity の明示的例外)。revisit: Claude Code 側で CLI 経由の Claude 呼び出しが必要になったとき、または ADR-0058 の parity 方針を見直すとき(期限なしの条件付き例外として維持)。
+
 ### Claude Code
 
 ```bash
 gh skill install . skill-manager --from-local --agent claude-code --scope user
-gh skill install . docs-entrypoint-check --from-local --agent claude-code --scope user
 gh skill install . docs-evaluator --from-local --agent claude-code --scope user
 gh skill install . grok-cli-runner --from-local --agent claude-code --scope user
+gh skill install . agy-cli-runner --from-local --agent claude-code --scope user
+gh skill install . instruction-cleaner --from-local --agent claude-code --scope user
 gh skill install . code-evaluator --from-local --agent claude-code --scope user
-gh skill install . opus-4-7-tuning --from-local --agent claude-code --scope user
-gh skill install . opus-4-8-tuning --from-local --agent claude-code --scope user
 gh skill install . opus-5-tuning --from-local --agent claude-code --scope user
 gh skill install . fable-5-tuning --from-local --agent claude-code --scope user
-gh skill install . gpt-5-5-tuning --from-local --agent claude-code --scope user
 gh skill install . gpt-5-6-tuning --from-local --agent claude-code --scope user
-gh skill install . claude-cli-runner --from-local --agent claude-code --scope user
 gh skill install . codex-cli-runner --from-local --agent claude-code --scope user
-gh skill install . gemini-cli-runner --from-local --agent claude-code --scope user
 gh skill install . copilot-cli-runner --from-local --agent claude-code --scope user
 gh skill install . agent-orchestration-evaluator --from-local --agent claude-code --scope user
 gh skill install . ai-usage-coach --from-local --agent claude-code --scope user
@@ -51,19 +49,16 @@ gh skill install . gws-cli-runner --from-local --agent claude-code --scope user
 
 ```bash
 gh skill install . skill-manager --from-local --agent codex --scope user
-gh skill install . docs-entrypoint-check --from-local --agent codex --scope user
 gh skill install . docs-evaluator --from-local --agent codex --scope user
 gh skill install . grok-cli-runner --from-local --agent codex --scope user
+gh skill install . agy-cli-runner --from-local --agent codex --scope user
+gh skill install . instruction-cleaner --from-local --agent codex --scope user
 gh skill install . code-evaluator --from-local --agent codex --scope user
-gh skill install . opus-4-7-tuning --from-local --agent codex --scope user
-gh skill install . opus-4-8-tuning --from-local --agent codex --scope user
 gh skill install . opus-5-tuning --from-local --agent codex --scope user
 gh skill install . fable-5-tuning --from-local --agent codex --scope user
-gh skill install . gpt-5-5-tuning --from-local --agent codex --scope user
 gh skill install . gpt-5-6-tuning --from-local --agent codex --scope user
 gh skill install . claude-cli-runner --from-local --agent codex --scope user
 gh skill install . codex-cli-runner --from-local --agent codex --scope user
-gh skill install . gemini-cli-runner --from-local --agent codex --scope user
 gh skill install . copilot-cli-runner --from-local --agent codex --scope user
 gh skill install . agent-orchestration-evaluator --from-local --agent codex --scope user
 gh skill install . ai-usage-coach --from-local --agent codex --scope user

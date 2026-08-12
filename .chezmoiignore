@@ -84,25 +84,6 @@ ghq/**/*.p8
 .codex/version.json
 .codex/worktrees
 
-# Qwen transient data
-.qwen/debug
-.qwen/installation_id
-.qwen/output-language.md
-.qwen/projects
-.qwen/skills
-.qwen/tmp
-
-# Gemini transient data
-.gemini/google_accounts.json
-.gemini/history
-.gemini/installation_id
-.gemini/mcp-oauth-tokens-v2.json
-.gemini/oauth_creds.json
-.gemini/projects.json
-.gemini/state.json
-.gemini/tmp
-.gemini/trustedFolders.json
-
 # Other transient/machine-specific files
 .claude.json
 .claude.json.backup

@@ -1,0 +1,447 @@
+#!/usr/bin/env python3
+"""instruction-gc: dotfiles の指示資産(AGENTS.md 系統・skills・agents)のゴミ検出。
+
+連作「AIと幻滅期」「マルコフ連鎖」「AGENTS.md 7 Tips」の掃除機構を機械化した
+check スクリプト。検出のみで修正はしない。定期実行は仕掛けず手動で回す。
+
+チェック内容:
+  1. ADR 解除条件スキャン(再検討条件を持つ ADR の棚卸しリスト / info)
+  2. install manifest と installed 実体の突合(差分 = fail)
+  3. repo AGENTS.md と common-rules の近似非一致検出(乖離 = fail)
+  4. stale 語彙(退役 skill / CLI 名)の残存検出(fail)
+  5. role agents md/toml の本文 drift 検査(fail)
+  6. skill description 長(first-party 400 字超 = warn / external = info)
+  6b. 常時露出予算 vs docs/instruction-baseline.json(超過 = warn)
+  7. skill-manager doctor の fail 集約(fail)
+  8. runner mapping parity(表と skills/*-cli-runner の 1:1 / fail)
+  9. runner skill 間の共有ブロック逐語検査(fail)
+  10. manifest parity 例外の revisit 条件(warn)
+
+usage: scripts/instruction-gc [--no-doctor]
+exit code: fail が 1 件以上あれば 1、なければ 0
+"""
+
+from __future__ import annotations
+
+import difflib
+import json
+import pathlib
+import re
+import subprocess
+import sys
+
+REPO = pathlib.Path(__file__).resolve().parent.parent
+HOME = pathlib.Path.home()
+
+FAILS: list[str] = []
+WARNS: list[str] = []
+INFOS: list[str] = []
+
+
+def section(title: str) -> None:
+    print(f"\n== {title} ==")
+
+
+def fail(msg: str) -> None:
+    FAILS.append(msg)
+    print(f"  FAIL {msg}")
+
+
+def warn(msg: str) -> None:
+    WARNS.append(msg)
+    print(f"  warn {msg}")
+
+
+def info(msg: str) -> None:
+    INFOS.append(msg)
+    print(f"  info {msg}")
+
+
+def ok(msg: str) -> None:
+    print(f"  ok   {msg}")
+
+
+# 1. ADR expiry-condition scan -------------------------------------------------
+
+ADR_EXPIRY_PAT = re.compile(r"再検討|解除条件|まで.{0,8}(維持|保留|残す)|revisit|until", re.I)
+
+
+def check_adr_expiry() -> None:
+    section("1. ADR expiry conditions (棚卸しリスト)")
+    hits = 0
+    for adr in sorted((REPO / "docs/adr").glob("*.md")):
+        for i, line in enumerate(adr.read_text(errors="ignore").splitlines(), 1):
+            if line.lstrip().startswith("-") or line.lstrip().startswith("*") or "##" in line:
+                if ADR_EXPIRY_PAT.search(line):
+                    info(f"{adr.name}:{i}: {line.strip()[:90]}")
+                    hits += 1
+    if hits == 0:
+        ok("no pending expiry conditions found")
+    else:
+        info(f"{hits} 件の解除条件/再検討条件。成立していないか目視確認すること")
+
+
+# 2. manifest vs installed -----------------------------------------------------
+
+INSTALL_RE = re.compile(r"gh skill install\s+(\S+)\s+(\S+).*--agent\s+(claude-code|codex)")
+# Codex 側で manifest 管理外を許すもの: plugin 由来 symlink と .system
+CODEX_TOLERATED = {"docx", "pdf", "pptx", "xlsx"}
+
+
+def check_manifest_parity() -> None:
+    section("2. install manifest vs installed skills")
+    manifest = (REPO / "docs/skills-install-manifest.md").read_text()
+    expect: dict[str, set[str]] = {"claude-code": set(), "codex": set()}
+    for m in INSTALL_RE.finditer(manifest):
+        expect[m.group(3)].add(m.group(2))
+
+    actual = {
+        "claude-code": {p.name for p in (HOME / ".claude/skills").iterdir()
+                        if p.is_dir() and (p / "SKILL.md").exists()},
+        "codex": {p.name for p in (HOME / ".codex/skills").iterdir()
+                  if (p / "SKILL.md").exists()},
+    }
+    clean = True
+    for agent in ("claude-code", "codex"):
+        missing = expect[agent] - actual[agent]
+        extra = actual[agent] - expect[agent]
+        if agent == "codex":
+            extra -= CODEX_TOLERATED
+        # third-party はシェルループ形式で記載されることがあるため、
+        # install 行に拾えなくても manifest 本文に名前があれば記載済みとみなす
+        extra = {s for s in extra if f"`{s}`" not in manifest and f"  {s}\n" not in manifest}
+        for s in sorted(missing):
+            fail(f"{agent}: manifest 記載だが未インストール: {s}")
+            clean = False
+        for s in sorted(extra):
+            fail(f"{agent}: インストール済みだが manifest 非記載: {s}")
+            clean = False
+    if clean:
+        ok(f"claude-code {len(actual['claude-code'])} / codex {len(actual['codex'])} skills all reconciled")
+
+
+# 3. repo AGENTS.md vs common-rules near-miss ---------------------------------
+
+
+def check_agents_md_sync() -> None:
+    section("3. repo AGENTS.md duplicated bullets vs common-rules")
+    common = [l.strip() for l in (REPO / ".chezmoitemplates/common-rules.md").read_text().splitlines()
+              if l.strip().startswith("- ")]
+    agents = [l.strip() for l in (REPO / "AGENTS.md").read_text().splitlines()
+              if l.strip().startswith("- ")]
+    drifted = 0
+    for a in agents:
+        if a in common:
+            continue  # 逐語一致の重複は Q8 決定により許容
+        best = difflib.get_close_matches(a, common, n=1, cutoff=0.85)
+        if best:
+            fail(f"近似非一致(片側編集の疑い): repo側: {a[:60]}… / common側: {best[0][:60]}…")
+            drifted += 1
+    if drifted == 0:
+        ok("duplicated bullets are verbatim-identical (no divergence)")
+
+
+# 4. stale vocabulary ----------------------------------------------------------
+
+STALE_TERMS = [
+    "gemini-cli-runner", "qwen-code", "dot_gemini", "dot_qwen",
+    "opus-4-7", "opus-4-8", "gpt-5-5-tuning",
+    "docs-entrypoint-check",
+]
+STALE_EXCLUDE_DIRS = {"docs/adr", ".context", ".git"}
+
+
+def check_stale_terms() -> None:
+    section("4. stale vocabulary (退役 skill / CLI 名)")
+    hits = 0
+    self_path = pathlib.Path(__file__).resolve()
+    for path in REPO.rglob("*"):
+        if not path.is_file() or path.resolve() == self_path:
+            continue
+        rel = path.relative_to(REPO)
+        if any(str(rel).startswith(d) for d in STALE_EXCLUDE_DIRS):
+            continue
+        if path.suffix in {".pyc", ".png", ".jpg"}:
+            continue
+        try:
+            text = path.read_text(errors="ignore")
+        except Exception:
+            continue
+        for term in STALE_TERMS:
+            if term in text:
+                fail(f"{rel}: 退役語彙 '{term}' が残存")
+                hits += 1
+    if hits == 0:
+        ok("no stale terms outside docs/adr")
+
+
+# 5. role agents md/toml drift -------------------------------------------------
+
+
+def _md_body(path: pathlib.Path) -> str:
+    text = path.read_text()
+    parts = text.split("---", 2)
+    return parts[2].strip() if len(parts) > 2 else text.strip()
+
+
+def _toml_instructions(path: pathlib.Path) -> str:
+    m = re.search(r'developer_instructions\s*=\s*"""\n?(.*?)"""', path.read_text(), re.S)
+    return m.group(1).strip() if m else ""
+
+
+# personal / tech は意図的なホスト別分岐を含む(memory 前提や Codex context
+# handoff 節)。ここに載る agent の乖離は warn ではなく info(ADR-0065)
+AGENT_INTENTIONAL_DIVERGENCE = {"personal", "tech"}
+
+
+def check_agent_drift() -> None:
+    section("5. role agents md/toml drift")
+    md_dir = REPO / "dot_claude/agents"
+    toml_dir = REPO / "dot_codex/agents"
+    checked = 0
+    for md in sorted(md_dir.glob("private_*.md")):
+        name = md.stem.removeprefix("private_")
+        toml = toml_dir / f"private_{name}.toml"
+        if not toml.exists():
+            fail(f"{name}: toml 側が存在しない")
+            continue
+        md_desc = re.search(r"^description:\s*(.+)$", md.read_text(), re.M)
+        toml_desc = re.search(r'^description\s*=\s*"(.+)"$', toml.read_text(), re.M)
+        if md_desc and toml_desc and md_desc.group(1).strip() != toml_desc.group(1).strip():
+            warn(f"{name}: description が md/toml で非一致")
+        if _md_body(md) != _toml_instructions(toml):
+            if name in AGENT_INTENTIONAL_DIVERGENCE:
+                info(f"{name}: md/toml 非一致(意図的ホスト分岐として許容済み)")
+            else:
+                warn(f"{name}: md/toml が非一致(意図的ホスト分岐か片側編集かを目視確認)")
+        else:
+            checked += 1
+    if checked:
+        ok(f"{checked} agents verbatim-synced")
+    info("1Password 側との突合は `opmaterialize diff` を別途実行(op 認証が必要)")
+
+
+# 5b. layer violation: role names must not appear in global instruction sources
+
+
+ROLE_TERMS = ["`tech`", "`biz`", "`personal`", "`worker`", "`mechanical`"]
+GLOBAL_SOURCES = [".chezmoitemplates/common-rules.md", "dot_codex/AGENTS.md.tmpl"]
+
+
+def check_layer_violation() -> None:
+    section("5b. role names in global instructions (ADR-0063)")
+    hits = 0
+    for f in GLOBAL_SOURCES:
+        text = (REPO / f).read_text()
+        for term in ROLE_TERMS:
+            if term in text:
+                fail(f"{f}: role 名 {term} が残存(委譲契約は agent 定義が正本)")
+                hits += 1
+    if hits == 0:
+        ok("global instructions are role-agnostic")
+
+
+# 6. description length --------------------------------------------------------
+
+DESC_LIMIT = 400
+
+
+def check_description_length() -> dict[str, int]:
+    section(f"6. skill description length (first-party > {DESC_LIMIT} chars = warn)")
+    totals = {"all": 0, "first_party": 0}
+    for skill_md in sorted((HOME / ".claude/skills").glob("*/SKILL.md")):
+        fm = skill_md.read_text(errors="ignore").split("---")
+        if len(fm) < 3:
+            continue
+        m = re.search(r"description:\s*[\">|]?\s*(.*?)(?=\n[a-zA-Z_-]+:|\Z)", fm[1], re.S)
+        if not m:
+            continue
+        name = skill_md.parent.name
+        n = len(re.sub(r"\s+", " ", m.group(1)).strip())
+        totals["all"] += n
+        first_party = (REPO / "skills" / name).is_dir()
+        if first_party:
+            totals["first_party"] += n
+        if n > DESC_LIMIT:
+            if first_party:
+                warn(f"{name}: description {n} chars")
+            else:
+                info(f"{name}: description {n} chars (external; 編集権なし)")
+    info(f"毎セッション露出の description 合計: {totals['all']} chars (first-party {totals['first_party']})")
+    return totals
+
+
+# 6b. exposure budget vs baseline ---------------------------------------------
+
+BASELINE_PATH = REPO / "docs/instruction-baseline.json"
+
+
+def _agent_description_chars() -> int:
+    total = 0
+    for md in (HOME / ".claude/agents").glob("*.md"):
+        m = re.search(r"^description:\s*(.+)$", md.read_text(errors="ignore"), re.M)
+        if m:
+            total += len(m.group(1).strip())
+    return total
+
+
+def check_exposure_budget(desc_totals: dict[str, int]) -> None:
+    section("6b. exposure budget vs baseline")
+    if not BASELINE_PATH.exists():
+        info("docs/instruction-baseline.json 未作成(cleaner の初回実行で作成)")
+        return
+    baseline = json.loads(BASELINE_PATH.read_text())["surfaces"]
+    current = {
+        "common_rules_chars": len((REPO / ".chezmoitemplates/common-rules.md").read_text()),
+        "skill_descriptions_chars_firstparty": desc_totals["first_party"],
+        "agent_descriptions_chars": _agent_description_chars(),
+    }
+    for key, cur in current.items():
+        base = baseline.get(key)
+        if base is None:
+            info(f"{key}: baseline 未記録 (current {cur})")
+        elif cur > base:
+            warn(f"{key}: {cur} chars > baseline {base}(意図的なら同一変更内で baseline を更新)")
+        else:
+            ok(f"{key}: {cur} <= baseline {base}")
+
+
+# 7. doctor aggregation --------------------------------------------------------
+
+
+def check_doctor() -> None:
+    section("7. skill-manager doctor")
+    doctor = HOME / ".claude/skills/skill-manager/scripts/executable_doctor.sh"
+    if not doctor.exists():
+        warn("doctor script not found; skipped")
+        return
+    try:
+        out = subprocess.run(["bash", str(doctor)], capture_output=True, text=True, timeout=120)
+        summary = json.loads(out.stdout).get("summary", {})
+    except Exception as e:  # noqa: BLE001
+        warn(f"doctor 実行失敗: {e}")
+        return
+    if summary.get("fail", 1) > 0:
+        fail(f"doctor fail={summary['fail']} (warn={summary.get('warn')})")
+    else:
+        ok(f"doctor pass={summary.get('pass')} warn={summary.get('warn')} fail=0")
+
+
+
+
+# 8. runner mapping parity (ratchet R1, ADR-0065) --------------------------------
+
+
+def check_runner_mapping_parity() -> None:
+    section("8. runner mapping parity (skills/*-cli-runner vs orchestration table)")
+    doc = REPO / "skills/agent-orchestration-evaluator/SKILL.md"
+    text = doc.read_text()
+    m = re.search(r"Expected runner mapping:\n(.*?)(?=\n#|\Z)", text, re.S)
+    if not m:
+        fail("agent-orchestration-evaluator: Expected runner mapping 表が見つからない")
+        return
+    table_runners = set(re.findall(r"`([a-z0-9-]+-cli-runner)`", m.group(1)))
+    # op / gws はツール CLI runner でありモデル backend ではない。
+    # orchestration の runner mapping 表はモデル委譲経路だけを扱う
+    non_model = {"op-cli-runner", "gws-cli-runner"}
+    repo_runners = {p.name for p in (REPO / "skills").glob("*-cli-runner")} - non_model
+    missing = repo_runners - table_runners
+    retired = table_runners - repo_runners
+    for r in sorted(missing):
+        fail(f"runner mapping 表に {r} の行が無い(新設 runner の未反映)")
+    for r in sorted(retired):
+        fail(f"runner mapping 表に退役済み {r} が残存")
+    if not missing and not retired:
+        ok(f"{len(repo_runners)} runners all mapped")
+
+
+# 9. shared runner blocks verbatim (ratchet R2, ADR-0065) ------------------------
+
+THINK_HARD_SENTENCE = (
+    'Do not add "think hard", fixed progress-update scaffolds, '
+    "or mandatory step-by-step narration to simulate effort."
+)
+THINK_HARD_FILES = ["codex-cli-runner", "copilot-cli-runner", "grok-cli-runner", "agy-cli-runner"]
+SHARED_SECTIONS = [
+    ("Default Response Format", "## Default Response Format",
+     ["codex-cli-runner", "claude-cli-runner", "copilot-cli-runner"]),
+    ("Image Success Criteria (additional)", "### Success Criteria (additional)",
+     ["codex-cli-runner", "grok-cli-runner"]),
+    ("Image Cautions", "### Cautions",
+     ["codex-cli-runner", "grok-cli-runner"]),
+]
+
+
+def _section_body(text: str, heading: str) -> str | None:
+    idx = text.find(heading + "\n")
+    if idx < 0:
+        return None
+    level = heading.split(" ")[0]
+    rest = text[idx + len(heading) + 1:]
+    # 同レベル以上の次見出しで節を閉じる(## の直後に ### 節が終わるケースを含む)
+    m = re.search(rf"^#{{1,{len(level)}}} ", rest, re.M)
+    body = rest[: m.start()] if m else rest
+    return re.sub(r"\s+", " ", body).strip()
+
+
+def check_shared_blocks() -> None:
+    section("9. shared runner blocks verbatim (乖離 = fail)")
+    bad = 0
+    for name in THINK_HARD_FILES:
+        text = (REPO / "skills" / name / "SKILL.md").read_text()
+        if THINK_HARD_SENTENCE not in text:
+            fail(f"{name}: think-hard 句が基準形と乖離")
+            bad += 1
+    for label, heading, files in SHARED_SECTIONS:
+        bodies = {}
+        for name in files:
+            body = _section_body((REPO / "skills" / name / "SKILL.md").read_text(), heading)
+            if body is None:
+                fail(f"{name}: 共有節 '{label}' が見つからない")
+                bad += 1
+            else:
+                bodies[name] = body
+        if len(set(bodies.values())) > 1:
+            fail(f"共有節 '{label}' が {sorted(bodies)} 間で乖離(正本一本化するか同時更新すること)")
+            bad += 1
+    if bad == 0:
+        ok("think-hard 句 + 共有 3 節 verbatim-synced")
+
+
+# 10. manifest exception revisit (ratchet R6, ADR-0065) --------------------------
+
+
+def check_manifest_exception_revisit() -> None:
+    section("10. manifest parity exceptions carry revisit conditions")
+    bad = 0
+    for i, line in enumerate((REPO / "docs/skills-install-manifest.md").read_text().splitlines(), 1):
+        if "例外" in line and "install" in line and not line.lstrip().startswith(("`", "gh ")):
+            if "revisit" not in line and "期限" not in line:
+                warn(f"manifest:{i}: parity 例外に revisit 条件が無い")
+                bad += 1
+    if bad == 0:
+        ok("all parity exceptions carry revisit conditions")
+
+
+def main() -> int:
+    no_doctor = "--no-doctor" in sys.argv
+    print(f"instruction-gc @ {REPO}")
+    check_adr_expiry()
+    check_manifest_parity()
+    check_agents_md_sync()
+    check_stale_terms()
+    check_agent_drift()
+    check_layer_violation()
+    desc_totals = check_description_length()
+    check_exposure_budget(desc_totals)
+    check_runner_mapping_parity()
+    check_shared_blocks()
+    check_manifest_exception_revisit()
+    if not no_doctor:
+        check_doctor()
+    print(f"\nresult: fail={len(FAILS)} warn={len(WARNS)}")
+    return 1 if FAILS else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

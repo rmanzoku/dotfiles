@@ -1,6 +1,6 @@
 ---
 name: copilot-cli-runner
-description: Run GitHub Copilot CLI subprocesses with observable JSONL logs, timeouts, config-preserving model, effort, agent, and permission controls, prompt profiles, and artifact-based failure handling. Use when Claude Code or Codex needs to invoke `copilot -p`, call Copilot from the CLI, CopilotをCLIで呼ぶ, Copilot CLIをサブプロセス実行する, or delegate long-running research, review, generation, or file work to Copilot while distinguishing real hangs from silent execution.
+description: "Run GitHub Copilot CLI subprocesses with observable JSONL logs, timeouts, model, effort, and permission controls, and artifact-based failure handling. Use when Claude Code or Codex needs `copilot -p`, CopilotをCLIで呼ぶ, or delegates long-running research, review, or generation work to Copilot."
 ---
 
 # Copilot CLI Runner
@@ -35,11 +35,13 @@ Before running Copilot, make these decisions explicitly:
 - Permission overrides: add `--allow-tool`, `--allow-url`, `--add-dir`, or broader flags only when explicitly supplied by the caller. Do not infer grants inside this runner.
 - Timeout: rely on the 600-second wrapper default unless the task contract says otherwise.
 - Budget: choose an effort level, timeout, and `--max-ai-credits` together. Reserve time and credits for required artifacts; run optional repository-wide diagnostics only after required outputs exist.
-- Fable budget: do not assume that a nominal minimum cap can complete one model turn. Size the hard cap from a comparable observed run or the current available balance, and require the model to write required artifacts before optional exploration. Fable turns can run for minutes; size `--timeout-seconds` together with the credit cap instead of relying on the 600-second default.
+- Fable budget: use 300 AI credits as the default floor for artifact-producing work, and never launch Fable below 200. Observed Fable 5 usage was 41.32 credits before a first tool call and 154.53 credits before a review artifact create call, so the CLI minimum and a 150 cap cannot complete representative file work. For larger work, estimate model turns at 50 credits each plus a 100-credit completion margin, then use the greater of that estimate or 300. If the user sets a lower budget, explain that it cannot complete and ask for a viable cap before launching.
+- Fable prompt packing: put all permitted review input directly in the source prompt when practical. The wrapper embeds the source prompt in `run.prompt.md`, avoiding a second model/tool round trip just to open `prompt.md`. Keep separate files only when their size or artifact semantics justify the additional turn.
+- Fable retry: after a session-limit failure, use the observed usage to choose one completion-sized cap. Do not retry through incremental caps that cannot cover the remaining model/tool turns.
 - Prompt profile: use `--prompt-profile auto` by default; it adds an Opus 5 or Fable 5 generation adapter when `--model` names that generation. Pass `--prompt-profile none` only when the source prompt already contains a complete Copilot-specific launch contract.
 - Extra Copilot args: pass each Copilot CLI token as its own `--extra-copilot-arg=<token>` value, especially for leading-hyphen tokens.
 
-Do not add "think hard", fixed progress-update scaffolds, or mandatory step-by-step narration to simulate reasoning. Use `--effort` only when the caller explicitly asks for an effort override.
+Do not add "think hard", fixed progress-update scaffolds, or mandatory step-by-step narration to simulate effort. Use `--effort` only when the caller explicitly asks for an effort override.
 
 ## Standard Command Shape
 

@@ -51,7 +51,7 @@ DADSと無関係な汎用UIライブラリの実装やアプリのビジネス�
 配色・レイアウトの審美性を高めたい場合は、本スキル（トークン・制約・a11y）と `frontend-design` スキルを併用する。DADSはトークンと原則を与え、frontend-design は構図・余白リズム・タイポ階層の練り込みを助ける。
 
 ## 既存導入例（DADS Mode B）
-- 元の導入元である `rmanzoku/consulting-gates` では **DADS Mode B** として、構造・原則は DADS 厳守、キーカラーのみ GATESブルー（`--brand-deep #000071` / `--brand #00118f` / `--key #264af4`）へ差し替えている。
+- 導入例（DADS Mode B）: 構造・原則は DADS 厳守のまま、キーカラー 3 種のみ自ブランド色（例: `--brand-deep` / `--brand` / `--key` を自組織の deep / base / accent へ）差し替える。
 - 同様にブランド色を差し替える場合も、8pxグリッド、タイプスケール、角丸/影スケール、AAコントラスト、色以外の手掛かりは維持する。
 
 ## ライセンス（要点）

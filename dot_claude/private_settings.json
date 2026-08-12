@@ -37,6 +37,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "root=\"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}\"; script=\"$root/scripts/phase_artifact_hook.py\"; [ -f \"$script\" ] || exit 0; python3 \"$script\" --event stop",
+            "timeout": 10
+          },
+          {
+            "type": "command",
             "command": "[ -n \"$SUPERSET_HOME_DIR\" ] && [ -x \"$SUPERSET_HOME_DIR/hooks/notify.sh\" ] && \"$SUPERSET_HOME_DIR/hooks/notify.sh\" || true"
           }
         ]

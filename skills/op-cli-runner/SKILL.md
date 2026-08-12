@@ -1,6 +1,6 @@
 ---
 name: op-cli-runner
-description: Run 1Password CLI (`op`) and `opmaterialize` commands through one direct, observable subprocess path with bounded timeouts, redacted command metadata, and failure classification. Use when Claude Code or Codex needs to execute `op`, `opmaterialize`, `op signin`, restore 1Password-backed files, debug `account is not signed in`, `promptError`, `authorization prompt dismissed`, `authorization timeout`, or avoid silent hangs around 1Password CLI authentication without introducing alternate fallback execution paths.
+description: "Run 1Password CLI (`op`) and `opmaterialize` through one direct, observable subprocess path with bounded timeouts, redacted metadata, and failure classification. Use when executing `op` or `opmaterialize`, restoring 1Password-backed files, or debugging `account is not signed in`, `promptError`, or authorization timeouts without silent hangs or fallback paths."
 ---
 
 # OP CLI Runner
@@ -87,18 +87,11 @@ For 1Password-backed dotfiles:
      -- opmaterialize restore
    ```
 
-4. If restore reports target conflicts, do not force overwrite silently. Ask for explicit confirmation before `opmaterialize restore --force`.
-5. After restore, run `chezmoi apply` and drift checks through the owning dotfile workflow.
+4. For conflict confirmation and post-restore steps (`chezmoi apply`, drift checks), follow the Restore section of `$onepassword-secret-materialize`; it owns restore policy.
 
 ## Wrapper Availability
 
-Treat a missing `opmaterialize` wrapper separately from 1Password authentication failures. If `opmaterialize` is not found or exits 127 before contacting 1Password, use the bundled script path from the installed skill:
-
-```bash
-OP_ACCOUNT=my.1password.com \
-OP_DOTFILES_MATERIALIZE_VAULT="Dotfiles Secrets" \
-sh ~/.codex/skills/onepassword-secret-materialize/scripts/opmaterialize diff
-```
+Treat a missing `opmaterialize` wrapper separately from 1Password authentication failures. If `opmaterialize` is not found or exits 127 before contacting 1Password, use the bundled script from the installed `$onepassword-secret-materialize` skill; its path and usage conditions are defined in that skill's bundled-script sections.
 
 Use this only for wrapper availability. Do not use it as an authentication fallback.
 

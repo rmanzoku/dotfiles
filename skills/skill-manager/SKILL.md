@@ -233,6 +233,7 @@ Do not use this as the default way to understand whether a skill is healthy in C
 The standard Codex path is a valid install under `~/.codex/skills` or `.agents/skills`, including direct copies created by `gh skill install`.
 
 Use only for skills whose policy is explicitly `mirror`.
+The policy is defined per target repository (for example a repo that syncs skills via symlink mirroring). This dotfiles repo defines no `mirror` policy; never use `sync codex` here.
 When repository policy requires Claude/Codex parity, sync the complete managed set in both directions and verify versions as well as names.
 Otherwise, do not assume all Claude skills should sync into Codex.
 Skip:

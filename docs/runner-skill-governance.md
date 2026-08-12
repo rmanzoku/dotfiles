@@ -21,6 +21,12 @@ Prefer the smallest mechanism that prevents the observed problem:
 4. New runner Skill
 5. New general Skill
 
+## Layering
+
+Skills carry reproducible procedure only: inputs, steps, thresholds, artifacts, and validation. Philosophy, rationale, and design tradeoffs live one layer up — in ADRs and in judgment-bearing role agents (for example `tech`) — and skills reference them instead of restating them.
+
+The reason is operational, demonstrated by the docs-evaluator case (ADR-0065): a principle embedded in a skill as narrative weights findings but detects nothing. Behavior changes only when the principle is compiled into judgment wording — a threshold, a named check, a fixed checklist. When a skill needs a principle to act, convert it into a check or a probe; when a decision needs judgment, escalate to the role layer instead of growing prose in the skill.
+
 ## Good Runner Candidates
 
 Runner work is justified when one or more of these risks are recurring or likely to cause real damage:

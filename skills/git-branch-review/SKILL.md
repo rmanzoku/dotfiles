@@ -32,7 +32,7 @@ Build a current, conservative view of local and remote Git branch state before d
 Use the bundled script for the standard report:
 
 ```bash
-python skills/git-branch-review/scripts/executable_git_branch_review.py /path/to/repo
+python3 skills/git-branch-review/scripts/executable_git_branch_review.py /path/to/repo
 ```
 
 For this repository when the skill is installed outside the target repo, resolve the script path from the skill folder first.

@@ -26,6 +26,7 @@ ERROR_RE = re.compile(
 
 OPUS_5_MODEL_RE = re.compile(r"opus[-_.]?5(?!\d)|(?<![\d.])5[-_.]?opus", re.IGNORECASE)
 FABLE_5_MODEL_RE = re.compile(r"fable[-_.]?5(?!\d)|(?<![\d.])5[-_.]?fable", re.IGNORECASE)
+FABLE_5_MIN_AI_CREDITS = 200
 
 COPILOT_ADAPTER = """\
 ## Copilot CLI Prompt Adapter
@@ -199,6 +200,7 @@ def resolve_prompt_profile(requested: str, model: str | None) -> str:
 
 
 def write_launch_prompt(path: Path, source_prompt: Path, profile: str) -> None:
+    source_prompt_text = source_prompt.read_text(encoding="utf-8")
     sections = [
         "---",
         "task: copilot-cli-runner-launch",
@@ -218,7 +220,7 @@ def write_launch_prompt(path: Path, source_prompt: Path, profile: str) -> None:
         [
             "## Source Prompt",
             "",
-            f"Read and follow `{source_prompt}`. Write requested artifacts exactly where specified.",
+            source_prompt_text,
             "",
             "Stop only after every requested item is completed or explicitly marked blocked with the missing input.",
             "",
@@ -317,6 +319,7 @@ def main() -> int:
     output_dir = Path(args.output_dir).expanduser().resolve()
     cwd = Path(args.cwd).expanduser().resolve()
     timeout_bin = resolve_timeout_bin(args.timeout_bin)
+    prompt_profile = resolve_prompt_profile(args.prompt_profile, args.model)
 
     if args.max_ai_credits is not None and args.max_ai_credits <= 0:
         print("--max-ai-credits must be positive", file=sys.stderr)
@@ -331,6 +334,18 @@ def main() -> int:
     if is_real_copilot and args.max_ai_credits is None and not args.allow_uncapped:
         print(
             "real Copilot runs require --max-ai-credits or explicit --allow-uncapped",
+            file=sys.stderr,
+        )
+        return 2
+    if (
+        is_real_copilot
+        and prompt_profile == "fable-5"
+        and args.max_ai_credits is not None
+        and args.max_ai_credits < FABLE_5_MIN_AI_CREDITS
+    ):
+        print(
+            f"Fable 5 runs require --max-ai-credits >= {FABLE_5_MIN_AI_CREDITS}; "
+            "use 300 or more for artifact-producing work",
             file=sys.stderr,
         )
         return 2
@@ -352,7 +367,6 @@ def main() -> int:
     launch_prompt_path = output_dir / f"{args.stream_name}.prompt.md"
     summary_path = output_dir / "summary.json"
     failure_path = output_dir / "failure.md"
-    prompt_profile = resolve_prompt_profile(args.prompt_profile, args.model)
     write_launch_prompt(launch_prompt_path, prompt_file, prompt_profile)
 
     short_prompt = (
