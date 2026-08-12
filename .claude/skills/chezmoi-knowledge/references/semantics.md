@@ -26,7 +26,7 @@ Use it to correct assumptions before editing or explaining behavior.
 
 - `private_` does not mean "rename by stripping `private_`".
 - It means the target file or directory is created without group/world permissions.
-- Example: `dot_codex/private_config.toml.tmpl` becomes `~/.codex/config.toml`, and the important semantic point is that the target is private and rendered from a template.
+- Example: `dot_codex/modify_private_config.toml.tmpl` manages `~/.codex/config.toml`; `private_` keeps the target private, while `modify_` preserves unmanaged runtime sections and merges the declared settings.
 
 ### 3. Hidden Source Directories Are Usually Ignored
 

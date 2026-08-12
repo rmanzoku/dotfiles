@@ -27,7 +27,6 @@ error() { printf '\033[1;31m[error]\033[0m %s\n' "$1" >&2; }
 EXTRA_FILES=(
   "dot_claude/CLAUDE.md:.claude/CLAUDE.md:raw"
   "dot_claude/settings.json:.claude/settings.json:raw"
-  "dot_codex/private_config.toml.tmpl:.codex/config.toml:codex_config_template"
 )
 
 EXPECTED_IGNORED_SOURCES=(
@@ -226,14 +225,6 @@ report_managed_diff_paths() {
 
   while IFS= read -r diff_path; do
     [ -n "$diff_path" ] || continue
-
-    if [ "$diff_path" = "/.codex/config.toml" ]; then
-      if files_differ "${repo_root}/dot_codex/private_config.toml.tmpl" "${HOME}/.codex/config.toml" "codex_config_template"; then
-        echo "$diff_path"
-        has_reported=true
-      fi
-      continue
-    fi
 
     echo "$diff_path"
     has_reported=true

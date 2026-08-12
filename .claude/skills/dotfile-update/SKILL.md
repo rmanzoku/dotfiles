@@ -56,7 +56,7 @@ Step artifact:
 | 設定カテゴリ | Claude | Codex |
 |---|---|---|
 | 指示ファイル | `dot_claude/CLAUDE.md` | `dot_codex/AGENTS.md.tmpl` |
-| クライアント設定 | `dot_claude/private_settings.json` | `dot_codex/private_config.toml.tmpl` |
+| クライアント設定 | `dot_claude/private_settings.json` | `dot_codex/modify_private_config.toml.tmpl` |
 
 判断ルール:
 - 共通運用ルール、保存方針、Plan ルールのように AI 間でそろえるべき内容は、対応ファイルを確認して必要なら反映する。
@@ -64,13 +64,12 @@ Step artifact:
 - `json` と `toml` のようにフォーマットが違う場合は、構文を合わせて再構成する。直接コピーしない。
 - 対応先があるか曖昧な場合は、既存ファイル内容と product の実在キーを確認してから判断する。
 - 反映しなかった場合は、「対応項目なし」「product 固有」「今回は同期不要」など理由を作業結果に残す。
-- Gemini の `~/.gemini/` では `settings.json` と `GEMINI.md` を managed 対象候補として確認し、`oauth_creds.json`、`trustedFolders.json`、`history/` などの state ファイルは原則 `.chezmoiignore` で非管理にする。
 
 フォーマット差分の扱い:
 - `settings.json` を `config.toml` へそのままコピーしない。必ず `toml` として再構成する。
 - JSON のオブジェクトは TOML のテーブルに写像する。入れ子は `[section.subsection]` を使う。
 - 文字列・真偽値・数値・配列は型を保って変換する。キー名や型を推測で変えない。
-- Claude / Qwen 固有キーを Codex 側に同名キーで作らない。Codex に等価な設定がある場合だけ対応する TOML セクションへ移す。
+- Claude 固有キーを Codex 側に同名キーで作らない。Codex に等価な設定がある場合だけ対応する TOML セクションへ移す。
 - Codex 設定は `model`、`model_reasoning_effort`、`approval_policy`、`sandbox_mode`、`[features]`、`[mcp_servers.<name>]` など Codex 実在キーに合わせる。
 
 ### 3. 共通ルールの同期
@@ -83,7 +82,7 @@ Step artifact:
 - 共通ルールを変更する場合は `.chezmoitemplates/common-rules.md` だけを編集し、各 `.tmpl` へ同文を複製しない。
 - AI 固有の挙動は各 `.tmpl` の固有セクション（`# Codex 固有ルール` など）へ書く。
 - `includeTemplate` に渡す `localDir` / `globalFile` は AI ごとの指示保存先パラメータである。共通 template 内に新しい分岐やパラメータを増やす場合は ADR で背景を残す。
-- 共通ルール変更後は `chezmoi cat ~/.codex/AGENTS.md ~/.gemini/GEMINI.md ~/.qwen/QWEN.md` で render を確認する。
+- 共通ルール変更後は `chezmoi cat ~/.codex/AGENTS.md` で render を確認する。
 
 Claude Code 固有ルール（`# Claude Code 固有ルール` 以降）は `dot_claude/CLAUDE.md` のみに存在する。
 

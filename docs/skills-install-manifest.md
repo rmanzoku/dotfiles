@@ -157,3 +157,22 @@ repo root で実行する。
 gh skill install freee/freee-mcp freee-api-skill --pin v0.30.2 --agent claude-code --scope user --force
 gh skill install freee/freee-mcp freee-api-skill --pin v0.30.2 --agent codex --scope user --force
 ```
+
+### `vercel-cli`
+
+- upstream: [vercel/vercel `skills/vercel-cli`](https://github.com/vercel/vercel/tree/main/skills/vercel-cli)
+- status: installed globally for Claude Code and Codex
+- install mode: direct `gh skill install` from the official upstream GitHub repository
+- upstream tag: `@vercel/static-build@2.11.13`
+- pin: `6331571e2fe14de31a01d00deead9e7a349e53a6` (the tag's commit; `gh skill --pin` cannot parse the tag's two `@` characters)
+- reason: use the official CLI workflow and safety guidance without vendoring the large reference set into this repo
+- update note: inspect changes with `gh skill preview vercel/vercel vercel-cli` before updating both agents to the same ref
+
+#### Claude Code / Codex refresh
+
+repo root で実行する。
+
+```bash
+gh skill install vercel/vercel vercel-cli --pin 6331571e2fe14de31a01d00deead9e7a349e53a6 --agent claude-code --scope user --force
+gh skill install vercel/vercel vercel-cli --pin 6331571e2fe14de31a01d00deead9e7a349e53a6 --agent codex --scope user --force
+```
