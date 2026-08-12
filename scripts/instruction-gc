@@ -16,6 +16,7 @@ check スクリプト。検出のみで修正はしない。定期実行は仕�
   8. runner mapping parity(表と skills/*-cli-runner の 1:1 / fail)
   9. runner skill 間の共有ブロック逐語検査(fail)
   10. manifest parity 例外の revisit 条件(warn)
+  11. first-party description 間の固有トークン重複(取り合い候補 / info)
 
 usage: scripts/instruction-gc [--no-doctor]
 exit code: fail が 1 件以上あれば 1、なければ 0
@@ -423,6 +424,38 @@ def check_manifest_exception_revisit() -> None:
         ok("all parity exceptions carry revisit conditions")
 
 
+# 11. distinctive-token overlap across first-party descriptions (ratchet R3) ----
+
+# 発火 probe で「正しい近接」と裁定済みの共有トークン(裁定 run を併記)
+ALLOWED_SHARED_DESC_TOKENS = {
+    "opmaterialize",  # op-cli-runner / onepassword-secret-materialize: run1 probe S1 で正 routing 確認
+}
+
+
+def check_description_token_overlap() -> None:
+    section("11. distinctive-token overlap across first-party descriptions")
+    owners: dict[str, set[str]] = {}
+    for skill_md in sorted((HOME / ".claude/skills").glob("*/SKILL.md")):
+        name = skill_md.parent.name
+        if not (REPO / "skills" / name).is_dir():
+            continue
+        fm = skill_md.read_text(errors="ignore").split("---")
+        if len(fm) < 3:
+            continue
+        m = re.search(r"description:\s*[\">|]?\s*(.*?)(?=\n[a-zA-Z_-]+:|\Z)", fm[1], re.S)
+        if not m:
+            continue
+        for tok in set(re.findall(r"`([^`]{2,40})`", m.group(1))):
+            owners.setdefault(tok, set()).add(name)
+    dup = 0
+    for tok, names in sorted(owners.items()):
+        if len(names) > 1 and tok not in ALLOWED_SHARED_DESC_TOKENS:
+            info(f"token `{tok}` を {len(names)} skill が主張: {', '.join(sorted(names))}(発火 probe で裁定し、正の近接なら allowlist へ)")
+            dup += 1
+    if dup == 0:
+        ok("no unadjudicated shared tokens")
+
+
 def main() -> int:
     no_doctor = "--no-doctor" in sys.argv
     print(f"instruction-gc @ {REPO}")
@@ -437,6 +470,7 @@ def main() -> int:
     check_runner_mapping_parity()
     check_shared_blocks()
     check_manifest_exception_revisit()
+    check_description_token_overlap()
     if not no_doctor:
         check_doctor()
     print(f"\nresult: fail={len(FAILS)} warn={len(WARNS)}")
