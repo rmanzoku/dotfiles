@@ -22,14 +22,6 @@ info() { printf '\033[1;34m[info]\033[0m %s\n' "$1"; }
 warn() { printf '\033[1;33m[warn]\033[0m %s\n' "$1"; }
 error() { printf '\033[1;31m[error]\033[0m %s\n' "$1" >&2; }
 
-# chezmoi ignore されている dot_* ファイルの直接比較対象
-# dot_ プレフィックスを . に変換したパスと対応
-EXTRA_FILES=(
-  "dot_claude/CLAUDE.md:.claude/CLAUDE.md:raw"
-  "dot_claude/settings.json:.claude/settings.json:raw"
-  "dot_codex/private_config.toml.tmpl:.codex/config.toml:codex_config_template"
-)
-
 EXPECTED_IGNORED_SOURCES=(
   "AGENTS.md"
   "Brewfile"
@@ -83,157 +75,13 @@ EOF
   return 0
 }
 
-render_template_to_file() {
-  local repo_file="$1"
-  local output_file="$2"
-  perl -0pe 's/\{\{ \.chezmoi\.homeDir \}\}/$ENV{HOME}/g' "$repo_file" >"$output_file"
-}
-
-normalize_codex_config_to_file() {
-  local input_file="$1"
-  local output_file="$2"
-
-  perl -0ne '
-    s/^notify = \[.*\]\n+//mg;
-    s/\n*\z/\n/s;
-    print;
-  ' "$input_file" >"$output_file"
-}
-
-files_differ() {
-  local repo_file="$1"
-  local actual_file="$2"
-  local mode="$3"
-
-  case "$mode" in
-    raw)
-      ! cmp -s "$repo_file" "$actual_file"
-      ;;
-    codex_config)
-      local normalized_repo normalized_actual
-      normalized_repo="$(mktemp)"
-      normalized_actual="$(mktemp)"
-      normalize_codex_config_to_file "$repo_file" "$normalized_repo"
-      normalize_codex_config_to_file "$actual_file" "$normalized_actual"
-      if cmp -s "$normalized_repo" "$normalized_actual"; then
-        rm -f "$normalized_repo" "$normalized_actual"
-        return 1
-      fi
-      rm -f "$normalized_repo" "$normalized_actual"
-      return 0
-      ;;
-    codex_config_template)
-      local rendered_repo normalized_repo normalized_actual
-      rendered_repo="$(mktemp)"
-      normalized_repo="$(mktemp)"
-      normalized_actual="$(mktemp)"
-      render_template_to_file "$repo_file" "$rendered_repo"
-      normalize_codex_config_to_file "$rendered_repo" "$normalized_repo"
-      normalize_codex_config_to_file "$actual_file" "$normalized_actual"
-      if cmp -s "$normalized_repo" "$normalized_actual"; then
-        rm -f "$rendered_repo" "$normalized_repo" "$normalized_actual"
-        return 1
-      fi
-      rm -f "$rendered_repo" "$normalized_repo" "$normalized_actual"
-      return 0
-      ;;
-    template)
-      local rendered_file
-      rendered_file="$(mktemp)"
-      render_template_to_file "$repo_file" "$rendered_file"
-      if cmp -s "$rendered_file" "$actual_file"; then
-        rm -f "$rendered_file"
-        return 1
-      fi
-      rm -f "$rendered_file"
-      return 0
-      ;;
-    *)
-      warn "未知の比較モードです: $mode"
-      return 1
-      ;;
-  esac
-}
-
-copy_actual_to_repo() {
-  local repo_file="$1"
-  local actual_file="$2"
-  local mode="$3"
-
-  case "$mode" in
-    raw)
-      cp "$actual_file" "$repo_file"
-      ;;
-    codex_config)
-      normalize_codex_config_to_file "$actual_file" "$repo_file"
-      ;;
-    codex_config_template)
-      normalize_codex_config_to_file "$actual_file" "$repo_file"
-      perl -0pi -e 's/\Q$ENV{HOME}\E/\{\{ .chezmoi.homeDir \}\}/g' "$repo_file"
-      ;;
-    template)
-      perl -0pe 's/\Q$ENV{HOME}\E/\{\{ .chezmoi.homeDir \}\}/g' "$actual_file" >"$repo_file"
-      ;;
-  esac
-}
-
-copy_repo_to_actual() {
-  local repo_file="$1"
-  local actual_file="$2"
-  local mode="$3"
-
-  case "$mode" in
-    raw)
-      cp "$repo_file" "$actual_file"
-      ;;
-    codex_config)
-      cp "$repo_file" "$actual_file"
-      ;;
-    codex_config_template)
-      render_template_to_file "$repo_file" "$actual_file"
-      ;;
-    template)
-      render_template_to_file "$repo_file" "$actual_file"
-      ;;
-  esac
-}
-
-check_extra_drift() {
-  local repo_root="$1"
-  local has_drift=false
-  for entry in "${EXTRA_FILES[@]}"; do
-    IFS=':' read -r repo_rel actual_rel mode <<<"$entry"
-    local repo_file="${repo_root}/${repo_rel}"
-    local actual_file="${HOME}/${actual_rel}"
-    if [ -f "$repo_file" ] && [ -f "$actual_file" ]; then
-      if files_differ "$repo_file" "$actual_file" "$mode"; then
-        echo "/${actual_rel}"
-        has_drift=true
-      fi
-    elif [ -f "$repo_file" ] && [ ! -f "$actual_file" ]; then
-      echo "/${actual_rel} (missing)"
-      has_drift=true
-    fi
-  done
-  $has_drift
-}
-
 report_managed_diff_paths() {
-  local repo_root="$1"
-  local diff_output="$2"
+  local diff_output="$1"
   local has_reported=false
   local diff_path
 
   while IFS= read -r diff_path; do
     [ -n "$diff_path" ] || continue
-
-    if [ "$diff_path" = "/.codex/config.toml" ]; then
-      if files_differ "${repo_root}/dot_codex/private_config.toml.tmpl" "${HOME}/.codex/config.toml" "codex_config_template"; then
-        echo "$diff_path"
-        has_reported=true
-      fi
-      continue
-    fi
 
     echo "$diff_path"
     has_reported=true
@@ -252,17 +100,11 @@ check_drift() {
     has_drift=true
   fi
 
-  # chezmoi 管理対象
   diff_output="$(chezmoi diff -S "$repo_root" 2>/dev/null || true)"
   if [ -n "$diff_output" ]; then
-    if report_managed_diff_paths "$repo_root" "$diff_output"; then
+    if report_managed_diff_paths "$diff_output"; then
       has_drift=true
     fi
-  fi
-
-  # chezmoi ignore 対象（直接比較）
-  if check_extra_drift "$repo_root"; then
-    has_drift=true
   fi
 
   if ! $has_drift; then
@@ -315,17 +157,6 @@ case "${1:-}" in
     echo ""
     if confirm "上記のファイルの変更をリポジトリに取り込みますか？"; then
       chezmoi re-add -S "$repo_root"
-      # chezmoi ignore 対象は直接コピー
-      for entry in "${EXTRA_FILES[@]}"; do
-        IFS=':' read -r repo_rel actual_rel mode <<<"$entry"
-        repo_file="${repo_root}/${repo_rel}"
-        actual_file="${HOME}/${actual_rel}"
-        if [ -f "$actual_file" ] && [ -f "$repo_file" ]; then
-          if files_differ "$repo_file" "$actual_file" "$mode"; then
-            copy_actual_to_repo "$repo_file" "$actual_file" "$mode"
-          fi
-        fi
-      done
       info "変更を取り込みました。"
     else
       info "キャンセルしました。"
@@ -343,17 +174,6 @@ case "${1:-}" in
     echo ""
     if confirm "上記のファイルをリポジトリの状態に戻しますか？"; then
       chezmoi apply --force -S "$repo_root"
-      # chezmoi ignore 対象は直接コピー
-      for entry in "${EXTRA_FILES[@]}"; do
-        IFS=':' read -r repo_rel actual_rel mode <<<"$entry"
-        repo_file="${repo_root}/${repo_rel}"
-        actual_file="${HOME}/${actual_rel}"
-        if [ -f "$repo_file" ]; then
-          if [ ! -f "$actual_file" ] || files_differ "$repo_file" "$actual_file" "$mode"; then
-            copy_repo_to_actual "$repo_file" "$actual_file" "$mode"
-          fi
-        fi
-      done
       info "復元しました。"
     else
       info "キャンセルしました。"

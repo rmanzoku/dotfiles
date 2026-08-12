@@ -184,8 +184,6 @@ Conductor などのツールが git worktree を立ち上げて dotfiles を編�
 | `.codex/AGENTS.md` | Codex エージェント設定 |
 | `.codex/config.toml` | Codex モデル・プロジェクト設定 |
 | `.copilot/settings.json` | GitHub Copilot CLI のモデル・plugin 設定 |
-| `.qwen/QWEN.md` | Qwen ユーザー設定 |
-| `.qwen/settings.json` | Qwen モデルプロバイダー設定 |
 
 ### repo ローカルで管理するファイル
 
@@ -204,7 +202,7 @@ Conductor などのツールが git worktree を立ち上げて dotfiles を編�
 | `.claude/CLAUDE.md` | `dot_claude/CLAUDE.md` |
 | `.claude/settings.json` | `dot_claude/private_settings.json` |
 | `.codex/AGENTS.md` | `dot_codex/AGENTS.md.tmpl` |
-| `.codex/config.toml` | `dot_codex/private_config.toml.tmpl` |
+| `.codex/config.toml` | `dot_codex/modify_private_config.toml.tmpl` |
 | `.copilot/settings.json` | `dot_copilot/private_settings.json` |
 | `.config/op/dotfiles.env.example` | `dot_config/private_op/dotfiles.env.example` |
 | `.local/bin/oprun` | `dot_local/bin/executable_oprun` |
@@ -226,9 +224,6 @@ mkdir -p ~/.config/op
 cp ~/.config/op/dotfiles.env.example ~/.config/op/dotfiles.env
 chmod 600 ~/.config/op/dotfiles.env
 $EDITOR ~/.config/op/dotfiles.env
-
-# 例: GEMINI_API_KEY を必要とするコマンドを 1Password 経由で実行
-oprun gemini --help
 
 # 直接読む必要がある単発処理
 op read 'op://<vault>/<item>/<field>'

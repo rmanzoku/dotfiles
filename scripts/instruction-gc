@@ -146,6 +146,8 @@ def check_agents_md_sync() -> None:
 
 STALE_TERMS = [
     "gemini-cli-runner", "qwen-code", "dot_gemini", "dot_qwen",
+    ".qwen/", "Qwen", "~/.gemini/", "oprun gemini",
+    "dot_codex/private_config.toml.tmpl",
     "opus-4-7", "opus-4-8", "gpt-5-5-tuning",
     "docs-entrypoint-check",
 ]
