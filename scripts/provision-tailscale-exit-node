@@ -1,0 +1,104 @@
+#!/bin/sh
+# Provision a Linux VPS as a Tailscale exit node.
+#
+# Run as root on a freshly created or rebuilt Ubuntu LTS instance. Idempotent.
+# Procedure and rationale: docs/tailscale-remote-access.md and
+# docs/adr/0067-adopt-tailscale-with-vps-exit-node.md
+#
+# ACCESS ROUTE
+#   A rebuilt host has no Tailscale state, so the tailnet route does not exist yet.
+#   Temporarily attaching the provider's inbound-SSH security group to reach it is a normal
+#   part of this procedure, not an exception. It must stay temporary: confirm tailnet SSH
+#   works BEFORE detaching the group and removing the public ufw rule.
+#
+#   The provider's rebuild dialog may offer no startup-script field even when the initial
+#   create wizard does, so provisioning after a rebuild is a manual run of this script.
+#
+# It deliberately does NOT run `tailscale up`. Joining the tailnet needs interactive
+# authentication and a decision about tags, so that stays a separate, visible step.
+#
+# Progress is printed for every stage so a silent hang is distinguishable from success.
+
+set -eu
+
+log() { printf '[provision] %s\n' "$1"; }
+
+log "0/5 waiting for the dpkg lock to clear"
+# A freshly rebuilt instance runs unattended-upgrades at first boot, which holds
+# /var/lib/dpkg/lock-frontend. Without this wait the Tailscale install fails with
+# "Could not get lock ... held by process N (unattended-upgr)" and, under set -e, the whole
+# script aborts before anything is applied. Observed on the 2026-08-12 rebuild.
+waited=0
+while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+  log "0/5 dpkg lock still held, waited ${waited}s"
+  waited=$((waited + 10))
+  sleep 10
+  if [ "$waited" -ge 600 ]; then
+    log "0/5 FAILED: dpkg lock still held after ${waited}s; investigate before retrying"
+    exit 1
+  fi
+done
+log "0/5 done: lock is free after ${waited}s"
+
+log "1/5 installing Tailscale"
+curl -fsSL https://tailscale.com/install.sh | sh
+log "1/5 done: $(tailscale version | head -1)"
+
+log "2/5 enabling IP forwarding (persisted)"
+printf 'net.ipv4.ip_forward = 1\nnet.ipv6.conf.all.forwarding = 1\n' \
+  > /etc/sysctl.d/99-tailscale.conf
+sysctl -p /etc/sysctl.d/99-tailscale.conf
+log "2/5 done"
+
+log "3/5 configuring ufw"
+# ACCEPT is required for exit-node forwarding. ufw defaults to DROP, which breaks the exit
+# node silently: the node looks healthy but clients get no traffic.
+sed -i 's/^DEFAULT_FORWARD_POLICY=.*/DEFAULT_FORWARD_POLICY="ACCEPT"/' /etc/default/ufw
+ufw allow in on tailscale0
+ufw allow 41641/udp
+ufw reload
+log "3/5 done"
+
+log "4/5 hardening sshd"
+# Pins the intent explicitly. 10- sorts ahead of 50-cloud-init.conf and sshd takes the first
+# value it obtains, so a regenerated cloud-init drop-in cannot silently restore password auth.
+printf 'PasswordAuthentication no\nKbdInteractiveAuthentication no\nPermitRootLogin prohibit-password\n' \
+  > /etc/ssh/sshd_config.d/10-hardening.conf
+sshd -t
+systemctl restart ssh
+log "4/5 done: $(sshd -T | grep '^passwordauthentication')"
+
+log "5/5 applying UDP GRO forwarding tuning (persisted)"
+if [ "$(systemctl is-enabled networkd-dispatcher 2>/dev/null || true)" = "enabled" ]; then
+  NETDEV=$(ip -o route get 8.8.8.8 | cut -f 5 -d " ")
+  printf '#!/bin/sh\n\nethtool -K %s rx-udp-gro-forwarding on rx-gro-list off\n' "$NETDEV" \
+    > /etc/networkd-dispatcher/routable.d/50-tailscale
+  chmod 755 /etc/networkd-dispatcher/routable.d/50-tailscale
+  /etc/networkd-dispatcher/routable.d/50-tailscale
+  log "5/5 done on ${NETDEV}: $(ethtool -k "$NETDEV" | grep rx-udp-gro-forwarding)"
+else
+  log "5/5 SKIPPED: networkd-dispatcher is not enabled; tuning would not persist"
+fi
+
+cat <<'NEXT'
+
+[provision] Host configuration complete. Remaining manual steps:
+
+  1. Join the tailnet as a tagged resource (requires tagOwners for tag:exit-node in the ACL):
+       tailscale up --advertise-exit-node --advertise-tags=tag:exit-node
+     Tagged devices get key expiry disabled automatically.
+
+  2. Approve in the admin console:
+       Machines -> filter property:exit-node -> Edit route settings -> Use as exit node
+
+  3. Once tailnet SSH is confirmed working, close public access:
+       ufw --force delete allow OpenSSH
+     then detach the inbound-SSH security group in the provider console.
+     Order matters: confirm tailnet access BEFORE closing the public route.
+
+  4. Remove the stale node entry for the previous instance from the admin console.
+     Do this BEFORE rejoining, or the rebuilt host registers under a suffixed name.
+
+  5. Enable the provider's deletion lock.
+
+NEXT
