@@ -1,4 +1,8 @@
 
+if [ -d "/Applications/ChatGPT.app/Contents/Resources" ]; then
+  export PATH="/Applications/ChatGPT.app/Contents/Resources:$PATH"
+fi
+
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
 if [ -x /opt/homebrew/bin/rbenv ]; then
