@@ -83,6 +83,20 @@ instruction-cleaner の挙動 probe 側には、保守側の規定を削ると�
   新規不明点 0 の 2 連続クリア（厳密な収束条件）には未達のまま resource cutoff で打ち切った
 - 検証 artifact は `.context/reversibility-rule/`（git 管理外）
 
+### skill 本文への適用と判定例の精緻化（2026-08-17 追記、Claude Opus 5 / Claude Code）
+
+skills/ の保守的ガードを本 ADR の 3 条件で棚卸しし（docs-evaluator `guidance-consistency-review`、95 件）、
+自走境界と矛盾する規定を skill 側で閉じた。あわせて判定例を 2 点精緻化した（表の行は変えない）。
+
+- **merged な remote branch の削除（private repository）**: 表では「branch / tag の削除 = 不可逆 (1)」だが、
+  default branch に到達可能な tip を持ち open PR も protection もない branch は、tip SHA を記録すれば
+  `git push origin <sha>:refs/heads/<name>` で実行者だけが復元でき、到達先は private repository の
+  collaborator（境界内）にとどまる。「事前バックアップ後の破壊操作」行に該当するものとして、
+  `git-branch-review` は private のときだけ自動削除し、public / internal / 不明では提案に留める
+- **private repository への PR comment 投稿**: PR 作成と同じく可逆（author が削除でき、通知先は境界内）。
+  `handoff` は private のとき push / PR 作成 / comment 投稿まで行い、それ以外は draft-first を維持する
+- 可視性は `gh repo view --json visibility` で毎回解決し、`PRIVATE` 以外は保守側に倒す
+
 ### 想定される影響
 
 - private repository での commit / push / PR 作成が確認なしで進むため、往復が減る

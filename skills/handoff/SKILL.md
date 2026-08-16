@@ -11,11 +11,11 @@ Create a handoff packet that lets a fresh agent resume work without guessing. Ch
 
 ## Workflow
 
-1. Determine the destination:
+1. Determine the destination, and resolve repository visibility once with `gh repo view --json visibility` when the destination involves GitHub. When it is `PRIVATE`, pushing the working branch, creating or updating the PR, and posting the handoff comment are done by this skill (each is undoable by the author and reaches only collaborators inside the boundary). When it is public, internal, or unknown (`gh` unavailable), draft instead and make that step the user's next action.
    - Same worktree or same machine: write an ignored artifact under `.context/handoff/`.
    - Cross-machine continuation: use a PR as the default carrier.
-   - PR reviewer or collaborator: draft a PR comment unless the user explicitly asks to post it.
-   - Deferred work without an open PR: write `.context/handoff/` locally and recommend the smallest durable next carrier, usually a branch or PR.
+   - PR reviewer or collaborator: post a PR comment (private) or draft it (otherwise).
+   - Deferred work without an open PR: write `.context/handoff/` locally, then push the branch and open the PR as the durable carrier (private) or recommend it as the next carrier (otherwise).
 2. Inspect the repository instead of asking when the answer is discoverable from git status, recent diffs, tests, docs, existing `.context` artifacts, or PR metadata available in the environment.
 3. Identify ignored or local-only context:
    - For same-worktree handoff, reference `.context` artifact paths directly.
@@ -25,7 +25,7 @@ Create a handoff packet that lets a fresh agent resume work without guessing. Ch
    - Never include secret values, tokens, private keys, real `op://...` references, local account names, or sensitive manifest rows.
    - If secret-backed files must be saved, restored, diffed, or explained, use `$onepassword-secret-materialize`.
    - In the handoff, describe only the non-secret action needed, for example "restore secret-backed files with `$onepassword-secret-materialize` before running integration checks."
-5. Write or draft the handoff. External writes such as posting PR comments, creating issues, or editing durable docs require explicit user instruction.
+5. Write the handoff and deliver it through the medium chosen in step 1.
 
 ## Medium Rules
 
@@ -36,10 +36,9 @@ Create a handoff packet that lets a fresh agent resume work without guessing. Ch
 
 PR handoff:
 - Use for cross-machine continuation by default.
-- Prefer a concise PR comment draft that points to commits, files, tests, unresolved decisions, and next steps.
-- If the user asks to post the comment, use the available GitHub workflow or CLI after verifying the target PR.
-- Do not depend on local ignored files; extract the relevant facts into the PR comment draft.
-- If the PR, branch, commit, or other durable anchor is unknown, state that it is missing and make confirming or creating it the next action. Do not invent anchors or treat a local branch name as cross-machine durable unless it is pushed or otherwise verified.
+- Prefer a concise PR comment that points to commits, files, tests, unresolved decisions, and next steps; verify the target PR with `gh pr view` before posting.
+- Do not depend on local ignored files; extract the relevant facts into the PR comment.
+- If the PR, branch, commit, or other durable anchor is missing, create it (push the branch, open the PR) in a private repository; otherwise state that it is missing and make creating it the next action. Do not invent anchors or treat a local branch name as cross-machine durable unless it is pushed or otherwise verified.
 
 Durable repository docs:
 - Use only when the handoff contains lasting policy, architecture decisions, or repeated operational knowledge.
@@ -49,8 +48,7 @@ Durable repository docs:
 Deferred work:
 - Capture the current stopping point, the next concrete action, blockers, validation already run, and validation still needed.
 - Keep the scope narrow enough that the next agent can start with one command or one file read.
-- If there is no durable carrier yet and cross-machine use is likely, recommend creating or updating a PR.
-- If no PR exists yet, write a pre-PR handoff and make PR creation or update the next action instead of forcing the output into PR comment form.
+- If there is no durable carrier yet and cross-machine use is likely, write a pre-PR handoff and open the PR with it as the PR body in a private repository; otherwise make PR creation the next action instead of forcing the output into PR comment form.
 
 ## Handoff Content
 

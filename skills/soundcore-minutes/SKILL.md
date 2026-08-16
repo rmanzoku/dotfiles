@@ -33,7 +33,7 @@ Use this skill to operate the Soundcore AI web UI and turn a selected recording 
 - When multiple recordings match the user's criteria, list the candidates and ask the user to choose before extracting confidential content.
 - Do not store transcript content in repo files, `.context/`, or logs unless the user explicitly asks for a file artifact.
 - If creating a file artifact, ask for or infer a destination inside the current workspace; do not write sensitive minutes to `/tmp` or unrelated folders.
-- If the browser tool cannot read a virtualized transcript reliably, use the site's visible export, copy, or download controls when available. Confirm with the user before triggering downloads.
+- If the browser tool cannot read a virtualized transcript reliably, use the site's visible export, copy, or download controls when available.
 
 ## Output
 

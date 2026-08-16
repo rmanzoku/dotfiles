@@ -43,7 +43,7 @@ description: "Audit and rewrite prompts, AGENTS.md / CLAUDE.md, skills, and agen
 4. **既定でより簡潔 — brevity 指示を見直す**
    5.6 は 5.5 より簡潔に応答する。旧 brevity 指示は不要になりうるため、残す前に再評価する。一貫した長さ制御は `text.verbosity`、task 固有の要求は prompt で指定する。
 5. **Autonomy boundary は安全アクションを明示列挙**
-   routine な local action は無承認で実行を許可し、external write・破壊的操作・scope 拡大は承認必須にする。「安全なアクション」を名指しで列挙するのが公式推奨。
+   可逆な in-scope 作業(共通ルール `## 可逆性と自走範囲` の 3 条件)は無承認で実行を許可し、3 条件を満たさない操作と scope 拡大は承認必須にする。無承認で行える安全なアクションを名指しで列挙するのが公式推奨。生成先の agent は共通ルールを読まないため、3 条件も prompt 内に展開する。
 6. **Pro Mode は eval-gated**
    `reasoning.mode: "pro"` は品質がレイテンシより重要な単一回答向け。eval で効果を確認してから採用し、既定にはしない。
 7. **Persisted reasoning を multi-turn 設計に組み込む**
@@ -63,9 +63,8 @@ description: "Audit and rewrite prompts, AGENTS.md / CLAUDE.md, skills, and agen
 
 依頼を受けたら、監査や編集に入る前に以下の順で実行モードを決める。判定結果は artifact または作業結果に 1 行残す。
 
-1. 依頼に複数の合理的解釈があり、設計判断や合意形成を伴う場合は、確認フローで依頼を完全指定にしてから再判定する。
-2. 中央モデルレジストリ、`AGENTS.md` / `CLAUDE.md` の構造変更、既存 skill description 変更、複数ファイル横断改修は Plan を提示してから監査フローへ進む。
-3. 依頼が明確で変更が局所かつ破壊性がない場合は単発処理とし、「典型修正パターン」だけ参照して小さく直す。
+1. 中央モデルレジストリや `AGENTS.md` / `CLAUDE.md` の構造変更を伴う場合は Plan を提示してから監査フローへ進む。
+2. 依頼が明確で変更が局所なら単発処理とし、「典型修正パターン」だけ参照して小さく直す。それ以外は監査フローへ進む。
 
 ## 監査フロー
 
@@ -125,7 +124,7 @@ artifact: `.context/<task>/04-verify.md`
 ### E. Autonomy boundary が曖昧
 
 - 兆候: 何を無承認で実行してよいか列挙がない、または全アクションに承認を要求。
-- 対応: 安全な routine local action を名指しで列挙して無承認許可し、external write・破壊的操作・scope 拡大だけ承認必須にする。
+- 対応: 可逆な in-scope 作業を名指しで列挙して無承認許可し、3 条件を満たさない操作と scope 拡大だけ承認必須にする。
 
 ### F. Pro Mode の乱用・未評価採用
 
@@ -172,19 +171,11 @@ artifact: `.context/<task>/04-verify.md`
 
 > Outcome: <期待成果>
 > Success criteria: <検証可能な完了条件>
-> Allowed side effects: <安全な routine local action の列挙は無承認可 / external write・破壊的操作・scope 拡大は要承認>
+> Allowed side effects: <可逆な in-scope 作業の列挙は無承認可 / 3 条件を満たさない操作と scope 拡大は要承認>
 > Output shape: <形式>
 > Completion rule: 全項目を完了するか、`[blocked]` と不足入力を明示して停止する。
 
 API 側は現行 effort を baseline に 1 段下げをテストし、長さは `text.verbosity` で制御する。公開する tool はタスク関連に絞る。
-
-## ユーザーへの確認が必須なケース
-
-- 中央モデルレジストリの書き換え。
-- `AGENTS.md` / `CLAUDE.md` の構造的書き換え。
-- 既存 skill の `description` 変更。
-- API クライアントコード、tool handler、provider adapter の編集。
-- irreversible side effect を持つ tool policy の変更。
 
 ## 完了条件
 

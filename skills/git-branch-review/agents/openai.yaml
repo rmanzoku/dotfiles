@@ -1,4 +1,4 @@
 interface:
   display_name: "Git Branch Review"
-  short_description: "Review Git branches, remote PRs, and deletion candidates"
-  default_prompt: "Use $git-branch-review to inspect this repository's local and remote branch and pull request state, classify remote deletion candidates, and fast-forward clean branches when safe."
+  short_description: "Refresh branches, clean up merged ones, review remote PRs and deletion candidates"
+  default_prompt: "Use $git-branch-review to fetch, fast-forward tracking branches, delete merged local branches (and merged origin branches when the repository is private), and report this repository's remaining branch and pull request state."
