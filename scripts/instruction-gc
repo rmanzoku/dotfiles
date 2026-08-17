@@ -152,7 +152,8 @@ STALE_TERMS = [
     "opus-4-7", "opus-4-8", "gpt-5-5-tuning",
     "docs-entrypoint-check", "--fast-forward-clean",
 ]
-STALE_EXCLUDE_DIRS = {"docs/adr", ".context", ".git"}
+# .claude/worktrees は Claude Code の nested worktree(repo 全体の複製 + その .context)。走査対象外
+STALE_EXCLUDE_DIRS = {"docs/adr", ".context", ".git", ".claude/worktrees"}
 
 
 def check_stale_terms() -> None:
