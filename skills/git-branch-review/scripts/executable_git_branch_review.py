@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Summarize local git branch state and optionally fast-forward a clean branch."""
+"""Refresh git branch state: fetch, fast-forward tracking branches that are behind,
+delete local branches already merged into the default remote branch, delete merged
+origin branches when the repository is private, and report remote branch / PR state."""
 
 from __future__ import annotations
 
@@ -73,12 +75,14 @@ def default_ref(cwd: Path) -> str:
 
 
 def local_branches(cwd: Path) -> list[dict[str, str]]:
-    fmt = "%(refname:short)%00%(upstream:short)%00%(committerdate:iso8601)%00%(objectname:short)%00%(subject)"
+    fmt = "%(refname:short)%00%(upstream:short)%00%(committerdate:iso8601)%00%(objectname:short)%00%(objectname)%00%(subject)"
     result = git(cwd, "for-each-ref", "refs/heads", f"--format={fmt}", "--sort=-committerdate", check=True)
     rows: list[dict[str, str]] = []
     for line in result.stdout.splitlines():
-        name, upstream, updated, sha, subject = (line.split("\0") + [""] * 5)[:5]
-        rows.append({"name": name, "upstream": upstream, "updated": updated, "sha": sha, "subject": subject})
+        name, upstream, updated, sha, oid, subject = (line.split("\0") + [""] * 6)[:6]
+        rows.append(
+            {"name": name, "upstream": upstream, "updated": updated, "sha": sha, "oid": oid, "subject": subject}
+        )
     return rows
 
 
@@ -116,6 +120,19 @@ def remote_branches(cwd: Path) -> list[dict[str, str]]:
             }
         )
     return rows
+
+
+def worktree_branches(cwd: Path) -> dict[str, str]:
+    """Map branch name -> worktree path for every branch checked out in a worktree."""
+    result = git(cwd, "worktree", "list", "--porcelain")
+    mapping: dict[str, str] = {}
+    path = ""
+    for line in result.stdout.splitlines():
+        if line.startswith("worktree "):
+            path = line.removeprefix("worktree ")
+        elif line.startswith("branch refs/heads/"):
+            mapping[line.removeprefix("branch refs/heads/")] = path
+    return mapping
 
 
 def is_ancestor(cwd: Path, branch: str, base_ref: str) -> bool | None:
@@ -159,6 +176,16 @@ def same_repository_prs(prs: list[dict[str, object]], branch: str) -> list[dict[
         pr
         for pr in prs
         if pr.get("headRefName") == branch and pr.get("isCrossRepository") is not True
+    ]
+
+
+def merged_default_prs(
+    prs: list[dict[str, object]], branch: str, oid: str, default_name: str
+) -> list[dict[str, object]]:
+    return [
+        pr
+        for pr in same_repository_prs(prs, branch)
+        if pr.get("mergedAt") and pr.get("headRefOid") == oid and pr.get("baseRefName") == default_name
     ]
 
 
@@ -209,6 +236,33 @@ def protected_branches(cwd: Path) -> tuple[set[str], str]:
     return set(result.stdout.splitlines()), "ok"
 
 
+def repository_visibility(cwd: Path) -> str:
+    """Return `private`, `public`, `internal`, or `unknown: <reason>` for the GitHub repository."""
+    if shutil.which("gh") is None:
+        return "unknown: gh unavailable"
+    result = run(["gh", "repo", "view", "--json", "visibility", "--jq", ".visibility"], cwd)
+    if result.code != 0:
+        return "unknown: gh error"
+    visibility = result.stdout.strip().lower()
+    if visibility in ("private", "public", "internal"):
+        return visibility
+    return "unknown: unexpected visibility"
+
+
+def delete_remote_branches(cwd: Path, candidates: list[dict[str, str]]) -> list[tuple[str, str, str]]:
+    """Delete origin branches one by one. Returns (branch, tip, result).
+
+    Rollback handle: `git push origin <tip>:refs/heads/<branch>`; the tip stays reachable from the
+    default branch (candidates are merged), so the objects are not lost.
+    """
+    results: list[tuple[str, str, str]] = []
+    for row in candidates:
+        result = git(cwd, "push", "origin", "--delete", row["name"])
+        outcome = "deleted" if result.code == 0 else f"failed: {result.stderr or result.stdout}"
+        results.append((row["name"], row["sha"], outcome))
+    return results
+
+
 def remote_branch_classification(
     cwd: Path,
     row: dict[str, str],
@@ -242,13 +296,7 @@ def remote_branch_classification(
 
     merged = is_ancestor(cwd, row["ref"], default_remote)
     default_name = default_remote.removeprefix("origin/") if default_remote else ""
-    merged_prs = [
-        pr
-        for pr in branch_prs
-        if pr.get("mergedAt")
-        and pr.get("headRefOid") == row["oid"]
-        and pr.get("baseRefName") == default_name
-    ]
+    merged_prs = merged_default_prs(prs, row["name"], row["oid"], default_name)
     if merged is True:
         return "safe deletion candidate", f"merged into {default_remote}"
     if merged_prs:
@@ -259,34 +307,125 @@ def remote_branch_classification(
     return "needs confirmation", "not merged and no open PR"
 
 
-def maybe_fast_forward(cwd: Path, branch: str, upstream: str) -> str:
-    if not upstream:
-        return "skipped: no upstream"
-    if git(cwd, "status", "--porcelain").stdout:
-        return "skipped: worktree dirty"
-    counts = ahead_behind(cwd, "HEAD", upstream)
-    if counts is None:
-        return "skipped: cannot compare upstream"
-    ahead, behind = counts
-    if ahead > 0:
-        return f"skipped: local branch is ahead by {ahead}"
-    if behind == 0:
-        return "skipped: already up to date"
-    result = git(cwd, "pull", "--ff-only")
-    if result.code == 0:
-        return f"fast-forwarded {branch} from {upstream}"
-    return f"failed: {result.stderr or result.stdout}"
+def fast_forward_branches(
+    cwd: Path,
+    current: str,
+    dirty: bool,
+    rows: list[dict[str, str]],
+    checked_out: dict[str, str],
+) -> list[tuple[str, str, str, str]]:
+    """Fast-forward every local tracking branch that is strictly behind its upstream.
+
+    Returns (branch, before, after, result) rows for branches that were behind.
+    Rollback handle: the previous tip stays reachable from the new tip; `git reset --hard <before>`
+    (current branch) or `git branch -f <branch> <before>` restores it.
+    """
+    results: list[tuple[str, str, str, str]] = []
+    for row in rows:
+        name, upstream = row["name"], row["upstream"]
+        if not upstream:
+            continue
+        if git(cwd, "show-ref", "--verify", "--quiet", f"refs/remotes/{upstream}").code != 0:
+            continue
+        counts = ahead_behind(cwd, name, upstream)
+        if counts is None:
+            continue
+        ahead, behind = counts
+        if behind == 0:
+            continue
+        before = row["sha"]
+        if ahead > 0:
+            results.append((name, before, before, f"skipped: diverged (ahead {ahead}, behind {behind})"))
+            continue
+        if name == current:
+            if dirty:
+                results.append((name, before, before, "skipped: worktree dirty"))
+                continue
+            result = git(cwd, "pull", "--ff-only")
+        elif name in checked_out:
+            results.append((name, before, before, f"skipped: checked out at {checked_out[name]}"))
+            continue
+        else:
+            result = git(cwd, "fetch", ".", f"refs/remotes/{upstream}:refs/heads/{name}")
+        after = git(cwd, "rev-parse", "--short", name).stdout
+        if result.code == 0:
+            results.append((name, before, after, f"fast-forwarded from {upstream} (+{behind})"))
+        else:
+            results.append((name, before, after, f"failed: {result.stderr or result.stdout}"))
+    return results
+
+
+def cleanup_local_branches(
+    cwd: Path,
+    current: str,
+    default_remote: str,
+    prs: list[dict[str, object]],
+    pr_lookup_status: str,
+    remote_classes: dict[str, str],
+    checked_out: dict[str, str],
+) -> list[tuple[str, str, str, str, str]]:
+    """Delete local branches whose tip is already contained in the default remote branch.
+
+    Returns (branch, tip, upstream, reason, result). Rollback handle: `git branch <branch> <tip>`;
+    the tip stays reachable from the default branch, so nothing is lost.
+    """
+    if not default_remote:
+        return []
+    default_name = default_remote.removeprefix("origin/")
+    deleted: list[tuple[str, str, str, str, str]] = []
+    for row in local_branches(cwd):
+        name = row["name"]
+        if name in (current, default_name) or row["upstream"] == default_remote:
+            continue
+        if name in checked_out:
+            continue
+        if row["upstream"] and remote_classes.get(row["upstream"]) == "keep":
+            continue
+        merged = is_ancestor(cwd, name, default_remote)
+        if merged is True:
+            reason = f"merged into {default_remote}"
+        else:
+            merged_prs = merged_default_prs(prs, name, row["oid"], default_name) if pr_lookup_status == "ok" else []
+            if not merged_prs:
+                continue
+            reason = "tip matches merged PR " + ", ".join(f"#{pr.get('number')}" for pr in merged_prs)
+        result = git(cwd, "branch", "-D", name)
+        outcome = "deleted" if result.code == 0 else f"failed: {result.stderr or result.stdout}"
+        deleted.append((name, row["sha"], row["upstream"], reason, outcome))
+    return deleted
+
+
+def print_table(headers: list[str], rows: list[list[str]], aligns: list[str] | None = None) -> None:
+    aligns = aligns or ["---"] * len(headers)
+    print("| " + " | ".join(headers) + " |")
+    print("| " + " | ".join(aligns) + " |")
+    for row in rows:
+        print("| " + " | ".join(quote_cell(value) for value in row) + " |")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("repo", nargs="?", default=".", help="Repository path, default: current directory")
-    parser.add_argument("--fast-forward-clean", action="store_true", help="Fast-forward the current branch only when clean and safe")
     parser.add_argument("--no-fetch", action="store_true", help="Skip git fetch --prune")
+    parser.add_argument(
+        "--no-fast-forward",
+        action="store_true",
+        help="Do not fast-forward local tracking branches that are strictly behind upstream",
+    )
+    parser.add_argument(
+        "--no-local-cleanup",
+        action="store_true",
+        help="Do not delete local branches already merged into the default remote branch",
+    )
+    parser.add_argument(
+        "--no-remote-cleanup",
+        action="store_true",
+        help="Do not delete safe-deletion-candidate origin branches even when the repository is private",
+    )
     parser.add_argument(
         "--no-pr",
         action="store_true",
-        help="Skip GitHub PR and protected-branch lookups through gh",
+        help="Skip GitHub PR, protected-branch, and visibility lookups through gh (remote cleanup is then skipped)",
     )
     args = parser.parse_args()
 
@@ -306,38 +445,88 @@ def main() -> int:
     upstream = upstream_for(cwd, branch)
     dirty = bool(git(cwd, "status", "--porcelain").stdout)
     default_remote = default_ref(cwd)
-    ff_result = "not requested"
-    if args.fast_forward_clean:
-        ff_result = maybe_fast_forward(cwd, branch, upstream)
+    checked_out = worktree_branches(cwd)
+
+    ff_rows: list[tuple[str, str, str, str]] = []
+    if not args.no_fast_forward:
+        print("[git-branch-review] fast-forwarding tracking branches that are behind")
+        ff_rows = fast_forward_branches(cwd, branch, dirty, local_branches(cwd), checked_out)
 
     counts = ahead_behind(cwd, "HEAD", upstream) if upstream else None
     ahead = counts[0] if counts else "-"
     behind = counts[1] if counts else "-"
 
-    print("\n# Git Branch Review\n")
-    print("## Current Branch\n")
-    print("| field | value |")
-    print("| --- | --- |")
-    print(f"| repo | {quote_cell(str(cwd))} |")
-    print(f"| branch | {quote_cell(branch)} |")
-    print(f"| upstream | {quote_cell(upstream)} |")
-    print(f"| worktree | {'dirty' if dirty else 'clean'} |")
-    print(f"| ahead | {ahead} |")
-    print(f"| behind | {behind} |")
-    print(f"| default remote ref | {quote_cell(default_remote)} |")
-    print(f"| fast-forward | {quote_cell(ff_result)} |")
-
-    branch_rows = local_branches(cwd)
     remote_branch_rows = remote_branches(cwd)
     repository_pr_rows: list[dict[str, object]] = []
     pr_lookup_status = "skipped"
     protected: set[str] = set()
     protection_status = "skipped"
+    visibility = "skipped"
     if not args.no_pr:
         print("[git-branch-review] querying GitHub PRs")
         repository_pr_rows, pr_lookup_status = repository_prs(cwd)
         print("[git-branch-review] querying protected GitHub branches")
         protected, protection_status = protected_branches(cwd)
+        print("[git-branch-review] querying repository visibility")
+        visibility = repository_visibility(cwd)
+
+    remote_reviews: list[tuple[dict[str, str], str, str]] = []
+    for row in remote_branch_rows:
+        classification, reason = remote_branch_classification(
+            cwd, row, default_remote, repository_pr_rows, pr_lookup_status, protected, protection_status
+        )
+        remote_reviews.append((row, classification, reason))
+    remote_classes = {row["ref"]: status for row, status, _ in remote_reviews}
+
+    cleanup_rows: list[tuple[str, str, str, str, str]] = []
+    if not args.no_local_cleanup:
+        print("[git-branch-review] deleting local branches already merged into the default remote branch")
+        cleanup_rows = cleanup_local_branches(
+            cwd, branch, default_remote, repository_pr_rows, pr_lookup_status, remote_classes, checked_out
+        )
+
+    deletion_candidates = [row for row, status, _ in remote_reviews if status == "safe deletion candidate"]
+    remote_cleanup_rows: list[tuple[str, str, str]] = []
+    remote_cleanup_ran = not args.no_remote_cleanup and visibility == "private" and bool(deletion_candidates)
+    if remote_cleanup_ran:
+        print("[git-branch-review] repository is private: deleting safe-deletion-candidate origin branches")
+        remote_cleanup_rows = delete_remote_branches(cwd, deletion_candidates)
+
+    branch_rows = local_branches(cwd)
+
+    print("\n# Git Branch Review\n")
+    print("## Current Branch\n")
+    print_table(
+        ["field", "value"],
+        [
+            ["repo", str(cwd)],
+            ["branch", branch],
+            ["upstream", upstream],
+            ["worktree", "dirty" if dirty else "clean"],
+            ["ahead", str(ahead)],
+            ["behind", str(behind)],
+            ["default remote ref", default_remote],
+            ["repository visibility", visibility],
+        ],
+    )
+
+    print("\n## Fast-Forward\n")
+    if args.no_fast_forward:
+        print("Skipped by `--no-fast-forward`.")
+    elif not ff_rows:
+        print("No local tracking branch was behind its upstream.")
+    else:
+        print_table(["branch", "before", "after", "result"], [list(row) for row in ff_rows])
+        print("\nRollback: `git reset --hard <before>` for the current branch, `git branch -f <branch> <before>` otherwise.")
+
+    print("\n## Local Cleanup\n")
+    if args.no_local_cleanup:
+        print("Skipped by `--no-local-cleanup`.")
+    elif not cleanup_rows:
+        print("No local branch was merged into the default remote branch.")
+    else:
+        print_table(["branch", "tip", "upstream", "reason", "result"], [list(row) for row in cleanup_rows])
+        print("\nRollback: `git branch <branch> <tip>` (the tip stays reachable from the default branch).")
 
     open_pr_rows = [
         pr for pr in repository_pr_rows if pr.get("state") == "OPEN" and not pr.get("mergedAt")
@@ -350,8 +539,7 @@ def main() -> int:
         print("No open PRs found.")
     else:
         local_names = {row["name"] for row in branch_rows}
-        print("| PR | state | head | local branch | base | updated | title |")
-        print("| ---: | --- | --- | --- | --- | --- | --- |")
+        table_rows: list[list[str]] = []
         for pr in open_pr_rows:
             head = str(pr.get("headRefName") or "")
             state = str(pr.get("state") or "OPEN")
@@ -360,93 +548,85 @@ def main() -> int:
             number = str(pr.get("number") or "")
             url = str(pr.get("url") or "")
             pr_link = f"[#{number}]({url})" if number and url else number or url
-            print(
-                "| "
-                + " | ".join(
-                    quote_cell(value)
-                    for value in [
-                        pr_link,
-                        state,
-                        head,
-                        "yes" if head in local_names else "no",
-                        str(pr.get("baseRefName") or ""),
-                        str(pr.get("updatedAt") or ""),
-                        str(pr.get("title") or ""),
-                    ]
-                )
-                + " |"
+            table_rows.append(
+                [
+                    pr_link,
+                    state,
+                    head,
+                    "yes" if head in local_names else "no",
+                    str(pr.get("baseRefName") or ""),
+                    str(pr.get("updatedAt") or ""),
+                    str(pr.get("title") or ""),
+                ]
             )
+        print_table(
+            ["PR", "state", "head", "local branch", "base", "updated", "title"],
+            table_rows,
+            ["---:", "---", "---", "---", "---", "---", "---"],
+        )
 
     print("\n## Remote Branches\n")
-    remote_reviews: list[tuple[dict[str, str], str, str]] = []
-    if not remote_branch_rows:
+    if not remote_reviews:
         print("No origin remote branches found.")
     else:
         local_upstreams: dict[str, list[str]] = {}
         for local in branch_rows:
             if local["upstream"]:
                 local_upstreams.setdefault(local["upstream"], []).append(local["name"])
-        print("| remote branch | classification | reason | protected | local branches | updated | tip | subject |")
-        print("| --- | --- | --- | --- | --- | --- | --- | --- |")
-        for row in remote_branch_rows:
-            classification, reason = remote_branch_classification(
-                cwd,
-                row,
-                default_remote,
-                repository_pr_rows,
-                pr_lookup_status,
-                protected,
-                protection_status,
-            )
-            remote_reviews.append((row, classification, reason))
+        deleted_remote = {name for name, _, outcome in remote_cleanup_rows if outcome == "deleted"}
+        table_rows = []
+        for row, classification, reason in remote_reviews:
             protected_status = (
                 "unknown" if protection_status != "ok" else "yes" if row["name"] in protected else "no"
             )
-            print(
-                "| "
-                + " | ".join(
-                    quote_cell(value)
-                    for value in [
-                        row["ref"],
-                        classification,
-                        reason,
-                        protected_status,
-                        ", ".join(local_upstreams.get(row["ref"], [])),
-                        row["updated"],
-                        row["sha"],
-                        row["subject"],
-                    ]
-                )
-                + " |"
+            table_rows.append(
+                [
+                    row["ref"],
+                    classification + (" (deleted)" if row["name"] in deleted_remote else ""),
+                    reason,
+                    protected_status,
+                    ", ".join(local_upstreams.get(row["ref"], [])),
+                    row["updated"],
+                    row["sha"],
+                    row["subject"],
+                ]
             )
+        print_table(
+            ["remote branch", "classification", "reason", "protected", "local branches", "updated", "tip", "subject"],
+            table_rows,
+        )
+
+    print("\n## Remote Cleanup\n")
+    if args.no_remote_cleanup:
+        print("Skipped by `--no-remote-cleanup`.")
+    elif remote_cleanup_ran:
+        print_table(["remote branch", "tip", "result"], [list(row) for row in remote_cleanup_rows])
+        print("\nRollback: `git push origin <tip>:refs/heads/<branch>` (the tip stays reachable from the default branch).")
+    elif not deletion_candidates:
+        print("No origin branch qualifies as a safe deletion candidate.")
+    else:
+        print(f"Not run: repository visibility is `{visibility}` (only `private` repositories are cleaned server-side).")
 
     print("\n## Recommended Next Actions\n")
-    deletion_candidates = [row["name"] for row, status, _ in remote_reviews if status == "safe deletion candidate"]
     confirmation_needed = [row["name"] for row, status, _ in remote_reviews if status == "needs confirmation"]
     unknown_branches = [row["name"] for row, status, _ in remote_reviews if status == "unknown"]
-    if deletion_candidates:
+    if deletion_candidates and not remote_cleanup_ran:
+        names = " ".join(row["name"] for row in deletion_candidates)
         print(
-            "- Review these remote deletion candidates and obtain explicit approval before running "
-            f"`git push origin --delete`: {', '.join(deletion_candidates)}"
+            "- Safe deletion candidates left on origin (restore handle = tip SHA in the table): "
+            f"`git push origin --delete {names}`"
         )
-    else:
-        print("- No remote branches currently qualify as safe deletion candidates.")
+    elif not deletion_candidates:
+        print("- No remote branch currently qualifies as a safe deletion candidate.")
     if confirmation_needed:
-        print(
-            "- Confirm ownership and intent before deleting unmerged branches: "
-            + ", ".join(confirmation_needed)
-        )
+        print("- Not merged and no open PR (owner intent unknown): " + ", ".join(confirmation_needed))
     if unknown_branches:
-        print(
-            "- Resolve PR, protection, default-ref, or ancestry information gaps before deletion: "
-            + ", ".join(unknown_branches)
-        )
+        print("- PR, protection, default-ref, or ancestry information missing: " + ", ".join(unknown_branches))
     if dirty:
-        print("- Inspect the dirty worktree before updating the current branch.")
+        print("- Worktree is dirty; the current branch is not fast-forwarded while it has uncommitted changes.")
 
     print("\n## Local Branches\n")
-    print("| branch | upstream | ahead | behind | merged | PR | updated | tip | subject |")
-    print("| --- | --- | ---: | ---: | --- | --- | --- | --- | --- |")
+    table_rows = []
     for row in branch_rows:
         upstream_name = row["upstream"]
         counts = ahead_behind(cwd, row["name"], upstream_name) if upstream_name else None
@@ -454,24 +634,24 @@ def main() -> int:
         row_behind = str(counts[1]) if counts else "-"
         merged = merged_status(cwd, row["name"], default_remote)
         pr = pr_for_branch(repository_pr_rows, row["name"], pr_lookup_status)
-        print(
-            "| "
-            + " | ".join(
-                quote_cell(value)
-                for value in [
-                    row["name"],
-                    upstream_name,
-                    row_ahead,
-                    row_behind,
-                    merged,
-                    pr,
-                    row["updated"],
-                    row["sha"],
-                    row["subject"],
-                ]
-            )
-            + " |"
+        table_rows.append(
+            [
+                row["name"],
+                upstream_name,
+                row_ahead,
+                row_behind,
+                merged,
+                pr,
+                row["updated"],
+                row["sha"],
+                row["subject"],
+            ]
         )
+    print_table(
+        ["branch", "upstream", "ahead", "behind", "merged", "PR", "updated", "tip", "subject"],
+        table_rows,
+        ["---", "---", "---:", "---:", "---", "---", "---", "---", "---"],
+    )
 
     return 0
 

@@ -11,7 +11,8 @@ check スクリプト。検出のみで修正はしない。定期実行は仕�
   4. stale 語彙(退役 skill / CLI 名)の残存検出(fail)
   5. role agents md/toml の本文 drift 検査(fail)
   6. skill description 長(first-party 400 字超 = warn / external = info)
-  6b. 常時露出予算 vs docs/instruction-baseline.json(超過 = warn)
+  6b. 露出予算 vs docs/instruction-baseline.json(常時露出 3 面 + first-party skill 本文字数 +
+      skill 本文の確認ゲート語彙数。超過 = warn。ゲート数は人間往復の予算: ADR-0068)
   7. skill-manager doctor の fail 集約(fail)
   8. runner mapping parity(表と skills/*-cli-runner の 1:1 / fail)
   9. runner skill 間の共有ブロック逐語検査(fail)
@@ -149,7 +150,7 @@ STALE_TERMS = [
     ".qwen/", "Qwen", "~/.gemini/", "oprun gemini",
     "dot_codex/private_config.toml.tmpl",
     "opus-4-7", "opus-4-8", "gpt-5-5-tuning",
-    "docs-entrypoint-check",
+    "docs-entrypoint-check", "--fast-forward-clean",
 ]
 STALE_EXCLUDE_DIRS = {"docs/adr", ".context", ".git"}
 
@@ -288,25 +289,52 @@ def _agent_description_chars() -> int:
     return total
 
 
+# 人間往復を強いる確認ゲート語彙(ADR-0068: 可逆な操作に確認を挟む規定は skill 本文で最も温存
+# されやすい stale class)。件数は「人間往復の予算」として baseline と比較する。正当なゲート
+# (外部到達・認証・secret・課金・永続判断)も数に入るので、増加したら理由を commit に書く
+GATE_PAT = re.compile(
+    r"explicitly (?:ask|request|want|instruct)|explicit (?:user )?(?:instruction|approval|request|permission)"
+    r"|the user (?:explicitly )?asks|ask the user|confirm with the user|user confirmation|obtain (?:explicit )?approval"
+    r"|ユーザーに確認|確認してから(?:進|実装|再判定|編集|続)|確認が必須|確認フロー|確認を求め"
+    r"|承認必須|要承認|承認が必要|明示的[にな](?:依頼|指示|承認)|Plan を提示",
+    re.I,
+)
+
+
+def _first_party_bodies() -> dict[str, str]:
+    bodies: dict[str, str] = {}
+    for skill_md in sorted((HOME / ".claude/skills").glob("*/SKILL.md")):
+        name = skill_md.parent.name
+        if (REPO / "skills" / name).is_dir():
+            bodies[name] = _md_body(skill_md)
+    return bodies
+
+
 def check_exposure_budget(desc_totals: dict[str, int]) -> None:
     section("6b. exposure budget vs baseline")
     if not BASELINE_PATH.exists():
         info("docs/instruction-baseline.json 未作成(cleaner の初回実行で作成)")
         return
     baseline = json.loads(BASELINE_PATH.read_text())["surfaces"]
+    bodies = _first_party_bodies()
+    gates = {name: len(GATE_PAT.findall(body)) for name, body in bodies.items()}
     current = {
         "common_rules_chars": len((REPO / ".chezmoitemplates/common-rules.md").read_text()),
         "skill_descriptions_chars_firstparty": desc_totals["first_party"],
         "agent_descriptions_chars": _agent_description_chars(),
+        "skill_bodies_chars_firstparty": sum(len(body) for body in bodies.values()),
+        "skill_confirmation_gates_firstparty": sum(gates.values()),
     }
     for key, cur in current.items():
         base = baseline.get(key)
         if base is None:
             info(f"{key}: baseline 未記録 (current {cur})")
         elif cur > base:
-            warn(f"{key}: {cur} chars > baseline {base}(意図的なら同一変更内で baseline を更新)")
+            warn(f"{key}: {cur} > baseline {base}(意図的なら同一変更内で baseline を更新)")
         else:
             ok(f"{key}: {cur} <= baseline {base}")
+    top = ", ".join(f"{n}={c}" for n, c in sorted(gates.items(), key=lambda kv: -kv[1]) if c)
+    info(f"確認ゲート語彙の内訳(installed first-party 本文): {top}")
 
 
 # 7. doctor aggregation --------------------------------------------------------

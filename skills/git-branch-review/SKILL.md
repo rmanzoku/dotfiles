@@ -1,65 +1,29 @@
 ---
 name: git-branch-review
-description: Inspect fresh local and remote Git branch and GitHub pull request state across machines and collaborators. Use when Claude Code or Codex needs to fetch recent remote refs, detect open PRs without local branches, classify origin branches as deletion candidates, decide whether a clean local branch can be fast-forwarded, compare branches with upstream/default branches, check whether branches are merged, or correlate branches with GitHub PR state.
+description: "Refresh Git branch state: fetch, fast-forward tracking branches that are behind, delete merged local branches, delete merged origin branches in private repos, and report origin branches with PR correlation. Use when Claude Code or Codex needs to bring branches up to date, clean up merged branches, or classify origin branches for deletion."
 ---
 
 # Git Branch Review
 
 ## Overview
 
-Build a current, conservative view of local and remote Git branch state before deciding what to update, merge, delete, or hand off. Prefer CLI inspection over assumptions, and never hide dirty worktree state.
+Bring local and `origin` branch state up to date after work on other machines or by collaborators, then report what remains. Everything the script does by default is reversible by the executor alone and prints its rollback handle; server-side deletion outside a private repository is left as a reported next action.
 
 ## Workflow
 
-1. Confirm the target repository path and run all commands from that repository root.
-2. Inspect current state before changing anything:
-   - `git status --short --branch`
-   - `git remote -v`
-   - `git branch --show-current`
-3. Refresh remote knowledge with `git fetch --all --prune` for a normal or read-only remote review because it does not mutate the server. It may update or remove stale local remote-tracking refs. Use `--no-fetch` only when the user explicitly asks for offline inspection or prohibits local ref updates; do not infer that prohibition from “read-only” alone.
-4. If the user wants the current branch updated from origin, fast-forward only when all conditions are true:
-   - worktree is clean by `git status --porcelain`
-   - the current branch has an upstream
-   - local ahead count is `0`
-   - remote behind count is greater than `0`
-   - `git pull --ff-only` succeeds
-5. Summarize local branches with upstream, ahead/behind counts, merge status relative to `origin/HEAD` or `origin/main`, and latest commit subject.
-6. When GitHub context is available, list repository-wide open PRs before correlating local and `origin` branch names with same-repository PRs. Do not treat a same-named fork PR as belonging to an `origin` branch.
-7. Classify each `origin` branch conservatively:
-   - `keep`: default branch, protected branch, or branch with an open/draft PR
-   - `safe deletion candidate`: no open/draft PR, not protected, and either merged into the default branch or its current tip matches a merged same-repository PR targeting the default branch
-   - `needs confirmation`: not merged and has no open PR
-   - `unknown`: PR, protection, default-ref, or ancestry information is unavailable
-   Treat age or naming alone as context, never as evidence that deletion is safe.
-8. Report recommended next actions separately from facts. Never delete a local or remote branch unless the user explicitly asks after seeing the review.
+1. Run the bundled script from the target repository root. When the skill is installed outside the target repo, resolve the script path from the installed skill folder first:
 
-## Script
+   ```bash
+   python3 <skill-dir>/scripts/executable_git_branch_review.py /path/to/repo
+   ```
 
-Use the bundled script for the standard report:
+2. By default the script:
+   - runs `git fetch --all --prune` (updates and prunes local remote-tracking refs; server state is untouched). Use `--no-fetch` only when the user asks for offline inspection or prohibits local ref updates; do not infer that from "read-only" alone.
+   - fast-forwards every local tracking branch that is strictly behind its upstream: the current branch via `git pull --ff-only` only when the worktree is clean, other branches via `git fetch . refs/remotes/<upstream>:refs/heads/<branch>`. Diverged branches and branches checked out in another worktree are skipped and reported. Rollback: `git reset --hard <before>` / `git branch -f <branch> <before>`.
+   - deletes local branches whose tip is already contained in the default remote branch (ancestor of `origin/HEAD`, or tip equal to a merged same-repository PR targeting the default branch), except the current branch, the default branch, worktree-checked-out branches, and branches whose upstream is classified `keep`. Rollback: `git branch <branch> <tip>`.
+   - lists repository-wide open PRs and classifies each `origin` branch: `keep` (default / protected / open or draft PR), `safe deletion candidate` (no open PR, not protected, merged into the default branch or tip equal to a merged same-repository PR), `needs confirmation` (not merged and no open PR), `unknown` (PR / protection / default-ref / ancestry information unavailable). Same-named fork PRs do not belong to an `origin` branch; age or naming alone is context, not evidence.
+   - deletes `safe deletion candidate` origin branches only when `gh repo view` reports the repository as `private`. Rollback: `git push origin <tip>:refs/heads/<branch>` (a merged tip stays reachable from the default branch; a squash-merged tip stays fetchable as GitHub's `refs/pull/<n>/head`). For `public`, `internal`, or unknown visibility it prints the exact `git push origin --delete` command instead and does not run it.
 
-```bash
-python3 skills/git-branch-review/scripts/executable_git_branch_review.py /path/to/repo
-```
+   Opt-outs: `--no-fast-forward`, `--no-local-cleanup`, `--no-remote-cleanup`, `--no-pr` (skip `gh`; remote classification becomes `unknown` except the default branch, and remote cleanup does not run).
 
-For this repository when the skill is installed outside the target repo, resolve the script path from the skill folder first.
-
-Useful options:
-
-- `--fast-forward-clean`: update only the current branch, and only when the safety conditions above hold.
-- `--no-fetch`: inspect without refreshing remotes.
-- `--no-pr`: skip GitHub PR and protected-branch lookups; remote deletion classification becomes `unknown` except for the default branch.
-
-The script prints progress before network-sensitive work and emits a Markdown report with facts separated from recommended next actions. It uses only `git`, optional `gh`, and the Python standard library.
-
-## Output Contract
-
-Include:
-
-- current branch, upstream, worktree cleanliness, ahead/behind counts, and whether a fast-forward ran or was skipped
-- repository-wide open PR table, including PRs whose head branch does not exist locally
-- `origin` remote branch table with deletion classification, reason, protection status, tracking local branches, last update, tip SHA, and subject
-- local branch table with upstream, ahead/behind, merged/not merged relative to default remote ref, PR status, last update, tip SHA, and subject
-- explicit gaps such as `gh unavailable`, fetch failure, no upstream, detached HEAD, or ambiguous default branch
-- a separate recommended-next-actions section; list deletion candidates without executing `git push origin --delete`, surface confirmation and information gaps, and mention a dirty worktree when present
-
-Do not present inferred PR or deletion safety as certain when `gh` could not query GitHub. In this skill, remote branch deletion means a server-side operation such as `git push origin --delete`; fetch/prune maintenance of local remote-tracking refs is reported separately. Treat the classification as a review result, not authorization to delete.
+3. Report the script's Markdown output. It already separates facts (current branch, fast-forward table, local cleanup table, remote cleanup table, open PRs, `origin` branch table, local branch table) from remaining next actions (candidates left on origin with the exact command, `needs confirmation` and `unknown` branches, dirty worktree). Two operations stay outside the default run: deleting a `needs confirmation` branch, and `git push origin --delete` on a non-private repository (a server-side operation the branch's other readers cannot undo alone). Run either only when the user names the branch; a general "clean up" request does not.
