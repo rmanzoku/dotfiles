@@ -10,7 +10,6 @@ Produce an evidence-backed evaluation report. Do not create patches, edit target
 ## Core Rules
 
 - Treat this skill as report-only. Provide findings, risks, scores, and recommended directions; do not implement them.
-- Prefer CLI inspection (`rg`, `find`, package manager metadata, test commands) over MCP unless the user explicitly asks for MCP.
 - Do not mutate the evaluated source tree except for evaluation artifacts written under `.context/code-evaluator/<task>/`. Treat this artifact directory as the only planned target-local mutation allowed by this skill; ignored cache/output writes from checks must be recorded as observed side effects, not silently assumed harmless.
 - Exclude generated/vendor/cache outputs from source-quality review by default: `node_modules/`, `dist/`, `build/`, `.next/`, `coverage/`, generated code, binary artifacts, and previous `.context/` runs.
 - Exclude gitignored files from normal source-quality review by default. Do not inspect or quote ignored secret/private files unless the user explicitly asks or a license/security/distribution question requires path-level confirmation; even then report only paths, key names, record counts, redacted excerpts, validation status, and risk categories.
@@ -78,11 +77,10 @@ Code Evaluation Progress:
    - Tag security findings as `static-review-only` when no scanner, dynamic test, or targeted security tool was run.
 
 6. **Run checks with mutation guard**
-   - Run tests/lint/typecheck/build only when useful for the requested scope and available without install, upgrade, codegen, migration, autofix, or dependency changes.
+   - Run tests/lint/typecheck/build only when useful for the requested scope and available without install, upgrade, formatter-write, autofix, codegen, migration, or dependency changes.
    - If the target is inside a git worktree, record `git status --short` before and after checks in `checks.md`. Treat pre-existing dirtiness as baseline context, not your own change.
    - Do not run commands expected to write tracked source, configs, lockfiles, generated artifacts, snapshots, or dependency installation state.
    - If a check writes ignored cache/output files, record the path category and reason in `checks.md`. If a check writes tracked or review-relevant files, stop running further checks and report the mutation; do not clean up or revert it unless the user explicitly asks.
-   - Do not run install, upgrade, formatter-write, autofix, codegen-write, migration, or dependency-changing commands unless the user explicitly asks.
    - Save commands, exit status, and skipped checks to `.context/code-evaluator/<task>/checks.md`.
 
 7. **Write final report**

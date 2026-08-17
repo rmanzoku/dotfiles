@@ -12,7 +12,6 @@ In the dotfiles repo, this skill is the semantic sensor in the cleaning role spl
 ## Core Rules
 
 - Treat this skill as report-only. Provide findings, risks, scores, inventories, and recommended directions; do not implement them.
-- Prefer CLI inspection (`rg`, `find`, `git`, link extraction commands) over MCP unless the user explicitly asks for MCP.
 - Do not mutate the evaluated source tree except for evaluation artifacts written under `.context/docs-evaluator/<task>/`. Treat this artifact directory as the only planned target-local mutation allowed by this skill; ignored cache/output writes from checks must be recorded as observed side effects, not silently assumed harmless.
 - Exclude generated/vendor/cache outputs by default: `.git/`, `.context/`, `node_modules/`, `dist/`, `build/`, `.next/`, `coverage/`, generated API docs, vendored docs, package caches, and binary artifacts.
 - Exclude gitignored, private, secret, and machine-local files from normal documentation review by default. Do not inspect or quote ignored secret/private content unless the user explicitly asks or a documentation-governance question requires path-level confirmation; even then report only paths, labels, key names, record counts, redacted excerpts, validation status, and risk categories.
@@ -101,7 +100,6 @@ Docs Evaluation Progress:
    - If the target is inside a git worktree, record `git status --short` before and after checks in `checks.md`. Treat pre-existing dirtiness as baseline context, not your own change.
    - Do not run commands expected to write tracked docs, configs, generated docs, snapshots, or dependency installation state.
    - If a check writes ignored cache/output files, record the path category and reason in `checks.md`. If a check writes tracked or review-relevant files, stop running further checks and report the mutation; do not clean up or revert it unless the user explicitly asks.
-   - Do not run formatters, autofixers, generators, installers, or commands that rewrite docs unless the user explicitly asks.
    - Save commands, exit status, and skipped checks to `.context/docs-evaluator/<task>/checks.md`.
 
 7. **Write final report**
