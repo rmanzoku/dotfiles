@@ -194,7 +194,7 @@ Guidance:
 
 ### `adopt <skill>`
 
-Adopt an external skill into a git-managed repository copy when the user explicitly wants that lifecycle.
+Adopt an external skill into a git-managed repository copy.
 
 Use this flow only when the repository policy permits git-managed adoption or when the skill is confirmed to be repo-original rather than external.
 
