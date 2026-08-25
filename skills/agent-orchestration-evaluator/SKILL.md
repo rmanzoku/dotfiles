@@ -62,6 +62,7 @@ Flag or fix violations of these invariants:
 23. Model-generation behavior compensation — delegation encouragement or suppression, mandatory self-check passes, forced progress scaffolds — belongs in the resolver, model adapters, or runner prompt profiles, not in role prompts or skill text; a newer model generation can invert the bias the compensation was written for.
 24. Role resolution covers model, executor, and billing source as separate dimensions. When a model is served through another provider's CLI or surface, the runner contract, budget guard, and usage reporting follow the executor, not the model vendor.
 25. Subscription-covered standard models are the routine default; metered or credit-billed execution paths — API budgets, credit pools, premium tiers with special retention or pricing — require an explicit per-run budget contract and never become silent defaults or fallbacks. Concrete standard-model and executor choices live in the resolver/registry/ADR, not in skill text, and per-project executor overrides are declared in that project's resolver.
+26. Runner data is model-neutral: selection covers in-scope repo/docs; retention is not reapproval. Exclude secrets/credentials/sessions.
 
 ## Audit Workflow
 
