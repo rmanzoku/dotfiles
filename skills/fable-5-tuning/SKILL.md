@@ -35,7 +35,7 @@ API クライアントコードの自動移行は対象外。SDK や Messages AP
 ## Fable 5 で押さえる項目
 
 1. **明示採用のみ・前提条件を先に確認**
-   価格は Opus tier より上($10/$50)。30 日 data retention が必須で、ZDR 組織は全リクエスト 400 になる。機密性・予算・retention 境界の引き受けを caller が明示した workflow だけを対象にする。
+   価格は Opus tier より上($10/$50)。30 日 data retention が必須で、ZDR 組織は全リクエスト 400 になる。明示選択を保持条件の acknowledgment とし、task-relevant な private code/docs を再確認しない。課金経路の hard cap と secret・credential・認証済み session の除外は維持する。
 2. **thinking 設定は全削除**
    thinking は常時 ON。`{type: "disabled"}` も `{type: "enabled", budget_tokens}` も 400。raw CoT は返らず、`display: "summarized"` で要約のみ得られる。reasoning を表示する製品は要約表示へ切り替える。prefill も非対応。
 3. **長 turn 前提の設計**
@@ -59,7 +59,7 @@ API クライアントコードの自動移行は対象外。SDK や Messages AP
 12. **Refusal / fallback**
     research biology・cybersecurity の多くは対象外ドメインで、隣接する正当作業でも classifier が false positive しうる。`stop_reason: "refusal"` を content 読み取り前に処理し、fallback へのオプトインを既定とする。Fable の thinking block は他モデルへの replay 時に drop される(課金されない)。
 13. **実行経路は Claude CLI に限らない**
-    Fable 5 は `claude-cli-runner` だけでなく `copilot-cli-runner` など他 CLI runner 経由でも実行される。世代固有の挙動補正は各 runner の prompt profile(model adapter)が担う設計とし、role prompt や skill 本文へ固定しない。ただし `claude-cli-runner` の同梱 profile は現在 Opus 5 のみで Fable 5 profile は未実装(`--prompt-profile auto` は Fable を補正しない。必要なら明示 profile か `none` を渡す)。Copilot 経由では hard AI-credit cap・retention 境界の明示引き受けが必須(runner skill の契約に従う)。
+    Fable 5 は `claude-cli-runner` だけでなく `copilot-cli-runner` など他 CLI runner 経由でも実行される。世代固有の挙動補正は各 runner の prompt profile(model adapter)が担う設計とし、role prompt や skill 本文へ固定しない。ただし `claude-cli-runner` の同梱 profile は現在 Opus 5 のみで Fable 5 profile は未実装(`--prompt-profile auto` は Fable を補正しない。必要なら明示 profile か `none` を渡す)。Copilot 経由は明示選択と hard cap を必須にする。
 
 ## Opus 5 との反転で事故りやすい点
 
@@ -86,7 +86,7 @@ Phase を持つ作業では `.context/<task>/` に artifact を残し、各 Phas
 ### Phase 1: スコープ確定
 
 - 対象ファイル群を列挙する。
-- Fable 5 採用の前提(明示選択、retention、予算 cap)が文書化されているか確認する。
+- Fable 5 の明示選択(retention acknowledgment)と課金経路の cap を確認する。
 - API コード側変更を対象外として切り分ける。
 - 旧 Opus / Sonnet 前提の語句を `rg` で洗い出す。
 
@@ -157,7 +157,7 @@ artifact: `.context/<task>/04-verify.md`
 ### I. Refusal / retention 未考慮
 
 - 兆候: `stop_reason` 処理や fallback 方針がない、ZDR / retention 条件を確認していない。
-- 対応: refusal 処理と fallback オプトインを既定化し、retention 前提を採用条件として文書化する。
+- 対応: refusal 処理と fallback オプトインを既定化し、明示選択を retention acknowledgment とする。task-relevant input を再確認しない。
 
 ### J. Context 残量の露出
 
@@ -185,7 +185,7 @@ artifact: `.context/<task>/04-verify.md`
 
 ## 完了条件
 
-- Fable 5 採用の前提(明示選択・retention・予算 cap)と実行経路(claude-cli-runner / copilot-cli-runner 等)が文書化されている。
+- Fable 5 の明示選択(retention acknowledgment)・課金経路の cap・実行経路が文書化されている。
 - 対象ファイルに thinking 設定・prefill・過剰 prescriptive scaffolding・委譲抑制・短 turn 前提が残っていない。
 - 委譲奨励 / 明示的検証 harness / scope・自律性 / 進捗裏取り / memory / refusal 方針が公式ドキュメントと矛盾せず、Opus 5 向け文書と混同されない形で世代が明示されている。
 - API コード変更と文書 / prompt tuning の責務が分離されている。

@@ -26,7 +26,6 @@ ERROR_RE = re.compile(
 
 OPUS_5_MODEL_RE = re.compile(r"opus[-_.]?5(?!\d)|(?<![\d.])5[-_.]?opus", re.IGNORECASE)
 FABLE_5_MODEL_RE = re.compile(r"fable[-_.]?5(?!\d)|(?<![\d.])5[-_.]?fable", re.IGNORECASE)
-FABLE_5_MIN_AI_CREDITS = 200
 
 COPILOT_ADAPTER = """\
 ## Copilot CLI Prompt Adapter
@@ -331,21 +330,12 @@ def main() -> int:
         print("use either --max-ai-credits or --allow-uncapped, not both", file=sys.stderr)
         return 2
     is_real_copilot = Path(args.copilot_bin).name == "copilot"
+    if is_real_copilot and prompt_profile == "fable-5" and args.allow_uncapped:
+        print("Fable 5 runs require --max-ai-credits; --allow-uncapped is not supported", file=sys.stderr)
+        return 2
     if is_real_copilot and args.max_ai_credits is None and not args.allow_uncapped:
         print(
             "real Copilot runs require --max-ai-credits or explicit --allow-uncapped",
-            file=sys.stderr,
-        )
-        return 2
-    if (
-        is_real_copilot
-        and prompt_profile == "fable-5"
-        and args.max_ai_credits is not None
-        and args.max_ai_credits < FABLE_5_MIN_AI_CREDITS
-    ):
-        print(
-            f"Fable 5 runs require --max-ai-credits >= {FABLE_5_MIN_AI_CREDITS}; "
-            "use 300 or more for artifact-producing work",
             file=sys.stderr,
         )
         return 2

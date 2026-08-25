@@ -7,7 +7,7 @@ description: "Run Antigravity CLI (agy) headless with observable prompt, respons
 
 Use this skill when delegating work to Gemini through Antigravity CLI (`agy`). The runner calls `agy` in print mode and records the prompt, response, summary, stderr, and failure notes under `.context/<task>/` so the call can be audited and replayed.
 
-This is the successor to the gemini CLI route: the personal-tier gemini CLI was discontinued, and `agy` is the supported way to reach Gemini models headlessly. Frame each delegation as an outcome-first contract: prompt artifact, expected response artifact, timeout, model, permission posture, success criteria, and failure handling. Keep final judgment, editing, and irreversible side effects in the caller.
+This is the successor to the gemini CLI route: the personal-tier gemini CLI was discontinued, and `agy` is the supported way to reach Gemini models headlessly. Frame each delegation as an outcome-first contract: prompt artifact, expected response artifact, timeout, model, permission posture, success criteria, and failure handling. Task-scoped editing may be delegated when the caller authorizes it; keep final judgment and irreversible side effects in the caller.
 
 ## Core Rules
 
@@ -49,13 +49,14 @@ Do not write secret values into prompt artifacts, repo files, or `.context/`.
 Before running agy, decide explicitly:
 
 - Task directory: choose `.context/<task>/`.
-- Prompt artifact: write the prompt markdown; keep one backend job per prompt file.
+- Prompt artifact: record outcome, exact delegated paths (or `none`), allowed side effects, success and stop conditions. `--output-dir` evidence is separate; retries keep this boundary. Keep one job per file.
 - Response artifact: pass `--response-artifact agy-response.json` when it belongs inside `--output-dir`; use an absolute path only when it must land elsewhere.
 - Model: required. Pick from `agy models` — currently `gemini-3.6-flash-{high,medium,low}`, `gemini-3.5-flash-{high,medium,low}`, `gemini-3.1-pro-{high,low}`, plus non-Gemini ids. For registry-driven calls, resolve the id through the working repository's model registry (for example `rules/model_registry.yaml`) rather than hardcoding it in a caller script.
 - Effort: `--effort low|medium|high` when the task warrants it; omit to use the model default.
 - Permissions: `--skip-permissions` for anything needing web search or file access; omit for prompt-only tasks.
 - Timeout: rely on the 600-second default unless the contract says otherwise.
 - Working directory: `--cwd` sets the subprocess working directory. Use a per-batch sandbox directory when running independent measurements.
+- Write boundary: map delegated paths to caller-selected `--sandbox` / `--add-dir` controls when needed. If the CLI cannot enforce them, verify changed paths before acceptance or retry and stop on mismatch.
 - Expected artifacts: if the target artifact is agy's response itself, make it `--response-artifact`. Files that agy writes must be tracked outside this wrapper.
 
 Do not add "think hard", fixed progress-update scaffolds, or mandatory step-by-step narration to simulate effort. Use model selection, `--effort`, and explicit success criteria instead.

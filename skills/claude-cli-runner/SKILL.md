@@ -23,7 +23,6 @@ Frame each delegation as an outcome-first contract: source prompt, expected arti
 - Save the prompt before execution as `.context/<task>/prompt.md`.
 - Do not pass a large prompt body as an inline shell argument. Pass a short instruction that tells Claude to read the prompt file.
 - Use the wrapper's 600-second timeout default, or pass an explicit timeout override when the task needs a shorter or longer limit.
-- For research tasks, explicitly limit WebSearch/WebFetch counts, timeout, and output lines in the prompt.
 - Do not force Claude `--permission-mode`, `--safe-mode`, tool, MCP, hook, plugin, or skill settings by default. The caller owns gate enforcement; this runner preserves observability and lets Claude CLI config/profile decide unless the caller explicitly requests an override.
 - Do not treat `stdout` or `stderr` being 0 bytes as a hang by itself.
 
@@ -150,11 +149,11 @@ Read and follow the prompt in /absolute/path/to/.context/<task>/prompt.md. Write
 
 For Claude researcher roles, include:
 
-- max WebSearch/WebFetch calls
-- max output lines or words
 - timeout expectation
 - exact output artifact path
 - instruction to stop and write findings instead of continuing if blocked
+
+Add WebSearch/WebFetch or output-size limits only when the calling workflow's evidence or budget contract requires them. This runner does not invent fixed research quotas.
 
 ## Wrapper Notes
 

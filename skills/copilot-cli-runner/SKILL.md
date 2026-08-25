@@ -20,7 +20,8 @@ Frame each delegation as an outcome-first contract: source prompt, expected arti
 - Do not treat 0-byte `run.events.jsonl` or `run.err` as a hang by itself.
 - Treat tokens and AI credits as part of the run contract. Real Copilot runs must pass `--max-ai-credits` or explicitly acknowledge `--allow-uncapped`; prefer a hard cap.
 - When the user's budget matters, check Copilot `/usage` before and after the run, pass the known remainder with `--available-ai-credits-before`, and report used/total/remaining credits.
-- Use `claude-fable-5` only when the caller explicitly requests long-horizon autonomous work or a zero-base audit, accepts the provider's Fable-specific data-retention boundary, and supplies a hard AI-credit cap. The task contract must enumerate allowed inputs, paths, and URLs; exclude secrets, personal/private data, and confidential source unless the user explicitly approves that retention boundary for those inputs. Do not make Fable an implicit fallback.
+- Use one model-neutral input boundary: an explicit Copilot request authorizes task-relevant private repository code and internal documents under configured policies. Do not require a second model-specific confirmation. Exclude secret values/references/results, credentials/private keys, authenticated-session material, and unrelated personal data.
+- Use `claude-fable-5` only by explicit selection with a hard AI-credit cap. Selection acknowledges its documented 30-day retention; training opt-out does not imply zero operational retention. Never use it as an implicit fallback.
 
 ## Caller Checklist
 
@@ -35,7 +36,7 @@ Before running Copilot, make these decisions explicitly:
 - Permission overrides: add `--allow-tool`, `--allow-url`, `--add-dir`, or broader flags only when explicitly supplied by the caller. Do not infer grants inside this runner.
 - Timeout: rely on the 600-second wrapper default unless the task contract says otherwise.
 - Budget: choose an effort level, timeout, and `--max-ai-credits` together. Reserve time and credits for required artifacts; run optional repository-wide diagnostics only after required outputs exist.
-- Fable budget: use 300 AI credits as the default floor for artifact-producing work, and never launch Fable below 200. Observed Fable 5 usage was 41.32 credits before a first tool call and 154.53 credits before a review artifact create call, so the CLI minimum and a 150 cap cannot complete representative file work. For larger work, estimate model turns at 50 credits each plus a 100-credit completion margin, then use the greater of that estimate or 300. If the user sets a lower budget, explain that it cannot complete and ask for a viable cap before launching.
+- Fable budget: size the cap to the current task. Prior runs inform estimates, not a model-specific minimum; do not reject a positive cap solely because it is below earlier usage.
 - Fable prompt packing: put all permitted review input directly in the source prompt when practical. The wrapper embeds the source prompt in `run.prompt.md`, avoiding a second model/tool round trip just to open `prompt.md`. Keep separate files only when their size or artifact semantics justify the additional turn.
 - Fable retry: after a session-limit failure, use the observed usage to choose one completion-sized cap. Do not retry through incremental caps that cannot cover the remaining model/tool turns.
 - Prompt profile: use `--prompt-profile auto` by default; it adds an Opus 5 or Fable 5 generation adapter when `--model` names that generation. Pass `--prompt-profile none` only when the source prompt already contains a complete Copilot-specific launch contract.
@@ -80,7 +81,7 @@ The wrapper writes:
 - Set `--max-ai-credits` below the known remainder; pass that remainder as `--available-ai-credits-before` so the wrapper rejects an impossible cap before launch.
 - Use `medium` or `low` for routine artifact completion. Use `high` for capability-sensitive end-to-end work. Do not use `xhigh` without an explicit reason and budget.
 - After completion, inspect `summary.json.usage`; after material runs, check `/usage` again because the plan balance is the billing authority.
-- `--allow-uncapped` is an explicit exception, not a default.
+- `--allow-uncapped` is an explicit exception for non-Fable models, not a default. Fable always requires `--max-ai-credits`.
 - A timeout limits wall time, not necessarily spend. Use both timeout and credit cap.
 - Avoid repeated image attachment and context discovery on follow-ups. For narrow remaining work, start a fresh, artifact-only run using existing files. Resume a prior session only when its pending plan still matches the new task; resumed sessions can continue the old plan before following a tighter prompt.
 
@@ -188,13 +189,15 @@ Validate the skill and wrapper after changes:
 ```bash
 scripts/skill-quick-validate skills/copilot-cli-runner
 python3 <skill-dir>/scripts/run_copilot_cli.py --help
+python3 <skill-dir>/scripts/test_run_copilot_cli.py
 ```
 
 For runtime validation, run:
 
 - no-API command construction
 - no-API fake Copilot success
-- uncapped and over-budget preflight rejection
+- positive low-cap Fable acceptance through preflight
+- uncapped Fable and over-budget preflight rejection
 - forced interrupt with orphan-process check
 - optional real short smoke prompt when auth/cost is acceptable
 - forced timeout failure
