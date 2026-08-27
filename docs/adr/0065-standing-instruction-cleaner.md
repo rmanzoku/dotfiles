@@ -31,6 +31,7 @@ agent_model: "Claude Fable 5 (Claude Code)"
    - 背景: 過去 13 run の docs-evaluator は思想(conditioning surface の重み付け)を持ちながら description 肥大を一度も検出できなかった。思想が判定文言(閾値)に落ちていなかったためで、evaluator 自身が出した具体候補(迷子 ~/CLAUDE.md、P1)も閉包オーナー不在で約 1 ヶ月放置された。
 10. **cleaner を doctrine-only 化する(2026-08-10 追記、ユーザー判断)**: agent 定義から dotfiles 固有の手段(センサー名の固定・skill 固定・repo 束縛・実行環境制約)を外し、agent はドメイン中立の掃除ドクトリンだけを持つ — 検出/閉包分離、KPI 3 点、増幅荷重の優先順位、stale 分類、**4 スロット要件(センサー / 露出指標 / 等価性ガード / ratchet 先を名指しできないドメインでは掃除しない)**、権限線、escalation。ドメイン束縛は末尾 1 節に限定: 指示面は instruction-cleaner に従い(実行環境制約はそちらへ)、他ドメイン(コード: guard=テスト・型検査、ratchet=linter/CI / 仕様書: guard=blank-slate 実装者 probe)は 4 スロットを満たす skill か親の明示契約があるときだけ実行する。instantiation skill は必要時に作り、先回りの一般化はしない。あわせて tech に掃除軸・層分離検査・sensor/closure routing を、biz に増幅と掃除・依頼先想起・賭けと採用分離の lens を追記した(private_ 定義のため本 ADR が変更記録を兼ねる。検証は blank-slate probe 3 本、全 critical 合格)。
 11. **run 1 残項目の裁定(2026-08-12 追記、ユーザー判断)**: **R3 は最小定義で採用** — gc check 11 として first-party description 間の backtick トークン重複を info で検知する(裁定済み共有トークンは allowlist。初期値 `opmaterialize` = run 1 probe で正しい近接と裁定済み)。**R4(probe fixture の永続化)は却下** — 発火 probe は run 内の旧新比較で完結するゲートであり時系列指標ではない。fixture は退役のたびに保守を要し(run 1 の発話セットには退役済み skill が既に含まれていた)、footprint 最小化ルールに例外を作る価値がない。probe セットは `.context` の使い捨てを正とする。**E-3(claude-cli-runner の fable-5 profile)は見送り** — 使用実績の証拠がなく、Fable の適応は de-prescription(引く方向)で `none` に対する adapter の価値が薄い。Codex → Claude CLI(Fable)委譲で `none` が不足する実例が出たら実装する。**§B-2(common-rules F11a / F11b の削減候補)は却下として閉包** — confidence low、両ホスト挙動 probe の費用が削減益(約 100〜150 字)を上回り、合格しても結果が現行ホスト世代に固定され再 probe のトリガーが存在しない。F11b 前半は挙動の教示であると同時に委譲の許可付与でもあり、削除は保守的世代を過小委譲へ振るリスクを持つ。再訪条件: common-rules の次回大改訂時、またはホスト世代の交代時。
+12. **instruction-cleaner を repo 非依存にする(2026-08-18 追記、ユーザー判断、GPT-5.6 (Codex))**: `scripts/instruction-gc` と `docs-evaluator` は dotfiles adapter とし、skill の core 契約から固定名を外す。repo 固有 sensor が無い場合は、`rg`、path 存在確認、文字数計測、blank-slate review / probe を portable defaults として observe から開始する。sensor 不在は停止理由にせず、永続 ratchet が無い場合だけ close 時の制約として明示する。新しい CI / script の追加は依頼範囲と repo 規約に従い、汎用化を理由に自動追加しない。
 
 ## Consequences
 
@@ -39,10 +40,12 @@ agent_model: "Claude Fable 5 (Claude Code)"
 - chezmoi checkout は複数セッションで共有されるため、cleaner は worktree での作業を標準とし(`chezmoi apply --source` で検証)、共有 checkout で作業する場合は blob staging で自分の変更だけを commit する。
 - git 未追跡の private_*(biz / tech / personal)は cleaner の編集・commit 対象外。計測(露出量)には installed 実体を使ってよい。
 - external skill は読み取り専用。ダイエットは upstream への提案か、install 差し替えの判断としてユーザーへ返す。
+- 他リポジトリでは repo 固有 sensor が無くても portable defaults で掃除を開始できる。dotfiles 固有の sensor・baseline・ratchet は adapter として引き続き利用する。
 
 ## Validation
 
 - `scripts/skill-quick-validate skills/instruction-cleaner`
 - one-in-one-out 追加後の blank-slate probe 2 本(重複追加の抑止 / 新規追加時の削除候補検討)で [critical] 全達成
 - description ダイエットの旧新発火 probe(16 プロンプト、blank-slate 選択器 2 体)で critical 全一致・新が旧を下回らないこと
+- repo sensor 不在 / 永続 ratchet 不在の portable-defaults probe で critical 全一致し、hidden `.github/` 面を初回列挙できること
 - 施工後 `scripts/instruction-gc` が fail=0、first-party description warn=0
