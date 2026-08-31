@@ -115,7 +115,6 @@ Use this when setting up a new machine or rehydrating ignored local config files
 ## Troubleshooting
 
 - If `op` reports multiple accounts, use `OP_ACCOUNT=my.1password.com`.
-- If `op` requires authentication, let the user unlock/sign in to 1Password from their normal terminal; do not ask them to paste secrets into chat, and do not keep retrying AI-side permission prompts after the readiness probe still fails.
 - If `opmaterialize` exits `127` or the wrapper is not found, use the bundled script with `OP_ACCOUNT=my.1password.com` and `OP_DOTFILES_MATERIALIZE_VAULT="Dotfiles Secrets"`.
 - If `Dotfiles Secrets` or `Secrets Manifest` is missing, create or ask the user to create it in 1Password rather than storing its content in git.
 - If `opmaterialize add` fails after multiple positional paths, retry as separate one-file `add` invocations.

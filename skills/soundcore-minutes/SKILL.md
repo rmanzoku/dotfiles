@@ -9,10 +9,34 @@ Use this skill to operate the Soundcore AI web UI and turn a selected recording 
 
 ## Tool Choice
 
+The authenticated Soundcore session lives in ONE specific Chrome profile. Selecting the wrong browser surface is the failure that wastes the most time here, so resolve the surface BEFORE navigating.
+
 - Prefer Chrome when the user likely needs their existing login session, cookies, password manager, or MFA state.
 - Use Codex App Browser when the user explicitly asks for it, is already logged in there, or wants the work done in the in-app browser.
 - If neither browser session is authenticated, open `https://ai.soundcore.com/home`, pause for the user to complete login, then continue after the UI is available.
-- Do not ask for Soundcore credentials. Let the user perform authentication directly in the browser.
+
+### Resolving the browser surface (Claude in Chrome)
+
+`mcp__claude-in-chrome__*` may be attached to the agent's built-in browser rather than the user's Chrome. The built-in browser has NO Soundcore session and NO 1Password extension, so both `navigate` and `request_credentials` fail there — the latter returns `transport_error` on every retry no matter how many times it is tried.
+
+1. Call `list_connected_browsers` first. One entry usually means only the built-in browser is attached.
+2. Identify which Chrome profile holds the session before asking the user to do anything. Profile display names are in `~/Library/Application Support/Google/Chrome/Local State` under `profile.info_cache` (macOS); the deployed extensions per profile are under `<profile>/Extensions/<id>/*/manifest.json`. The Claude extension id is `fcoeoabgfenejglbffodgkkbkcdhcgfn`; 1Password is `aeblfdkhhhdcdjpifhhbdiojplfjncoa`.
+3. If the profile that holds the session already has the Claude extension but is not connected, ask the user to open the Claude extension side panel in THAT profile's window and sign in. It then appears in `list_connected_browsers`.
+4. With more than one browser connected, the harness requires asking the user which to use, then `select_browser` with the chosen deviceId. Verify by navigating to the recording URL and confirming no redirect to `/login`.
+
+Do not diagnose a `/login` redirect as a profile mismatch without checking `list_connected_browsers` — the built-in browser is the more common cause.
+
+### 1Password autofill
+
+1Password for Claude is an official integration, and its documented requirements settle where it can run: macOS, the Claude desktop app, **Claude in Chrome**, the 1Password desktop app, and the 1Password browser extension (both 1Password components 8.12.28+). Anthropic's own help page states it "requires Claude in Chrome"; the built-in browser is out of scope by design, not by accident. It covers logins and TOTP only — not cards or identities.
+
+So on repeated `transport_error`, check causes in this order:
+
+1. **The driven surface.** If `request_credentials` is being called while attached to the built-in browser, it fails every time and retrying never helps. This was the sole cause in the 2026-08-29 incident. Resolve the surface first — see the section above.
+2. **The Connectors link.** In the Claude desktop app, `Customize > Connectors` must have the 1Password connector connected and unlocked with Touch ID or the account password.
+3. **1Password process state.** `pgrep -lf 1Password`: a `--just-updated --should-restart` process means the app is mid-restart, and a missing `1Password-BrowserSupport` means the extension bridge is down (opening the 1Password extension in Chrome spawns it).
+
+Do not start at step 3. In the observed incident the connector was already connected and the app state was a red herring — time went into restarting 1Password when the surface was the only real problem.
 
 ## Workflow
 
@@ -21,7 +45,7 @@ Use this skill to operate the Soundcore AI web UI and turn a selected recording 
 3. Identify the target recording from the user's criteria: title, date, time, duration, participants, matter name, or the most recent recording.
 4. Open the target recording and wait until the transcript and summary panes finish loading.
 5. Capture visible metadata, summary, action items, topics, speakers, and transcript text.
-6. If the UI paginates, lazy-loads, collapses, or virtualizes the transcript, scroll through the entire transcript area and collect all visible segments.
+6. Open the transcript pane with the `文字起こし` button, then call `get_page_text` once. Observed 2026-08-29: a 48-minute transcript came back complete in a single call with no scrolling, because the pane is not virtualized. Scroll through the transcript area and collect segments only if the returned text is visibly truncated.
 7. Produce minutes from extracted content only. Mark unavailable fields as `未確認` instead of guessing.
 8. Include the source recording identifier in the final answer: visible title plus date/time or URL when available.
 
