@@ -1,0 +1,211 @@
+#!/usr/bin/env python3
+"""Fetch and inspect the official DADS Markdown documentation archive.
+
+デジタル庁デザインシステム（DADS）は全ドキュメントを Front Matter 付き Markdown の
+zip アーカイブとして配布しており、公式に AI 参照用途を想定している。本スクリプトは
+そのアーカイブを共有キャッシュへ取得・展開し、状態を報告する。
+
+- キャッシュ: $DADS_DOCS_DIR、なければ ${XDG_DATA_HOME:-~/.local/share}/dads-design
+- 配布元 URL はリソースページから毎回発見する（ファイル名に日付が入り固定できないため）。
+  発見できなければ URL を推測せず失敗させる。
+
+Usage:
+  dads-docs status          キャッシュの状態を表示する
+  dads-docs check           キャッシュがあれば 0、無ければ 3 を返す（取得はしない）
+  dads-docs fetch [--force] 最新アーカイブを取得・展開する
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import shutil
+import sys
+import tempfile
+import time
+import urllib.error
+import urllib.request
+import zipfile
+from pathlib import Path
+
+RESOURCES_URL = "https://design.digital.go.jp/dads/resources/"
+SITE_ROOT = "https://design.digital.go.jp"
+ARCHIVE_PATTERN = re.compile(r"/dads/dads-markdown-(\d{8})\.zip")
+SITE_VERSION_PATTERN = re.compile(r"デジタル庁デザインシステム[^\s<]*版\s*(v[\d.]+)")
+USER_AGENT = "dads-design-skill/1.0 (+https://design.digital.go.jp/dads/)"
+TIMEOUT_SECONDS = 60
+RETRIES = 3
+
+
+def log(message: str) -> None:
+    """進捗は stderr へ。無出力の待機を作らないための必須ログ。"""
+    print(f"[dads-docs] {message}", file=sys.stderr, flush=True)
+
+
+def cache_dir() -> Path:
+    override = os.environ.get("DADS_DOCS_DIR")
+    if override:
+        return Path(override).expanduser()
+    base = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
+    return Path(base).expanduser() / "dads-design"
+
+
+def read_manifest(root: Path) -> dict | None:
+    path = root / "manifest.json"
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def http_get(url: str) -> bytes:
+    """リトライ付き GET。試行ごとにログを出し、失敗理由を握り潰さない。"""
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    last_error: Exception | None = None
+    for attempt in range(1, RETRIES + 1):
+        log(f"GET {url} (attempt {attempt}/{RETRIES})")
+        try:
+            with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+                payload = response.read()
+            log(f"received {len(payload)} bytes")
+            return payload
+        except (urllib.error.URLError, TimeoutError) as exc:
+            last_error = exc
+            log(f"attempt {attempt} failed: {exc}")
+            if attempt < RETRIES:
+                time.sleep(2 * attempt)
+    raise SystemExit(f"[dads-docs] FAILED: could not fetch {url}: {last_error}")
+
+
+def discover_archive(page_html: str) -> tuple[str, str]:
+    """リソースページから最新アーカイブの URL と日付を取り出す。"""
+    matches = ARCHIVE_PATTERN.findall(page_html)
+    if not matches:
+        raise SystemExit(
+            "[dads-docs] FAILED: no dads-markdown-YYYYMMDD.zip link found on "
+            f"{RESOURCES_URL}. 配布形態が変わった可能性がある。URL を推測せず停止する。"
+        )
+    archive_date = max(matches)
+    return f"{SITE_ROOT}/dads/dads-markdown-{archive_date}.zip", archive_date
+
+
+def safe_extract(archive: Path, destination: Path) -> int:
+    """zip slip を防ぎつつ展開し、展開したファイル数を返す。"""
+    destination.mkdir(parents=True, exist_ok=True)
+    resolved_root = destination.resolve()
+    count = 0
+    with zipfile.ZipFile(archive) as zf:
+        for member in zf.infolist():
+            target = (destination / member.filename).resolve()
+            if not target.is_relative_to(resolved_root):
+                raise SystemExit(
+                    f"[dads-docs] FAILED: archive contains an unsafe path: {member.filename}"
+                )
+            zf.extract(member, destination)
+            if not member.is_dir():
+                count += 1
+    return count
+
+
+def cmd_status(root: Path) -> int:
+    manifest = read_manifest(root)
+    print(f"cache dir     : {root}")
+    if manifest is None:
+        print("state         : NOT FETCHED")
+        print("next step     : scripts/dads-docs fetch")
+        return 3
+    print(f"state         : ready")
+    print(f"archive date  : {manifest.get('archive_date')}")
+    print(f"source url    : {manifest.get('source_url')}")
+    print(f"site version  : {manifest.get('site_version')}")
+    print(f"fetched at    : {manifest.get('fetched_at')}")
+    print(f"markdown files: {manifest.get('file_count')}")
+    print(f"docs root     : {root / 'docs'}")
+    return 0
+
+
+def cmd_check(root: Path) -> int:
+    if (root / "docs").is_dir() and read_manifest(root) is not None:
+        return 0
+    log(f"documentation cache is missing at {root}. Run: scripts/dads-docs fetch")
+    return 3
+
+
+def cmd_fetch(root: Path, force: bool) -> int:
+    log(f"cache dir: {root}")
+    page = http_get(RESOURCES_URL).decode("utf-8", errors="replace")
+    archive_url, archive_date = discover_archive(page)
+    site_version_match = SITE_VERSION_PATTERN.search(page)
+    site_version = site_version_match.group(1) if site_version_match else None
+    log(f"latest archive: {archive_date} (site {site_version or 'unknown'})")
+
+    manifest = read_manifest(root)
+    if manifest and manifest.get("archive_date") == archive_date and not force:
+        log(f"already up to date ({archive_date}); use --force to re-download")
+        return 0
+
+    payload = http_get(archive_url)
+    with tempfile.TemporaryDirectory(prefix="dads-docs-") as tmp:
+        tmp_path = Path(tmp)
+        archive_path = tmp_path / f"dads-markdown-{archive_date}.zip"
+        archive_path.write_bytes(payload)
+        if not zipfile.is_zipfile(archive_path):
+            raise SystemExit("[dads-docs] FAILED: downloaded file is not a valid zip archive")
+        staging = tmp_path / "docs"
+        log("extracting archive")
+        file_count = safe_extract(archive_path, staging)
+        log(f"extracted {file_count} files")
+
+        root.mkdir(parents=True, exist_ok=True)
+        final_docs = root / "docs"
+        previous = root / "docs.previous"
+        shutil.rmtree(previous, ignore_errors=True)
+        if final_docs.exists():
+            final_docs.rename(previous)
+        shutil.move(str(staging), str(final_docs))
+        shutil.rmtree(previous, ignore_errors=True)
+
+    (root / "manifest.json").write_text(
+        json.dumps(
+            {
+                "archive_date": archive_date,
+                "source_url": archive_url,
+                "resources_page": RESOURCES_URL,
+                "site_version": site_version,
+                "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                "file_count": file_count,
+                "license_note": (
+                    "デザインシステム本体（デジタル庁コピーライトポリシー）。"
+                    "引用・転載時は出典記載が必要。git 管理下へコピーしないこと。"
+                ),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    log(f"DONE: {root / 'docs'} ({file_count} files, archive {archive_date})")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "command", nargs="?", default="status", choices=["status", "check", "fetch"]
+    )
+    parser.add_argument("--force", action="store_true", help="fetch: 同じ日付でも再取得する")
+    args = parser.parse_args()
+
+    root = cache_dir()
+    if args.command == "status":
+        return cmd_status(root)
+    if args.command == "check":
+        return cmd_check(root)
+    return cmd_fetch(root, args.force)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

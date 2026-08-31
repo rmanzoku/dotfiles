@@ -1,192 +1,136 @@
-# DADS デザイントークン リファレンス
+# DADS デザイントークン クイックリファレンス
 
-デジタル庁デザインシステム（DADS, β版）のデザイントークンを数値で網羅したリファレンス。
+DADS のトークンを**成果物づくりの判断に必要な粒度**でまとめたもの。
 
-- **実数値（HEX / rem / box-shadow）の正本**: `@digital-go-jp/design-tokens` v2.0.1 の `tokens.css`（MIT License, Copyright (c) 2023 デジタル庁）。本スキルの `assets/dads-tokens.css` に同梱。
-- **意味づけ・命名・運用ルール**: 公式ドキュメント `https://design.digital.go.jp/dads/foundations/*`。
-- DADSはβ版。トークンは更新されうる（更新告知: `/dads/updates-dads/`）。重要な配色・サイズを確定する前に最新版（npm `@digital-go-jp/design-tokens` / Figma Community）の確認を推奨。
-- 実装で即利用する場合は `assets/dads-tokens.css` を読み込み `var(--color-key-700)` 等のCSS変数を参照するのが最も確実。
+役割分担を先に押さえること。ここを取り違えると古い値を引く。
 
-## 目次
-1. カラー（プリミティブ／ニュートラル／セマンティック／キー）
-2. タイポグラフィ（フォント／サイズ／行間／テキストスタイル）
-3. 角丸（border-radius）
-4. エレベーション（影）
-5. 余白（spacing）
-6. レイアウト（ブレークポイント／グリッド）
-7. リンクテキスト
-8. アイコン
+| 知りたいこと | 見る場所 |
+|---|---|
+| **実数値**（HEX / rem / box-shadow） | `assets/dads-tokens.css`（`@digital-go-jp/design-tokens` v2.0.1, MIT）。全プリミティブ色・全サイズ・全影が入っている |
+| **意味づけ・設計原則・作例** | 公式Markdown `<docs>/foundations/<topic>/index.md`（`scripts/dads-docs` で取得） |
+| **選び方の要点・トークン化されていない規定** | このファイル |
+
+`<docs>` は `python3 scripts/dads-docs status` が示す `docs root`。未取得なら `python3 scripts/dads-docs fetch`。
+このファイルの最終照合: 2026-08-28（サイト β版 v2.17.1 / Markdown 2026-08-19版 / tokens v2.0.1）。
 
 ---
 
 ## 1. カラー
 
-色相 = 10系統（Blue, Light Blue, Cyan, Green, Lime, Yellow, Orange, Red, Magenta, Purple）× 各13階調（50〜1200）。
-数値が大きいほど暗い。**キーカラー（プライマリ）は Blue**（`--color-key-*` は Blue にエイリアス）。
+色相 = 10系統（Blue, Light Blue, Cyan, Green, Lime, Yellow, Orange, Red, Magenta, Purple）× 各13階調（50〜1200）。数値が大きいほど暗い。CSS変数は `--color-primitive-<hue>-<step>`。**全HEX値は `assets/dads-tokens.css` を引くこと**（ここには転記しない）。
 
-### 1.1 プリミティブカラー（全色相 × 全階調 HEX）
+### キーカラー（プライマリ）
+`--color-key-<step>`（50〜1200）は **Blue にエイリアス**。サービスのブランド色へ差し替える前提の変数（DADSの「スタイルガイド」概念）。
 
-CSS変数名: `--color-primitive-<hue>-<step>`（例: `--color-primitive-blue-700`）。
+- 標準 `--color-key-700` #264af4 / 濃 `--color-key-800` #0031d8 / 淡背景 `--color-key-50` #e8f1fe
+- プライマリーは主要背景に対し **4.5:1 以上**。セカンダリー／ターシャリーは非テキストで 3:1、テキストで 4.5:1 以上
 
-| step | blue | light-blue | cyan | green | lime | yellow | orange | red | magenta | purple |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 50 | #e8f1fe | #f0f9ff | #e9f7f9 | #e6f5ec | #ebfad9 | #fbf5e0 | #ffeee2 | #fdeeee | #f3e5f4 | #f1eafa |
-| 100 | #d9e6ff | #dcf0ff | #c8f8ff | #c2e5d1 | #d0f5a2 | #fff0b3 | #ffdfca | #ffdada | #ffd0ff | #ecddff |
-| 200 | #c5d7fb | #c0e4ff | #99f2ff | #9bd4b5 | #c0f354 | #ffe380 | #ffc199 | #ffbbbb | #ffaeff | #ddc2ff |
-| 300 | #9db7f9 | #97d3ff | #79e2f2 | #71c598 | #ade830 | #ffd43d | #ffa66d | #ff9696 | #ff8eff | #cda6ff |
-| 400 | #7096f8 | #57b8ff | #2bc8e4 | #51b883 | #9ddd15 | #ffc700 | #ff8d44 | #ff7171 | #f661f6 | #bb87ff |
-| 500 | #4979f5 | #39abff | #01b7d6 | #2cac6e | #8cc80c | #ebb700 | #ff7628 | #ff5454 | #f137f1 | #a565f8 |
-| 600 | #3460fb | #008bf2 | #00a3bf | #259d63 | #7eb40d | #d2a400 | #fb5b01 | #fe3939 | #db00db | #8843e1 |
-| 700 | #264af4 | #0877d7 | #008da6 | #1d8b56 | #6fa104 | #b78f00 | #e25100 | #fa0000 | #c000c0 | #6f23d0 |
-| 800 | #0031d8 | #0066be | #008299 | #197a4b | #618e00 | #a58000 | #c74700 | #ec0000 | #aa00aa | #5c10be |
-| 900 | #0017c1 | #0055ad | #006f83 | #115a36 | #507500 | #927200 | #ac3e00 | #ce0000 | #8b008b | #5109ad |
-| 1000 | #00118f | #00428c | #006173 | #0c472a | #3e5a00 | #806300 | #8b3200 | #a90000 | #6c006c | #41048e |
-| 1100 | #000071 | #00316a | #004c59 | #08351f | #2c4100 | #6e5600 | #6d2700 | #850000 | #500050 | #30016c |
-| 1200 | #000060 | #00234b | #003741 | #032213 | #1e2d00 | #604b00 | #541e00 | #620000 | #3b003b | #21004b |
+### ニュートラル（コントラストの基準点）
+`--color-neutral-solid-gray-<step>` と白黒。判断に効く3点だけ覚える。
 
-### 1.2 ニュートラル
-
-| トークン | 値 | 備考 |
+| トークン | 値 | 意味 |
 |---|---|---|
-| `--color-neutral-white` | #ffffff | |
-| `--color-neutral-black` | #000000 | |
-| `--color-neutral-solid-gray-50` | #f2f2f2 | |
-| `--color-neutral-solid-gray-100` | #e6e6e6 | |
-| `--color-neutral-solid-gray-200` | #cccccc | |
-| `--color-neutral-solid-gray-300` | #b3b3b3 | |
-| `--color-neutral-solid-gray-400` | #999999 | |
-| `--color-neutral-solid-gray-420` | #949494 | **白背景に対しコントラスト比 3:1**（非テキストの境界） |
-| `--color-neutral-solid-gray-500` | #7f7f7f | |
-| `--color-neutral-solid-gray-536` | #767676 | **白・黒の双方に 4.5:1**（テキスト最小） |
-| `--color-neutral-solid-gray-600` | #666666 | **黒背景に対し 3:1** |
-| `--color-neutral-solid-gray-700` | #4d4d4d | |
-| `--color-neutral-solid-gray-800` | #333333 | |
-| `--color-neutral-solid-gray-900` | #1a1a1a | 本文テキスト相当 |
+| `solid-gray-420` | #949494 | **白背景に 3:1**。非テキスト（罫線・境界）の下限 |
+| `solid-gray-536` | #767676 | **白・黒の双方に 4.5:1**。薄い文字の下限 |
+| `solid-gray-600` | #666666 | **黒背景に 3:1** |
 
-不透明度グレー `--color-neutral-opacity-gray-<step>` = `rgba(0,0,0,α)`。α: 50=0.05, 100=0.1, 200=0.2, 300=0.3, 400=0.4, 420=0.42, 500=0.5, 536=0.54, 600=0.6, 700=0.7, 800=0.8, 900=0.9。背景の上に重ねる罫線・分割線・無効状態などに使用。
+本文相当は `solid-gray-900` #1a1a1a。不透明度グレー `--color-neutral-opacity-gray-<step>` = `rgba(0,0,0,α)`（step/1000 が α。420→0.42, 536→0.54）で、背景の上に重ねる罫線・無効状態に使う。
 
-### 1.3 セマンティック（システム）カラー
+### セマンティック
+明暗2段階（`-1` が標準、`-2` が濃い）。
 
-用途別トークン。明暗2段階（-1 が標準、-2 が濃い）。
+| トークン | 参照 | HEX |
+|---|---|---|
+| `--color-semantic-success-1` / `-2` | green-600 / -800 | #259d63 / #197a4b |
+| `--color-semantic-error-1` / `-2` | red-800 / -900 | #ec0000 / #ce0000 |
+| `--color-semantic-warning-yellow-1` / `-2` | yellow-700 / -900 | #b78f00 / #927200 |
+| `--color-semantic-warning-orange-1` / `-2` | orange-600 / -800 | #fb5b01 / #c74700 |
 
-| トークン | 参照プリミティブ | 解決HEX | 用途 |
-|---|---|---|---|
-| `--color-semantic-success-1` | green-600 | #259d63 | 成功・完了・安全 |
-| `--color-semantic-success-2` | green-800 | #197a4b | 成功（濃） |
-| `--color-semantic-error-1` | red-800 | #ec0000 | エラー・危険 |
-| `--color-semantic-error-2` | red-900 | #ce0000 | エラー（濃） |
-| `--color-semantic-warning-yellow-1` | yellow-700 | #b78f00 | 警告（黄系） |
-| `--color-semantic-warning-yellow-2` | yellow-900 | #927200 | 警告 黄（濃） |
-| `--color-semantic-warning-orange-1` | orange-600 | #fb5b01 | 警告（橙系） |
-| `--color-semantic-warning-orange-2` | orange-800 | #c74700 | 警告 橙（濃） |
+### 機能カラー（2026-08-05 追加。**CSS変数は v2.0.1 に存在しない**）
+UI のインタラクション状態を明示するためのカラー。トークン化されていないのでプリミティブを直接参照する。
 
-### 1.4 キーカラー（プライマリ）
+| 用途 | 規定 |
+|---|---|
+| リンクカラー | Default=青 / Visited=紫（青と明度差をつけるため赤みを少し足した紫）。4.5:1 以上 |
+| **フォーカスカラー** | **Yellow-300 #ffd43d と Black #000000 の2重構造。いかなる場合も変更してはいけない** |
+| 検索ハイライトカラー | シアン系 または マゼンタ系（淡い背景＋濃いボーダー）から選択 |
 
-`--color-key-<step>`（50〜1200）は **Blue にエイリアス**。サービスのブランド色に合わせて差し替える設計（DADSの「スタイルガイド」概念）。
-- 例: キー標準 `--color-key-700` = #264af4 / 濃 `--color-key-800` = #0031d8 / 淡背景 `--color-key-50` = #e8f1fe。
+ブランド色へ差し替えてよいのは**キーカラーだけ**で、フォーカスカラーは対象外。
 
-### 1.5 カラー運用原則
-- 前景色と背景色は必ず両方指定する。
-- **色のみで情報を区別しない**（色覚多様性: 状態・リンク等は形・下線・アイコンを併用）。
-- テキストは原則コントラスト比 **4.5:1 以上**（DADSはサイズによらず4.5:1を採用）。詳細は `accessibility.md`。
+### 運用原則
+- 前景色と背景色は必ず両方指定する
+- **色のみで情報を区別しない**（状態・リンクは形・下線・アイコンを併用）
+- テキストは原則 **4.5:1 以上**。DADS は「大きなテキストは 3:1」の緩和を採らず、サイズによらず 4.5:1 → `accessibility.md`
 
 ---
 
 ## 2. タイポグラフィ
 
-### 2.1 フォントファミリー
-| 区分 | CSS変数 | 値 |
-|---|---|---|
-| 和文・標準（本文/見出し） | `--font-family-sans` | `'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif` |
-| 等幅（コード等） | `--font-family-mono` | `'Noto Sans Mono', monospace` |
+### フォントファミリー
+トークン値は `--font-family-sans` = `'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif` / `--font-family-mono` = `'Noto Sans Mono', monospace`。Noto Sans JP は SIL Open Font License 1.1。欧文専用ファミリは定義されず、和文フォントの欧文グリフを使う。
 
-Noto Sans JP は SIL Open Font License 1.1。欧文専用ファミリは定義されず、和文フォントの欧文グリフを使用。
+公式の記述例は 2026-08-05 にシステムフォント列挙を省いた形へ簡素化された（トークン側の値は従来のまま）:
 
-### 2.2 ウェイト
-`--font-weight-400` = 400（N: Normal） / `--font-weight-700` = 700（B: Bold）。中間ウェイトは使わない。
+```css
+body { font-family: 'Noto Sans JP', sans-serif; }
+pre, code { font-family: 'Noto Sans Mono', monospace; }
+```
 
-### 2.3 フォントサイズ
-`--font-size-<px>`（rem値。root=16pxで 1rem=16px）。
+Google Fonts を使う場合の公式HTML記述例:
 
-| トークン | rem | px |
-|---|---|---|
-| `--font-size-14` | 0.875 | 14 |
-| `--font-size-16` | 1 | 16 |
-| `--font-size-17` | 1.0625 | 17 |
-| `--font-size-18` | 1.125 | 18 |
-| `--font-size-20` | 1.25 | 20 |
-| `--font-size-22` | 1.375 | 22 |
-| `--font-size-24` | 1.5 | 24 |
-| `--font-size-26` | 1.625 | 26 |
-| `--font-size-28` | 1.75 | 28 |
-| `--font-size-32` | 2 | 32 |
-| `--font-size-36` | 2.25 | 36 |
-| `--font-size-45` | 2.8125 | 45 |
-| `--font-size-48` | 3 | 48 |
-| `--font-size-57` | 3.5625 | 57 |
-| `--font-size-64` | 4 | 64 |
+```html
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&family=Noto+Sans+Mono:wght@100..900&display=swap">
+```
 
-### 2.4 行間（line-height）
-`--line-height-<n>`: 100=1.0, 120=1.2, 130=1.3, 140=1.4, 150=1.5, 160=1.6, 170=1.7, 175=1.75。
+### ウェイト
+`--font-weight-400`（N: Normal）/ `--font-weight-700`（B: Bold）の**2段階のみ**。現在の Noto Sans JP / Mono はバリアブルフォントとして配布されており CSS 上は任意値を指定できるが、**デザインシステムとしての太さレベルは N/B のまま**なので、DADS準拠を名乗る成果物では中間値を使わない。
 
-用途の目安: 100=ボタン等1行 / 120・130=情報密度優先（管理・業務画面） / 140=大きめ見出し / 150=本文の最低限 / 160=一般的な本文 / 170=可読性重視の本文 / 175=広いグリッド幅の本文。
+### サイズ・行間
+- `--font-size-<px>`（rem値。root=16px）: **14, 16, 17, 18, 20, 22, 24, 26, 28, 32, 36, 45, 48, 57, 64**
+  - 48〜64 = 視覚的インパクト用 / 16〜45 = 見出し・本文の主力 / **14 は原則使わない**（フッター等の付随情報や領域制約時のみ。14px未満は原則不可）
+  - 本文・UI の基準値は **16px 以上**
+- `--line-height-<n>`: 100, 120, 130, 140, 150, 160, 170, 175
+  - 100=ボタン等1行 / 120・130=情報密度優先（管理・業務画面） / 140=大きめ見出し / 150=本文の最低限 / 160=一般的な本文 / 170=可読性重視 / 175=広いグリッド幅
 
-### 2.5 テキストスタイル（合成トークン）
-命名規則 `<カテゴリ>-<サイズpx><N|B>-<行間%>`（例 `Std-16N-170` = Standard / 16px / 400 / line-height 1.7）。`tokens.css` には素トークン（サイズ・行間・ウェイト）のみ含まれ、合成スタイルはFigma側の定義。代表カテゴリ:
+### テキストスタイル（合成トークン）
+命名は `<カテゴリ>-<サイズpx><N|B>-<行間%>`（例 `Std-16N-170` = Standard / 16px / 400 / line-height 1.7）。`tokens.css` には素トークンのみ含まれ、合成スタイルは Figma 側の定義。
 
-- **Display（Dsp）48/57/64px**: 特大見出し。line-height 140%。例 `Dsp-64B-140`。
-- **Standard（Std）16〜45px**: 見出し〜本文の主力。本文は `Std-16N-170` / `Std-17N-170` / `Std-16N-175`。見出しは `Std-20B-150`〜`Std-45B-140`。字間 letter-spacing は 16〜26pxで 2%(0.02em)、32〜36pxで 1%、45pxで 0。
-- **Dense（Dns）14/16/17px**: 情報密度優先（管理・業務画面）。line-height 120%/130%。
-- **Oneline（Oln）14/16/17px**: UI/ボタン等の1行。line-height 100%、字間 2%。
-- **Mono 14/16/17px**: コード等（Noto Sans Mono）。line-height 150%。
+- **Display（Dsp）48/57/64px**: 特大見出し。行間140%
+- **Standard（Std）16〜45px**: 見出し〜本文の主力。本文 `Std-16N-170` / `Std-17N-170` / `Std-16N-175`、見出し `Std-20B-150`〜`Std-45B-140`。letter-spacing は 16〜26px で 2%、32〜36px で 1%、45px で 0
+- **Dense（Dns）14/16/17px**: 情報密度優先。行間120%/130%
+- **Oneline（Oln）14/16/17px**: UI/ボタン等の1行。行間100%、字間2%
+- **Mono 14/16/17px**: コード等。行間150%
 
-本文の既定はおおむね **16px / line-height 1.7（`Std-16N-170`）**。見出しは Bold + line-height 1.4〜1.5。
+既定は **16px / line-height 1.7（`Std-16N-170`）**、見出しは Bold + 行間 1.4〜1.5。
 
 ---
 
-## 3. 角丸（border-radius）
+## 3. 角丸
 
-`--border-radius-<n>`（rem）。
+`--border-radius-<n>`（4, 6, 8, 12, 16, 24, 32, full）。公式の分類は **なし=0 / スモール=8 / ミディアム=正方形16・長方形12 / ラージ=正方形32・長方形16 / フル=50%**。
 
-| トークン | rem | px | 用途の目安 |
-|---|---|---|---|
-| `--border-radius-4` | 0.25 | 4 | 小（タグ・チップ・入力欄の一部） |
-| `--border-radius-6` | 0.375 | 6 | 小〜中 |
-| `--border-radius-8` | 0.5 | 8 | 角丸スモール（ボタン・入力欄） |
-| `--border-radius-12` | 0.75 | 12 | 角丸ミディアム（長方形） |
-| `--border-radius-16` | 1 | 16 | 角丸ミディアム（正方形）/ カード |
-| `--border-radius-24` | 1.5 | 24 | 大きめコンテナ |
-| `--border-radius-32` | 2 | 32 | 角丸ラージ（正方形） |
-| `--border-radius-full` | 624.9375 | ― | 完全な円/ピル形状（高さの50%相当を強制） |
-
-公式の「角の形状」分類: なし=0 / スモール=8 / ミディアム=正方形16・長方形12 / ラージ=正方形32・長方形16 / フル=50%。
+使い分けの目安: ボタン・入力欄=8 / カード=12〜16 / 大きめコンテナ=24〜32 / ピル・円=full（`--border-radius-full` は 624.9375rem で高さの50%相当を強制）。
 
 ---
 
-## 4. エレベーション（影 / box-shadow）
+## 4. エレベーション（影）
 
-`--elevation-<1..8>`。値が大きいほど高い（手前に浮く）。すべて2層構成（広く淡い影 + 近く濃い影）。
+`--elevation-1`〜`8`。値が大きいほど手前に浮く。すべて2層構成（広く淡い影＋近く濃い影）。**box-shadow の実値は `assets/dads-tokens.css`**。
 
-| トークン | box-shadow |
-|---|---|
-| `--elevation-1` | `0 2px 8px 1px rgba(0,0,0,0.1), 0 1px 5px 0 rgba(0,0,0,0.3)` |
-| `--elevation-2` | `0 2px 12px 2px rgba(0,0,0,0.1), 0 1px 6px 0 rgba(0,0,0,0.3)` |
-| `--elevation-3` | `0 4px 16px 3px rgba(0,0,0,0.1), 0 1px 6px 0 rgba(0,0,0,0.3)` |
-| `--elevation-4` | `0 6px 20px 4px rgba(0,0,0,0.1), 0 2px 6px 0 rgba(0,0,0,0.3)` |
-| `--elevation-5` | `0 8px 24px 5px rgba(0,0,0,0.1), 0 2px 10px 0 rgba(0,0,0,0.3)` |
-| `--elevation-6` | `0 10px 30px 6px rgba(0,0,0,0.1), 0 3px 12px 0 rgba(0,0,0,0.3)` |
-| `--elevation-7` | `0 12px 36px 7px rgba(0,0,0,0.1), 0 3px 14px 0 rgba(0,0,0,0.3)` |
-| `--elevation-8` | `0 14px 40px 7px rgba(0,0,0,0.1), 0 3px 16px 0 rgba(0,0,0,0.3)` |
-
-運用: 重なる要素は最低2段階の差をつける（例: 下にレベル1のボタンがあるダイアログはレベル3以上）。
+運用で効くのは値ではなく次の3点:
+- 重なる要素は最低2段階の差をつける（レベル1のボタンの上に出るダイアログはレベル3以上）
+- **ドロップシャドウではコントラスト比を確保できない**。影を境界の代わりにしない
+- 強制カラーモードを考慮し、オーバーレイシェード上の要素にはボーダーをつける
 
 ---
 
 ## 5. 余白（spacing）
 
-- **基準単位 = 8px グリッド**。余白・サイズは原則 8 の倍数（4pxは半グリッドとして補助的に）。
-- 例示スケール: 8（等倍）/ 24（3倍）/ 64（8倍）。1画面の余白スケールは3〜5段階に収まることが多い。
-- 注: `@digital-go-jp/design-tokens` v2.0.1 の `tokens.css` には **spacingトークンは含まれない**（8の倍数で運用する方針のため）。実装では `0.5rem`(8) `1rem`(16) `1.5rem`(24) `2rem`(32) `3rem`(48) `4rem`(64) 等を直接用いる。
+- **基準単位 = 8px グリッド**。余白・サイズは原則8の倍数（4px は半グリッドとして補助的に）
+- 1画面の余白スケールは3〜5段階に収まることが多い
+- 注: v2.0.1 の `tokens.css` に **spacing トークンは無い**（8の倍数で運用する方針のため）。実装では `0.5rem`(8) `1rem`(16) `1.5rem`(24) `2rem`(32) `3rem`(48) `4rem`(64) 等を直接書く
 
 ---
 
@@ -194,28 +138,27 @@ Noto Sans JP は SIL Open Font License 1.1。欧文専用ファミリは定義�
 
 | 項目 | 値 |
 |---|---|
-| ブレークポイント | **768px**（1点）。768px未満 = モバイル/タブレット、768px以上 = デスクトップ |
-| グリッド | 12カラム基本。リキッドレイアウト（カラムまたはガターの一方可変） |
-| ガター | 本文文字サイズの約2倍を目安（可変。固定pxの公式値なし） |
-| マージン | ページ幅に応じ可変 |
-| コンテンツ最大幅 | 公式の固定値明示なし（サービス側のスタイルガイドで決める） |
-| カラム割り例 | 2カラム=9+3 / 8+4 / 6+6、3カラム=4+4+4 / 3+6+3、4カラム=3+3+3+3、オフセット=2offset+8 等 |
+| ブレークポイント | **768px の1点**（未満=モバイル/タブレット、以上=デスクトップ） |
+| グリッド | 12カラム。リキッド（カラムまたはガターの一方が可変） |
+| ガター | 本文文字サイズの約2倍が目安（固定pxの公式値なし） |
+| コンテンツ最大幅 | 公式の固定値なし。サービス側のスタイルガイドで決める |
+| カラム割り例 | 2カラム=9+3 / 8+4 / 6+6、3カラム=4+4+4 / 3+6+3、4カラム=3+3+3+3 |
 
 ---
 
 ## 7. リンクテキスト
 
-状態別の装飾規則（HEX値はFigma側。色相の方向性のみ公式記載）。
+状態別の装飾規則（HEXはFigma側。公式は色相の方向性のみ記載）。
 
 | 状態 | 規則 |
 |---|---|
 | Default | 青色テキスト＋**下線（必須）**。外部/新規タブは末尾にアイコン＋代替テキスト |
 | Hover | 青が明るくなり下線が太くなる |
-| Focus | 黒の外枠線＋黄色背景 |
-| Active | オレンジ色 |
+| Focus | 黒の外枠線＋黄色背景（機能カラーのフォーカスカラー） |
+| Active | オレンジ色（Orange-800。Orange-700 はコントラスト不足のため2025-10に修正済み） |
 | Visited | マゼンタ/赤紫 |
 
-原則: 色のみに依存せず下線等を併用。ターゲットサイズは最小 24×24px（上下に各4pxの余白があれば確保とみなす）。
+色のみに依存せず下線等を併用する。ターゲットサイズは最小 24×24px（上下に各4pxの余白があれば確保とみなす）。
 
 ---
 
@@ -223,9 +166,9 @@ Noto Sans JP は SIL Open Font License 1.1。欧文専用ファミリは定義�
 
 | 項目 | 値 |
 |---|---|
-| ターゲットサイズ（操作要素のアイコン） | 44×44px 以上 |
-| コントラスト（テキストの一部） | 背景に対し 4.5:1 以上 |
-| コントラスト（非テキスト要素） | 背景に対し 3:1 以上 |
+| ターゲットサイズ（操作要素） | 44×44 CSS px 以上 |
+| コントラスト（テキストの一部） | 4.5:1 以上 |
+| コントラスト（非テキスト要素） | 3:1 以上 |
 | 配置種別 | フロント（ブロック先頭）/ リード（行頭）/ テール（行末）/ エンド（ブロック末尾） |
 
-注: アイコンの出典フォント・標準サイズ・グレード等の具体仕様は公式HTMLに明記なし。Material Symbols 系のアイコンは Apache License 2.0（`licensing.md` 参照）。実アイコンは Figma / リソースページを参照。
+アイコンは**ラベルと組み合わせて使う**のが原則。単体で使わざるを得ない場合は、本来のラベル内容を代替テキストにし、44×44px 以上を確保する。Material Symbols 系は Apache License 2.0（`licensing.md`）。実アイコンは Figma / リソースページを参照。
