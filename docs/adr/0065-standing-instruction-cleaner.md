@@ -33,6 +33,8 @@ agent_model: "Claude Fable 5 (Claude Code)"
 11. **run 1 残項目の裁定(2026-08-12 追記、ユーザー判断)**: **R3 は最小定義で採用** — gc check 11 として first-party description 間の backtick トークン重複を info で検知する(裁定済み共有トークンは allowlist。初期値 `opmaterialize` = run 1 probe で正しい近接と裁定済み)。**R4(probe fixture の永続化)は却下** — 発火 probe は run 内の旧新比較で完結するゲートであり時系列指標ではない。fixture は退役のたびに保守を要し(run 1 の発話セットには退役済み skill が既に含まれていた)、footprint 最小化ルールに例外を作る価値がない。probe セットは `.context` の使い捨てを正とする。**E-3(claude-cli-runner の fable-5 profile)は見送り** — 使用実績の証拠がなく、Fable の適応は de-prescription(引く方向)で `none` に対する adapter の価値が薄い。Codex → Claude CLI(Fable)委譲で `none` が不足する実例が出たら実装する。**§B-2(common-rules F11a / F11b の削減候補)は却下として閉包** — confidence low、両ホスト挙動 probe の費用が削減益(約 100〜150 字)を上回り、合格しても結果が現行ホスト世代に固定され再 probe のトリガーが存在しない。F11b 前半は挙動の教示であると同時に委譲の許可付与でもあり、削除は保守的世代を過小委譲へ振るリスクを持つ。再訪条件: common-rules の次回大改訂時、またはホスト世代の交代時。
 12. **instruction-cleaner を repo 非依存にする(2026-08-18 追記、ユーザー判断、GPT-5.6 (Codex))**: `scripts/instruction-gc` と `docs-evaluator` は dotfiles adapter とし、skill の core 契約から固定名を外す。repo 固有 sensor が無い場合は、`rg`、path 存在確認、文字数計測、blank-slate review / probe を portable defaults として observe から開始する。sensor 不在は停止理由にせず、永続 ratchet が無い場合だけ close 時の制約として明示する。新しい CI / script の追加は依頼範囲と repo 規約に従い、汎用化を理由に自動追加しない。
 
+13. **予算計測の被測定木を明示する(2026-08-31 追記、ユーザー判断、Claude Opus 5 (Claude Code))**: check 6b は installed 実体を測る。これは「実際に露出している面」を測る意図として正しいが、repo の内容を説明しているとは限らない。PR-24 の削除は 2026-08-17 から**未マージのまま配備**され、以降 installed から読んだ予算値には未マージ分が混入していた。5 件同時着地の整理でこれが顕在化し、各 PR の baseline 値を installed からではなくマージ後ツリーから算出して回避した。恒久対策として check 6a(installed vs repo の first-party 本文比較)を追加する。乖離は作業中の正常な状態なので **fail ではなく warn** とし、乖離があるときは 6b の冒頭に「この数値は installed の値で repo とは一致しない」ことと、baseline 更新前に install を揃えるかマージ後ツリーから算出することを info で出す。
+
 ## Consequences
 
 - ADR-0061〜0063 の方法論が一回きりの作業から常設プロセスへ昇格し、c にオーナーが付く。
@@ -41,6 +43,7 @@ agent_model: "Claude Fable 5 (Claude Code)"
 - git 未追跡の private_*(biz / tech / personal)は cleaner の編集・commit 対象外。計測(露出量)には installed 実体を使ってよい。
 - external skill は読み取り専用。ダイエットは upstream への提案か、install 差し替えの判断としてユーザーへ返す。
 - 他リポジトリでは repo 固有 sensor が無くても portable defaults で掃除を開始できる。dotfiles 固有の sensor・baseline・ratchet は adapter として引き続き利用する。
+- 予算値がどの木を説明しているかが gc 出力から判別できる。複数の変更が同時に係属していて installed が混ざるときは、baseline をマージ後ツリーから算出する。
 
 ## Validation
 
@@ -49,3 +52,4 @@ agent_model: "Claude Fable 5 (Claude Code)"
 - description ダイエットの旧新発火 probe(16 プロンプト、blank-slate 選択器 2 体)で critical 全一致・新が旧を下回らないこと
 - repo sensor 不在 / 永続 ratchet 不在の portable-defaults probe で critical 全一致し、hidden `.github/` 面を初回列挙できること
 - 施工後 `scripts/instruction-gc` が fail=0、first-party description warn=0
+- check 6a の陽性確認: installed 本文を 1 行改変すると warn が出て 6b に注記が付き、再 install で消えること

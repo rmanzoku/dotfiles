@@ -312,8 +312,40 @@ def _first_party_bodies() -> dict[str, str]:
     return bodies
 
 
-def check_exposure_budget(desc_totals: dict[str, int]) -> None:
+# 6a. installed と repo の乖離 -------------------------------------------------
+
+# 6b は installed 実体(= 実際に露出している面)を測る。未 install の repo 変更や、
+# 未マージのまま install された変更があると、予算値は repo の内容を説明しなくなる。
+# 実際に PR-24 の削除は 2026-08-17 から未マージのまま配備され、以降 installed から
+# 読んだ予算値には未マージ分が混入していた。乖離自体は作業中の正常な状態なので
+# fail にせず、6b の数値がどの木を説明しているかを明示する。
+
+
+def check_installed_repo_drift() -> list[str]:
+    section("6a. installed vs repo (first-party skill bodies)")
+    drifted: list[str] = []
+    for name, installed_body in sorted(_first_party_bodies().items()):
+        repo_md = REPO / "skills" / name / "SKILL.md"
+        if not repo_md.exists():
+            continue
+        repo_body = _md_body(repo_md)
+        if repo_body != installed_body:
+            delta = len(installed_body) - len(repo_body)
+            drifted.append(name)
+            warn(f"{name}: installed body {delta:+d} chars vs repo(未 install または未マージ配備)")
+    if not drifted:
+        ok("installed first-party bodies == repo")
+    return drifted
+
+
+def check_exposure_budget(desc_totals: dict[str, int], drifted: list[str]) -> None:
     section("6b. exposure budget vs baseline")
+    if drifted:
+        info(
+            "6a で乖離あり: 以下の数値は installed 実体の値で、repo の内容とは一致しない"
+            f"({', '.join(drifted)})。baseline を更新する前に install を揃えるか、"
+            "マージ後ツリーから算出すること"
+        )
     if not BASELINE_PATH.exists():
         info("docs/instruction-baseline.json 未作成(cleaner の初回実行で作成)")
         return
@@ -548,7 +580,8 @@ def main() -> int:
     check_agent_drift()
     check_layer_violation()
     desc_totals = check_description_length()
-    check_exposure_budget(desc_totals)
+    drifted = check_installed_repo_drift()
+    check_exposure_budget(desc_totals, drifted)
     check_runner_mapping_parity()
     check_shared_blocks()
     check_manifest_exception_revisit()
