@@ -1,11 +1,11 @@
 {
-  "updated_at": "2026-08-17",
+  "updated_at": "2026-08-31",
   "note": "露出予算(ADR-0065)。常時露出 3 面に加え、first-party skill 本文の字数と確認ゲート語彙数(人間往復の予算、ADR-0068)を持つ。意図的に増やすときは同じ変更内でこのファイルを更新し、理由を commit message に書く",
   "surfaces": {
     "common_rules_chars": 4909,
     "skill_descriptions_chars_firstparty": 7600,
     "agent_descriptions_chars": 1831,
-    "skill_bodies_chars_firstparty": 205196,
-    "skill_confirmation_gates_firstparty": 47
+    "skill_bodies_chars_firstparty": 204443,
+    "skill_confirmation_gates_firstparty": 46
   }
 }

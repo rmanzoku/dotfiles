@@ -18,6 +18,7 @@ check スクリプト。検出のみで修正はしない。定期実行は仕�
   9. runner skill 間の共有ブロック逐語検査(fail)
   10. manifest parity 例外の revisit 条件(warn)
   11. first-party description 間の固有トークン重複(取り合い候補 / info)
+  12. AI CLI runner の provider/model 固有 overguard と data-boundary contract(fail)
 
 usage: scripts/instruction-gc [--no-doctor]
 exit code: fail が 1 件以上あれば 1、なければ 0
@@ -487,6 +488,56 @@ def check_description_token_overlap() -> None:
         ok("no unadjudicated shared tokens")
 
 
+# 12. AI CLI runner guard boundaries (ADR-0069) -------------------------------
+
+MODEL_RUNNERS = [
+    "claude-cli-runner",
+    "codex-cli-runner",
+    "agy-cli-runner",
+    "grok-cli-runner",
+    "copilot-cli-runner",
+]
+RUNNER_OVERGUARD_PATTERNS = {
+    "personal/private data": "model-specific private-data exclusion",
+    "confidential source unless": "model-specific confidential-source approval",
+    "explicitly limit WebSearch/WebFetch counts": "runner-owned fixed research quota",
+    "Keep final judgment, editing": "blanket delegated-editing prohibition",
+    "Do not use generated images to depict real": "runner-owned image content policy",
+    "Do not ask for logos, brand marks": "runner-owned image content policy",
+    "For diagrams, prefer authoring SVG": "runner-owned image format policy",
+}
+
+
+def check_runner_guard_boundaries() -> None:
+    section("12. AI CLI runner guard boundaries (ADR-0069)")
+    bad = 0
+    for name in MODEL_RUNNERS:
+        text = (REPO / "skills" / name / "SKILL.md").read_text()
+        for pattern, label in RUNNER_OVERGUARD_PATTERNS.items():
+            if pattern in text:
+                fail(f"{name}: {label} が再導入された: {pattern!r}")
+                bad += 1
+
+    copilot_skill = (REPO / "skills/copilot-cli-runner/SKILL.md").read_text()
+    required_copilot_contract = [
+        "task-relevant private repository code and internal documents",
+        "Do not require a second model-specific confirmation",
+        "Fable always requires `--max-ai-credits`",
+    ]
+    for phrase in required_copilot_contract:
+        if phrase not in copilot_skill:
+            fail(f"copilot-cli-runner: ADR-0069 contract phrase が欠落: {phrase!r}")
+            bad += 1
+
+    copilot_script = (REPO / "skills/copilot-cli-runner/scripts/run_copilot_cli.py").read_text()
+    if "FABLE_5_MIN_AI_CREDITS" in copilot_script:
+        fail("copilot-cli-runner: model-specific minimum-credit rejection が再導入された")
+        bad += 1
+
+    if bad == 0:
+        ok("model-neutral task-data boundary; no known runner-specific overguards")
+
+
 def main() -> int:
     no_doctor = "--no-doctor" in sys.argv
     print(f"instruction-gc @ {REPO}")
@@ -502,6 +553,7 @@ def main() -> int:
     check_shared_blocks()
     check_manifest_exception_revisit()
     check_description_token_overlap()
+    check_runner_guard_boundaries()
     if not no_doctor:
         check_doctor()
     print(f"\nresult: fail={len(FAILS)} warn={len(WARNS)}")

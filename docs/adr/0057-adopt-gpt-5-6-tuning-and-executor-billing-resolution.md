@@ -8,6 +8,8 @@ agent_model: Claude Fable 5 (claude-fable-5)
 
 # ADR 0057: GPT-5.6 tuning skill を新設し、サブスク標準採用と executor/billing 分離解決を導入する
 
+> Fable の task-data authorization と credit floor は [ADR 0069](./0069-normalize-ai-cli-runner-data-boundaries.md) により一部更新された。executor/billing 分離と per-run budget contract は維持する。
+
 ## Context
 
 GPT-5.6(2026-07-09 リリース、`gpt-5.6-sol` / `gpt-5.6-terra` / `gpt-5.6-luna`)は ADR 0054 で Codex の role 別既定に採用済みだが、対応する tuning skill がなく、`codex-cli-runner` の prompt profile も GPT-5.5 までだった。公式ガイダンスは 5.5 の fresh-baseline と異なり「既存プロンプトを lean に削る」方向(繰り返し排除・無効 example 削除・tool scope 限定)で、autonomy boundary の明示列挙、eval-gated Pro Mode、persisted reasoning、bounded PTC が新要素になる。
@@ -20,7 +22,7 @@ GPT-5.6(2026-07-09 リリース、`gpt-5.6-sol` / `gpt-5.6-terra` / `gpt-5.6-lun
 - `skills/codex-cli-runner` に `gpt-5-6` prompt profile を追加する。`auto` は明示 `--model` の 5.6 系(sol / terra / luna / alias)にのみ適用し、5.5 系と相互誤検出しない。wrapper の `--effort` choices は Codex CLI の `model_reasoning_effort` が `none` / `max` を受理するか未検証のため変更せず、必要時は `--extra-codex-arg` の config 経由とする。
 - `skills/agent-orchestration-evaluator` に executor / billing source の分離解決を導入する(invariant 24 / 25)。runner 契約・budget guard・usage 報告は model vendor ではなく executor に従う。
 - **サブスク標準採用ポリシー**: サブスクリプションで賄える実行経路では現行世代 flagship を routine の標準とする — Claude Code entrypoint は Opus 5(長期自律・ゼロベース監査等の明示要件では Fable 5、既存 role 規約に従う)、Codex entrypoint は GPT-5.6(role 別 variant は ADR 0054)。従量・credit 課金経路(API 予算、Copilot credits、via-Copilot の Fable/Opus)は per-run の明示予算契約を必須とし、silent default / fallback にしない。
-- **Per-project executor override**: 特定プロジェクトが Claude モデルを Copilot CLI 経由で実行する場合、そのプロジェクトの resolver / registry で override を宣言し、`copilot-cli-runner` の契約(credit cap、usage 記録、Fable の retention 境界)に従う。グローバル既定からの暗黙継承は認めない。
+- **Per-project executor override**: 特定プロジェクトが Claude モデルを Copilot CLI 経由で実行する場合、そのプロジェクトの resolver / registry で override を宣言し、`copilot-cli-runner` の契約(credit cap、usage 記録、Fable 明示選択による30日保持 acknowledgment、model-neutral な task-data boundary)に従う。グローバル既定からの暗黙継承は認めない。
 - evaluator の skill 本文では具体モデル名を non-authoritative 例に留め(invariant 10 維持)、本 ADR を標準採用ポリシーの正本とする。
 
 ## Placement
