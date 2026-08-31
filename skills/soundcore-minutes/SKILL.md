@@ -14,7 +14,6 @@ The authenticated Soundcore session lives in ONE specific Chrome profile. Select
 - Prefer Chrome when the user likely needs their existing login session, cookies, password manager, or MFA state.
 - Use Codex App Browser when the user explicitly asks for it, is already logged in there, or wants the work done in the in-app browser.
 - If neither browser session is authenticated, open `https://ai.soundcore.com/home`, pause for the user to complete login, then continue after the UI is available.
-- Do not ask for Soundcore credentials. Let the user perform authentication directly in the browser.
 
 ### Resolving the browser surface (Claude in Chrome)
 
