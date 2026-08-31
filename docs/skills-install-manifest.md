@@ -1,6 +1,6 @@
 ---
 title: "Skill Install Manifest"
-updated_at: 2026-08-09
+updated_at: 2026-08-28
 ---
 
 # Skill Install Manifest
@@ -70,6 +70,14 @@ gh skill install . handoff --from-local --agent codex --scope user
 gh skill install . git-branch-review --from-local --agent codex --scope user
 gh skill install . dads-design --from-local --agent codex --scope user
 gh skill install . gws-cli-runner --from-local --agent codex --scope user
+```
+
+### install 後に追加手順が要る skill
+
+`dads-design` は、デジタル庁デザインシステムの公式 Markdown ドキュメント一式を git 管理せず、共有キャッシュ `${XDG_DATA_HOME:-~/.local/share}/dads-design/` へ都度取得する（[ADR-0070](adr/0070-dads-docs-external-cache.md)）。新しいマシンでは install 後に一度実行する。両 agent は同じキャッシュを参照するので 1 回でよい。
+
+```bash
+python3 ~/.claude/skills/dads-design/scripts/dads-docs fetch
 ```
 
 ## Third-party external skills
