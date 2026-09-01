@@ -146,7 +146,7 @@ Important request rules:
 Require all applicable checks:
 
 - Process exit code is `0`.
-- For real runs with `json` or `streaming-json` output, `summary.json.stop_reason` is `EndTurn`.
+- For real runs with `json` or `streaming-json` output, `summary.json.stop_reason` normalizes to `end_turn`. The wrapper compares lowercased with `_`/`-` removed, so `end_turn` and `EndTurn` both count as success.
 - For real runs, the resolved response artifact exists and is non-empty.
 - Response artifact contains `request`, `response`, `model` (`null` when the run delegated to the Grok Build CLI default model), `backend`, and `output_text` or parsed stdout sufficient for the caller to inspect.
 - `summary.json.success` is `true`. The wrapper defines it as an empty `failure_reasons`.
@@ -209,7 +209,7 @@ Treat any of these as failure:
 - Missing `request.input`.
 - Missing `grok` executable.
 - Grok Build auth, model, permission, policy, update, or rate-limit errors.
-- For real `json` or `streaming-json` runs, `stop_reason` other than `EndTurn`, normally `Cancelled` from a headless permission prompt that nothing could answer (exit code stays `0`; only `stop_reason` reveals the failure). `plain` output and `--dry-run` leave `stop_reason` `null` and are not judged on it.
+- For real `json` or `streaming-json` runs, `stop_reason` that does not normalize to `end_turn`, normally `Cancelled` / `cancelled` from a headless permission prompt that nothing could answer (exit code stays `0`; only `stop_reason` reveals the failure). `plain` output and `--dry-run` leave `stop_reason` `null` and are not judged on it.
 - Real run response artifact is missing or empty.
 
 On failure, inspect `.context/<task>/summary.json` first. Start with `failure_reasons`,

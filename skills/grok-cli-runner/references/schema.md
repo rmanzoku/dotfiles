@@ -122,7 +122,7 @@ Important fields:
 - `dry_run_payload`: present only for dry-run success and includes the normalized request, prompt byte count, and redacted command
 - `prompt_bytes`
 - `exit_code`
-- `stop_reason`: Grok Build stop reason parsed from `json` / `streaming-json` stdout (`EndTurn` on completion; `Cancelled` normally means an unanswerable headless permission prompt); `null` for `plain` output and dry-run
+- `stop_reason`: Grok Build stop reason parsed verbatim from `json` / `streaming-json` stdout (`end_turn` / `EndTurn` on completion — success is judged by normalized comparison, lowercased with `_`/`-` removed; `Cancelled` normally means an unanswerable headless permission prompt); `null` for `plain` output and dry-run
 - `elapsed_seconds`
 - `request_bytes`, `response_bytes`, `stderr_bytes`
 - `response_non_empty`
