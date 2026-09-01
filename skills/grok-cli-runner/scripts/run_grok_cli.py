@@ -315,6 +315,14 @@ def extract_stop_reason(parsed_stdout: Any) -> str | None:
     return None
 
 
+def is_end_turn(stop_reason: str | None) -> bool:
+    # Grok CLI stop-reason spelling varies by version (EndTurn vs end_turn),
+    # so compare lowercased with "_" and "-" removed.
+    if not isinstance(stop_reason, str):
+        return False
+    return stop_reason.lower().replace("_", "").replace("-", "") == "endturn"
+
+
 def run_grok_build(
     args: argparse.Namespace,
     command: list[str],
@@ -361,7 +369,7 @@ def run_grok_build(
         "backend": "grok-build",
     }
     write_json(response_path, artifact)
-    if args.output_format in {"json", "streaming-json"} and stop_reason != "EndTurn":
+    if args.output_format in {"json", "streaming-json"} and not is_end_turn(stop_reason):
         log_progress(f"Grok Build turn did not complete stop_reason={stop_reason}")
     else:
         log_progress(f"completed Grok Build headless run bytes={len(proc.stdout)}")
@@ -394,7 +402,7 @@ def classify_failure_reasons(
         not dry_run
         and exit_code == 0
         and output_format in {"json", "streaming-json"}
-        and stop_reason != "EndTurn"
+        and not is_end_turn(stop_reason)
     ):
         reasons.append("stop_reason_not_end_turn")
     if not dry_run and not response_non_empty and "missing_grok" not in reasons and "invalid_request" not in reasons:
@@ -413,7 +421,7 @@ def recommended_next_action(failure_reasons: list[str], *, dry_run: bool) -> str
         return "Fix grok-request.json against references/schema.md, then rerun with --dry-run before a real call."
     if "stop_reason_not_end_turn" in failure_reasons:
         return (
-            "Grok Build ended the turn without completing (stop_reason != EndTurn; Cancelled usually means a headless "
+            "Grok Build ended the turn without completing (stop_reason does not normalize to end_turn; Cancelled usually means a headless "
             "permission prompt nobody could answer). For tasks with shell or file side effects rerun with "
             "--permission-mode bypassPermissions, and inspect events.jsonl under ~/.grok/sessions/ for permission_cancelled."
         )
