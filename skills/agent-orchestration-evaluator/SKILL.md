@@ -1,11 +1,11 @@
 ---
 name: agent-orchestration-evaluator
-description: "Evaluate and tune AI agent orchestration assets: model resolvers, Self-Elision, skill role assignments, delegation boundaries, and prompt harnesses that keep parent agents orchestrating while researcher, reviewer, and worker roles go to subagents or observable CLI runners. Use when reviewing resolver semantics, multi-agent skill design, runner-skill migration, or agent workflow tuning."
+description: "Evaluate and tune AI agent orchestration assets: model resolvers, Self-Elision, skill role assignments, delegation boundaries, and prompt harnesses. Use when reviewing resolver semantics, multi-agent skill design, runner-skill migration, or agent workflow tuning."
 ---
 
 # Agent Orchestration Evaluator
 
-Evaluate or tune agent workflow instructions so they separate orchestration from delegated work. The core pattern is: `self` means parent-orchestrator direct execution for orchestration work only; concrete task execution belongs to delegated roles. Aliased AI roles such as researcher, reviewer, creator, worker, or judge should be delegated to a subagent when they resolve to the current provider/model, and to an observable runner or CLI subprocess when they resolve elsewhere.
+Evaluate or tune agent workflow instructions so delegation is used where it improves parallelism, context isolation, specialty coverage, or required independence. Existing-contract work that remains within one owner may be performed directly by the parent. A matching provider or model does not decide that choice; cross-provider delegated work uses an observable runner or CLI subprocess when available.
 
 ## Modes
 
@@ -23,10 +23,10 @@ Use these terms consistently:
 
 | Term | Meaning |
 |---|---|
-| Parent orchestrator | The entrypoint agent coordinating the task, artifacts, parallel workers, synthesis, and final response. |
-| `self` | An explicit role assignment meaning the parent orchestrator directly performs orchestration work for the phase. Reserve for intent clarification, planning, delegation, artifact checks, synthesis, adjudication, and final output. Do not use for concrete task execution that can be delegated. |
+| Parent orchestrator | The entrypoint agent coordinating the task, direct owner-local work when appropriate, handoffs, parallel workers, synthesis, and final response. |
+| `self` | An explicit role assignment meaning the parent handles the work directly. It may cover orchestration or existing-contract work that remains within one owner when delegation is not warranted. |
 | AI agent role | A delegated role such as researcher, reviewer, creator, worker, judge, analyzer, verifier, or implementation slice owner. |
-| Self-Elision | Runtime optimization when a delegated role resolves to the same provider/model as the parent. Skip external CLI, but still delegate to a same-provider/model subagent. |
+| Self-Elision | Runtime optimization when a delegated role resolves to the same provider/model as the parent. Skip external CLI and choose direct execution or a same-provider subagent under the same delegation criteria. |
 | Runner skill | A wrapper skill for observable Claude / Codex / Gemini / Grok / Copilot CLI or API-backed subprocess execution, stream logs, timeouts, expected artifacts, and failure reports. |
 | Resolver | Logic that maps role -> alias -> provider/model/config/execution mode. It should not become a raw command cookbook when runner skills exist. |
 | Executor / billing source | The CLI, subagent surface, or service that actually serves a resolved model, plus how that execution is billed (provider subscription, metered API budget, or credit pool). The same model can be servable by more than one executor; the runner contract and budget rules follow the executor, not the model vendor. |
@@ -38,31 +38,30 @@ Use these terms consistently:
 Flag or fix violations of these invariants:
 
 1. `self` and Self-Elision are not equivalent.
-2. `self` is the only direct parent execution mode.
-3. Parent orchestrators do not own concrete task execution. They clarify, plan, delegate, monitor artifacts, synthesize, adjudicate, and report.
-4. Aliased AI agent roles are not performed by the parent orchestrator merely because the model matches.
-5. Delegation should prefer subagents whenever the environment supports them, including for same-provider Self-Elision and for wrapping cross-provider runner-skill calls.
-6. Self-Elision means "do not spawn an external CLI subprocess; spawn a same-provider subagent instead."
-7. Cross-provider roles use a runner skill when available; otherwise use the resolver's CLI command contract. This includes Claude, Codex, Gemini, Grok, and Copilot runner skills.
-8. Runner skills own subprocess mechanics: prompt files, stream logs, timeout defaults, expected artifacts, summary, and failure reports.
-9. Resolver docs own role/provider/model/config selection and execution-mode semantics, not wrapper internals.
-10. Skills should reference the resolver/registry for concrete provider, model ID, effort, and config. Do not hard-code model names or effort settings in skill text except as examples clearly marked non-authoritative.
-11. The rule is entrypoint-independent: Claude Code, Codex, Gemini, or another agent should follow the same logical resolver semantics.
-12. Every fallback from subagent delegation must be explicit. Do not silently fall back to parent execution for delegated AI roles.
-13. Delegated agents must not perform synthesis, final report editing, or orchestration decisions unless their role explicitly says so.
-14. Execution-only roles such as `creator`, `apply_consensus`, formatter, or renderer should default to lightweight model settings such as low effort unless the resolver documents an eval-backed reason for a heavier setting.
-15. Review and finding roles should not filter findings by vague importance bars during the discovery phase. Prefer coverage-first finding prompts, then rank, dedupe, or verify in a separate role or phase.
-16. Tool-use policy should be explicit enough for required evidence gathering, but should not force fixed tool-call counts or stale progress scaffolds that fight newer model tool-triggering behavior.
-17. Long-running delegated work must leave enough artifacts, summaries, and failure reports for the parent orchestrator to recover after context compaction or a runner restart. Artifacts carry references to canonical sources; a summary must not replace the source it summarizes.
-18. Error bypasses must not silently become the accepted workflow. If a command, tool, environment, permission, dependency, or validation error is bypassed and recurrence, skipped validation, setup drift, or reproducibility risk remains, the workflow must trigger an explicit bypass remediation review.
-19. Bypass remediation review may be delegated to a subagent, reviewer, evaluator, or runner when available, but the parent orchestrator must verify the proposed permanent fix against repository code, configuration, docs, tests, and managed state boundaries before adopting it.
-20. Repeated fallback, subline execution, delegated-role confusion, or runner bypass observed in session history or an AI-usage coach report is evidence for an orchestration audit, not proof of an orchestration defect by itself.
-21. Roles that generate changes must not weaken or rewrite their own acceptance criteria — tests, specs, or completion definitions — without a separate gate or role.
-22. Scaling generation throughput (fan-out, parallel workers, autonomous loops) must be paired with matching verification and cleanup capacity, and goal contracts must include stop conditions and cleanup of superseded artifacts.
-23. Model-generation behavior compensation — delegation encouragement or suppression, mandatory self-check passes, forced progress scaffolds — belongs in the resolver, model adapters, or runner prompt profiles, not in role prompts or skill text; a newer model generation can invert the bias the compensation was written for.
-24. Role resolution covers model, executor, and billing source as separate dimensions. When a model is served through another provider's CLI or surface, the runner contract, budget guard, and usage reporting follow the executor, not the model vendor.
-25. Subscription-covered standard models are the routine default; metered or credit-billed execution paths — API budgets, credit pools, premium tiers with special retention or pricing — require an explicit per-run budget contract and never become silent defaults or fallbacks. Concrete standard-model and executor choices live in the resolver/registry/ADR, not in skill text, and per-project executor overrides are declared in that project's resolver.
-26. Runner data is model-neutral: selection covers in-scope repo/docs; retention is not reapproval. Exclude secrets/credentials/sessions.
+2. Parent direct execution is valid for existing-contract work within one owner when parallelism, context isolation, specialty coverage, and independent review do not justify delegation.
+3. Phase names, role names, and a matching model do not by themselves require delegation or prohibit direct execution.
+4. Delegated work has a bounded owner and an explicit reason for the delegation.
+5. Self-Elision means "do not spawn an external CLI subprocess"; it does not determine whether the parent works directly or delegates to a same-provider subagent.
+6. Cross-provider delegated work uses a runner skill when available; otherwise use the resolver's CLI command contract. This includes Claude, Codex, Gemini, Grok, and Copilot runner skills.
+7. Runner skills own subprocess mechanics: prompt files, stream logs, timeout defaults, expected artifacts, summary, and failure reports.
+8. Resolver docs own role/provider/model/config selection and execution-mode semantics, not wrapper internals.
+9. Skills should reference the resolver/registry for concrete provider, model ID, effort, and config. Do not hard-code model names or effort settings in skill text except as examples clearly marked non-authoritative.
+10. The rule is entrypoint-independent: Claude Code, Codex, Gemini, or another agent should follow the same logical resolver semantics.
+11. A fallback from delegation must be explicit. Reconsidering direct parent execution is allowed only when it meets the same owner, scope, and delegation criteria.
+12. Delegated agents must not perform synthesis, final report editing, or orchestration decisions unless their role explicitly says so.
+13. Execution-only roles such as `creator`, `apply_consensus`, formatter, or renderer should default to lightweight model settings such as low effort unless the resolver documents an eval-backed reason for a heavier setting.
+14. Review and finding roles should not filter findings by vague importance bars during the discovery phase. Prefer coverage-first finding prompts, then rank, dedupe, or verify in a separate role or phase.
+15. Tool-use policy should be explicit enough for required evidence gathering, but should not force fixed tool-call counts or stale progress scaffolds that fight newer model tool-triggering behavior.
+16. Long-running delegated work leaves enough handoff evidence, summaries, and failure reports for recovery after context compaction or a runner restart. Artifacts carry references to canonical sources when an artifact is needed; a summary must not replace the source it summarizes.
+17. Error bypasses must not silently become the accepted workflow. If a command, tool, environment, permission, dependency, or validation error is bypassed and recurrence, skipped validation, setup drift, or reproducibility risk remains, the workflow must trigger an explicit bypass remediation review.
+18. Bypass remediation review may be delegated to a subagent, reviewer, evaluator, or runner when available, but the parent orchestrator must verify the proposed permanent fix against repository code, configuration, docs, tests, and managed state boundaries before adopting it.
+19. Repeated fallback, subline execution, delegated-role confusion, or runner bypass observed in session history or an AI-usage coach report is evidence for an orchestration audit, not proof of an orchestration defect by itself.
+20. Roles that generate changes must not weaken or rewrite their own acceptance criteria — tests, specs, or completion definitions — without a separate gate or role.
+21. Scaling generation throughput (fan-out, parallel workers, autonomous loops) must be paired with matching verification and cleanup capacity, and goal contracts must include stop conditions and cleanup of superseded artifacts.
+22. Model-generation behavior compensation — delegation encouragement or suppression, mandatory self-check passes, forced progress scaffolds — belongs in the resolver, model adapters, or runner prompt profiles, not in role prompts or skill text; a newer model generation can invert the bias the compensation was written for.
+23. Role resolution covers model, executor, and billing source as separate dimensions. When a model is served through another provider's CLI or surface, the runner contract, budget guard, and usage reporting follow the executor, not the model vendor.
+24. Subscription-covered standard models are the routine default; metered or credit-billed execution paths — API budgets, credit pools, premium tiers with special retention or pricing — require an explicit per-run budget contract and never become silent defaults or fallbacks. Concrete standard-model and executor choices live in the resolver/registry/ADR, not in skill text, and per-project executor overrides are declared in that project's resolver.
+25. Runner data is model-neutral: selection covers in-scope repo/docs; retention is not reapproval. Exclude secrets/credentials/sessions.
 
 ## Audit Workflow
 
@@ -78,16 +77,16 @@ Flag or fix violations of these invariants:
    - Identify execution-only roles that consume an already planned prompt or consensus output, such as `creator`, `apply_consensus`, doc renderer, formatter, or conversion worker.
 
 3. **Check boundaries**
-   - Look for wording that says Self-Elision means "current agent directly executes", "execute as self", "親が兼任", or similar.
-   - Look for `self` phases that perform concrete task execution instead of orchestration.
+   - Look for wording that makes Self-Elision itself require either direct execution or delegation.
+   - Look for `self` phases where direct work crosses owner boundaries or lacks a reason to remain direct.
    - Look for raw CLI construction inside skills when a runner skill exists.
-   - Look for subagent fallbacks that silently become direct parent execution.
+   - Look for delegation fallbacks that become direct parent execution without reassessing owner, scope, and the delegation criteria.
    - Look for delegated prompts that allow Phase C/D synthesis, final edits, or reading other workers' outputs without an explicit reason.
    - Look for skills that hard-code concrete model names, provider names, effort settings, timeout defaults, or CLI flags that should come from a resolver/registry or runner skill.
    - Look for code-review prompts that tell finding roles to report only high-severity, important, or certain issues before a separate ranking or verification phase.
    - Look for fixed tool-call quotas, forced progress checkpoints, or stale "always use tools" language that should be replaced by outcome/evidence-based tool guidance.
    - Look for model-generation compensation hard-coded in role prompts or skills — "delegate more", mandatory double-check or self-verification passes, forced verification subagents — that inverts on a generation with the opposite bias and should move to a model adapter or runner prompt profile.
-   - Look for fan-out or delegation stages that leave spawn count and delegation criteria to model discretion instead of an explicit cap and delegation condition.
+   - Look for fan-out or delegation stages that lack a bounded purpose or use phase or role names as their only delegation condition.
    - Look for roles that treat model and executor as the same thing — assuming a model vendor's own CLI is the only execution path — when the resolver may route the same model through another provider's CLI with a different billing source and runner contract.
    - Look for per-project executor overrides (for example, a project that routes one vendor's models through another provider's CLI) that are inherited implicitly instead of being declared in that project's resolver/registry together with the executor's budget contract.
    - Look for wording that tells agents to "find another way", "work around", "skip", "continue anyway", "ignore", or "use a fallback" after errors without defining when a bypass remediation review is required.
@@ -107,11 +106,11 @@ Flag or fix violations of these invariants:
    - Check that routine roles default to subscription-covered standard models, and that metered or credit-billed paths carry an explicit per-run budget contract; the concrete standard-model list lives in the resolver/registry/ADR.
 
 5. **Evaluate execution contracts**
-   - Delegated work should have an outcome-first prompt, source prompt file when large, expected artifacts, success criteria, allowed side effects, evidence rules, timeout/budget guard, and blocked-state reporting.
+   - Delegated work should have an outcome-first prompt, source prompt file when large, success criteria, allowed side effects, evidence rules, timeout/budget guard, and blocked-state reporting. Require artifacts only when a handoff, audit, identity, or recovery need calls for them.
    - CLI runner calls should preserve observability: stream logs, stderr, summary, failure artifact, elapsed time, and expected artifact checks.
    - Check Claude, Codex, Gemini, Grok, and Copilot roles for available runner skills before accepting raw `claude`, `codex`, `gemini`, `grok`, `copilot`, direct API, or ad hoc wrapper calls inside skill text.
-   - Same-provider subagents should have a bounded responsibility and a clear return artifact or final report shape.
-   - Long-running roles should write summaries, blocked-state reports, and expected artifacts in stable paths so compaction does not make the work unrecoverable.
+   - Same-provider subagents should have a bounded responsibility and a clear return shape; use a durable artifact when the handoff or recovery need requires one.
+   - Long-running roles should leave summaries, blocked-state reports, and any needed artifacts in stable paths so compaction does not make the work unrecoverable.
    - Bypass remediation reviews should classify the error cause, temporary bypass, permanent-remediation options, repo-managed changes, machine-local state, and verification plan.
    - If the bypass review is delegated, check that the subagent or runner prompt forbids direct adoption of its proposal and requires the parent to verify against source-of-truth files.
    - Treat promotion candidates as review inputs. Require recurrence, friction, risk, portability, and future-value evidence before recommending a reusable orchestration rule or skill.
@@ -122,23 +121,23 @@ Flag or fix violations of these invariants:
 
 ## Tuning Patterns
 
-### Replace Direct Self-Elision
+### Keep Self-Elision Separate From Delegation Choice
 
 Bad:
 
 ```text
-If resolved provider/model matches current agent, execute as self and skip command construction.
+If resolved provider/model matches current agent, always delegate to a same-provider subagent.
 ```
 
 Good:
 
 ```text
-If resolved provider/model matches current agent, skip external CLI subprocess construction and delegate the role to a same-provider/model subagent. The parent orchestrator must not perform aliased AI agent roles directly.
+If resolved provider/model matches current agent, skip external CLI subprocess construction. Decide between direct execution and a same-provider subagent from parallelism, context isolation, specialty coverage, required independence, owner boundary, and scope.
 ```
 
 ### Separate `self` From Delegated Roles
 
-Use `self` for orchestration phases. These phases may decide and synthesize, but should not perform concrete worker tasks when delegation is available:
+Use `self` for work the parent can complete within the owner and scope; it may include orchestration or concrete existing-contract work:
 
 ```yaml
 roles:
@@ -183,16 +182,16 @@ Typical policy:
 |---|---|
 | `creator`, `apply_consensus`, renderer, formatter | Lightweight / low effort unless evals justify more. |
 | `researcher`, `reviewer`, `judge`, architecture analyzer | Medium or higher depending on risk and evidence needs. |
-| Parent `self` orchestration | No concrete model allocation inside the skill; uses the entrypoint agent. |
+| Parent `self` work | No concrete model allocation inside the skill; uses the entrypoint agent. |
 
-### Define Provider-Specific Same-Provider Delegation
+### Define Provider-Specific Delegation
 
 Keep this as execution guidance, not model allocation:
 
 | Current provider | Same-provider delegation |
 |---|---|
-| `claude_code` | Claude Code subagent / Agent tool, with the skill's artifact contract. |
-| `codex` | `spawn_agent`, with explicit ownership and expected artifacts. |
+| `claude_code` | Claude Code subagent / Agent tool when delegation is warranted. |
+| `codex` | `spawn_agent` when delegation is warranted, with explicit ownership and needed handoff evidence. |
 | `gemini` | Gemini subagent mechanism if available; otherwise delegate through `agy-cli-runner`. |
 | Other | Define explicitly before relying on Self-Elision. |
 
@@ -294,10 +293,10 @@ Recommended remediation review contract:
 
 Subagent or runner prompts should include:
 
-- Role and scope.
+- Role, scope, and why delegation is warranted.
 - Working directory.
 - Source prompt path for multi-line instructions.
-- Expected artifact paths.
+- Expected artifact paths when needed for handoff, audit, identity, or recovery.
 - Success criteria — including cleanup of superseded artifacts — stop conditions, and blocked-state reporting.
 - Allowed side effects.
 - Evidence rules.
@@ -336,18 +335,18 @@ For tuning, also list files changed and validation commands run.
 
 Stop only when:
 
-- The canonical resolver or equivalent guidance clearly distinguishes `self` from Self-Elision.
-- Delegated AI roles have an explicit subagent or runner path.
-- Parent `self` phases are limited to orchestration responsibilities, not concrete task execution.
+- The canonical resolver or equivalent guidance clearly distinguishes `self` from Self-Elision and bases delegation on the actual benefit and boundary.
+- Delegated AI roles have an explicit subagent or runner path when delegation is warranted.
+- Parent direct work remains within one owner and existing contract, or has the required review and handoff evidence for an exception.
 - Skills reference resolver/registry paths instead of hard-coding concrete model names, effort, or provider config.
 - Claude, Codex, Gemini, Grok, and Copilot cross-provider invocations use available runner skills instead of raw command or ad hoc API calls.
 - Execution-only roles such as `creator` use lightweight defaults unless a documented reason says otherwise.
-- Fallbacks are explicit and do not silently assign worker roles to the parent orchestrator.
+- Fallbacks are explicit and any direct-parent alternative is reassessed against the owner and delegation criteria.
 - Dependent skills/prompts no longer contradict the canonical resolver.
 - Review/finding roles preserve discovery coverage before final filtering.
 - Model-generation behavior compensation lives in model adapters, runner prompt profiles, or the resolver; role prompts and skills do not hard-code delegation-rate or self-verification compensation for a specific generation.
 - Roles resolve model, executor, and billing source separately; subscription-standard defaults and per-project executor overrides are declared in the resolver/registry/ADR, and metered or credit-billed paths carry explicit per-run budget contracts.
-- Long-running runner or subagent roles leave recoverable artifacts for compaction or restart.
+- Long-running runner or subagent roles leave recoverable handoff evidence for compaction or restart when needed.
 - Generating roles cannot rewrite their own acceptance criteria without a separate gate, and artifact contracts pass canonical references rather than summary-only handoffs.
 - Error bypasses that may recur, skip validation, or reduce reproducibility trigger an explicit bypass remediation review with cause, temporary bypass, permanent-fix candidates, ownership boundary, and verification plan.
 - Durable architectural changes are recorded in the target repo's ADR or equivalent long-lived documentation when the repo requires it.
