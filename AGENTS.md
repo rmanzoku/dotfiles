@@ -31,7 +31,7 @@
 # 恒久指示の反映運用
 
 - 恒久性のあるユーザー指示、再発しやすい運用判断、複数回参照しそうな手順は、原則その作業ターン内で git 管理ファイルへ反映すること
-- 反映先は、運用ルールや判断基準なら現在作業中のリポジトリの正規指示ファイル（通常は `AGENTS.md`）と AI 別指示ファイル、背景や継続判断なら `docs/adr/`、反復手順や更新フローなら対応 Skill を使い分けること
+- 反映先は、運用ルールや判断基準なら現在作業中のリポジトリの正規指示ファイル（通常は `AGENTS.md`）と AI 別指示ファイル、背景や継続判断ならそのリポジトリの正規 ADR 配置、反復手順や更新フローなら対応 Skill を使い分けること
 - 反映を見送る例外は、一過性の事情、既存文書との重複、ユーザーの明示的な文書化不要指示に限り、見送った理由を作業結果に残すこと
 - 恒久的な指示を追加するときは、既存指示の削除・統合候補を併せて検討し、常時読み込まれる指示面を無条件に増やさないこと
 - AI 間や CLI 間で複数行や構造化された内容を受け渡すときは、作業 worktree 内の `.context/` に置いた実ファイル経由を標準とし、`-p` などの引数へのインライン展開や here-doc 直書きを避けること。パイプは単一コマンドが標準入力をただちに 1 回だけ読む単発処理に限ること
@@ -40,12 +40,10 @@
 - コマンドやツールのエラーは、失敗と断定する前に意味（一致なし、context 不一致、path 不存在、conflict / dirty state、検証 failure 等）で分類し、原因を確認してから続行すること
 - エラーへの一時的な迂回は許容するが、同種エラーの再発、検証省略、環境・設定・権限・依存の不備、再現性低下が絡む場合は恒久対策レビューの対象とし、原因・一時迂回・恒久対策・git 反映対象・検証方法を分けて整理すること
 
-# Phase / Step Artifact ルール
+# Artifact
 
-- Phase / Step を持つ作業では、対応する中間成果物 artifact を `.context/` へ保存してから次の Phase / Step へ進むこと。口頭合意、推論上の完了宣言、Memory 内だけの状態遷移で進めてはならない
-- artifact の初期必須項目は `task`、`phase_or_step`、`created_at`（Markdown は Front Matter、JSON は同名キー）とし、命名は `.context/<task-or-date>/<nn>-<phase-name>.(md|json)` を推奨すること
-- Plan や依頼で Phase / Step が明示されない作業は非 Phase 作業として扱い、artifact 必須対象外とする。単発例外として artifact gate を明示的にバイパスする場合だけ `.context/single-step/<task>.json` を使い、`enabled=true`、`task`、`reason`、`expires_at` を必須とすること
-- Phase / Step 遷移の最小原則は現在作業中のリポジトリの正規指示ファイル（通常は `AGENTS.md`）を、各 Skill 固有の required artifact は `SKILL.md` を正本とすること。競合時は `SKILL.md` をその Skill 実行中の具体契約として優先し、正規指示ファイルは下限ルールとして常に適用すること
+- artifact は owner / context 間の handoff、外部または不可逆操作、未解決の永続判断、証拠再利用または PR に必要な identity、利用者指定の audit に必要なときに `.context/` へ保存する。Phase / Step の名称だけでは要求しない
+- artifact の初期必須項目は `task`、`phase_or_step`、`created_at`（Markdown は Front Matter、JSON は同名キー）とし、作業中リポジトリの正規指示または Skill が明示する追加項目に従う
 
 # スキル管理
 
