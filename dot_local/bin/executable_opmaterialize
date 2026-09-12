@@ -12,5 +12,5 @@ do
 done
 
 printf '%s\n' "opmaterialize: onepassword-secret-materialize skill script not found" >&2
-printf '%s\n' "install it with: gh skill install <dotfiles-repo> onepassword-secret-materialize --from-local --agent codex --scope user" >&2
+printf '%s\n' "install it with: gh skill install <dotfiles-repo> onepassword-secret-materialize --from-local --agent codex --scope user --dir \"$HOME/.codex/skills\"" >&2
 exit 127

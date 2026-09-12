@@ -13,7 +13,9 @@ skills
 .DS_Store
 
 # Secrets (managed outside chezmoi)
+.aws/config
 .aws/credentials
+.config/1Password/ssh/agent.toml
 .zshenv.local
 .config/op/dotfiles.env
 .config/op/materialize.tsv
@@ -27,6 +29,7 @@ skills
 .config/**/*.conf
 .config/**/*.p8
 .ssh/id_*
+.ssh/config.local
 ghq/**/*.env
 ghq/**/*.conf
 ghq/**/*.p8

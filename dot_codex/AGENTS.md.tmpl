@@ -4,7 +4,7 @@
 ## Config / Trust 運用
 
 - Codex の repo enforcement 用 hook は repo ローカル `.codex/hooks.json` を正本とし、`~/.codex/hooks.json` は個人通知などのグローバル用途だけに使うこと
-- hook / validator は `.context/` の artifact 存在、初期必須キー、単発例外宣言の検査までに限定し、自然言語の意味理解や「本当に完了したか」の判定を持たせないこと
+- hook / validator は、明示的に必要な artifact の存在と必須キーの検査までに限定し、自然言語の意味理解や「本当に完了したか」の判定を持たせないこと
 - trust 設定は原則 `~/.codex/config.toml` に集約し、`[projects."<path>"]` は常用しないこと。project 固有の Codex 設定が本当に必要な repo / worktree だけ、例外として `trust_level = "trusted"` を追加すること
 - 通常運用で権限不足が出た場合は、恒久設定を緩めず、その実行時だけ `danger-full-access` を使うこと
 

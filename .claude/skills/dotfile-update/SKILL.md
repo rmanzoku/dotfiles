@@ -20,17 +20,12 @@ chezmoi で管理された dotfiles リポジトリの更新ワークフロー�
 source state / target state / `.chezmoiignore` の前提を外していないか点検すること。
 repo 固有の chezmoi 解釈や誤解しやすい前提整理が必要な場合は、`chezmoi-knowledge` スキルも使って意味解釈を先に固めること。
 
-Phase / Step を持つ作業として扱うため、各 Step をまたぐ前に `.context/` 配下へ artifact を保存すること。
-artifact の初期必須項目は `task`、`phase_or_step`、`created_at` とし、Markdown は Front Matter、JSON は同名キーで保持する。
-推奨命名は `.context/<task-or-date>/<nn>-<phase-name>.(md|json)` とする。
+artifact は owner / context 間の handoff、外部または不可逆操作、未解決の永続判断、証拠再利用または PR に必要な identity、利用者指定の audit に必要なときに `.context/` へ保存する。Phase / Step の名称だけでは要求しない。保存するときは初期必須項目の `task`、`phase_or_step`、`created_at` と、作業中リポジトリの正規指示または該当 Skill が定める追加項目に従う。
 
 ### 1. ソースファイルの編集
 
 chezmoi のソースファイルを直接編集する。
 ホームディレクトリの実ファイルではなく、リポジトリ内のソースを編集すること。
-
-Step artifact:
-- 作業開始時に、対象 task と `source-edit` を記した artifact を `.context/` に保存する。
 
 補足:
 - repo ローカルの `.claude/skills/` 配下の skill 追加・更新と、publisher source `skills/` 配下の配布 skill 追加・更新は `dotfile-update` ではなく `skill-creator` の責務として扱う。
@@ -47,9 +42,6 @@ Step artifact:
 
 いずれか 1 つの AI 向け設定を変更するときは、他の AI に相当する設定項目があるかを必ず確認し、反映するかどうかを判断する。
 「片方だけ変える」こと自体は許容されるが、確認せずに放置しない。
-
-Step artifact:
-- AI 間の対応有無、反映理由、非反映理由を `ai-sync-check` artifact として `.context/` に保存する。
 
 対応表:
 
@@ -91,9 +83,6 @@ Claude Code 固有ルール（`# Claude Code 固有ルール` 以降）は `dot_
 - 反復手順の変更があるなら、関連 Skill の更新要否も同じターンで確認する。
 - Skill 更新が必要な場合は `skill-creator` の手順に従い、更新後に repo ローカルの `scripts/skill-quick-validate <skill-dir>` を実行する。
 
-Step artifact:
-- 共通ルール同期の結果と対象ファイル一覧を `rule-sync` artifact として `.context/` に保存する。
-
 ### 4. グローバル配備文書のレビュー
 
 `.chezmoitemplates/common-rules.md`、`dot_claude/CLAUDE.md`、`dot_codex/AGENTS.md.tmpl`、
@@ -104,9 +93,6 @@ Step artifact:
 - `この repo` や `repo の AGENTS.md` のような repo 固有主語がグローバル文書に混入していないか
 - source / target の説明が必要な内容を、グローバル文書ではなく repo 文書側へ寄せるべきではないか
 
-Step artifact:
-- レビュー対象、確認結果、残した表現の理由を `global-doc-review` artifact として `.context/` に保存する。
-
 ### 5. chezmoi apply の実行
 
 編集が完了したら、変更を実機に反映する:
@@ -115,9 +101,6 @@ Step artifact:
 2. `chezmoi diff` で差分を確認し、ユーザーに提示する
 3. ユーザーの確認を得てから `chezmoi apply` を実行する（確認なしに自動実行しない）
 4. chezmoi が未インストールの場合は `brew install chezmoi` を案内して停止する
-
-Step artifact:
-- `chezmoi diff` の確認結果と apply 可否を `apply-check` artifact として `.context/` に保存する。
 
 ### 6. ドリフト確認
 
@@ -128,9 +111,6 @@ scripts/chezmoi-drift
 ```
 
 `.chezmoiignore` の不整合とドリフトの両方がなければ完了。
-
-Step artifact:
-- ドリフト確認の結果を `drift-check` artifact として `.context/` に保存する。
 
 ### 7. `.chezmoiignore` の管理
 

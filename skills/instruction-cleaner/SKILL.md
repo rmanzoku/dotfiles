@@ -73,7 +73,7 @@ repo 固有 sensor が見つからないときは、次の 4 スロットをそ�
 - 等価性ガード: validator + 挙動 / 発火 probe
 - ratchet 先: `scripts/instruction-gc` の check（STALE_TERMS・閾値・allowlist 等）
 - skill 更新の検証: `scripts/skill-quick-validate skills/<name>`
-- 配備: `gh skill install . <name> --from-local --agent claude-code --scope user --force` と `--agent codex`
+- 配備: `gh skill install . <name> --from-local --agent claude-code --scope user --force` と `gh skill install . <name> --from-local --agent codex --scope user --force --dir "$HOME/.codex/skills"`
 
 ## してはならないこと
 
