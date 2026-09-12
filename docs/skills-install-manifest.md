@@ -1,6 +1,6 @@
 ---
 title: "Skill Install Manifest"
-updated_at: 2026-08-28
+updated_at: 2026-09-13
 ---
 
 # Skill Install Manifest
@@ -12,6 +12,14 @@ updated_at: 2026-08-28
 
 この manifest で管理する repo オリジナル skill と external skill は、Claude Code と Codex に同じ skill セット・同じ ref / version で配備する。
 Codex `.system` skill、Claude / Codex の plugin 同梱 skill、各 host の組み込み skill は parity 対象外とする。
+
+## Office / PDF plugins
+
+Codex の標準文書 plugins は `documents@openai-primary-runtime`、`presentations@openai-primary-runtime`、`spreadsheets@openai-primary-runtime`、`pdf@openai-primary-runtime`。復元時は Codex の plugin 管理でこの4件の利用可否と enabled 状態を確認する。PowerPoint / Excel は標準 plugin に集約する。Word / PDF は選択の等価性が確認できるまで既存の docx / pdf 入口も維持する。
+
+Claude Code の document-skills は Claude の plugin 管理に残す。Codex の user Skill ディレクトリへ pptx / xlsx の symlink を再導入しない。既存リンクを除去するときは標準 plugin の利用可否を先に確認し、リンク先を記録して symlink だけを外す。plugin 本体や cache は削除しない。
+
+docx / pdf を新しいマシンで復元する場合は、Claude の plugin 管理が示すインストール済み document-skills の実在パスを確認して Codex の user Skill ディレクトリへリンクする。cache のバージョン付きパスをこの manifest に固定しない。この互換入口は、標準 plugin の Word 読取・PDF 編集の選択 probe が合格したときに再検討する。理由と検証条件は [ADR-0074](adr/0074-native-office-skill-discovery.md) を参照する。
 
 ## First-party publisher skills
 

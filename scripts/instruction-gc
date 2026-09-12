@@ -87,8 +87,9 @@ def check_adr_expiry() -> None:
 # 2. manifest vs installed -----------------------------------------------------
 
 INSTALL_RE = re.compile(r"gh skill install\s+(\S+)\s+(\S+).*--agent\s+(claude-code|codex)")
-# Codex 側で manifest 管理外を許すもの: plugin 由来 symlink と .system
-CODEX_TOLERATED = {"docx", "pdf", "pptx", "xlsx"}
+# Word/PDF compatibility entries remain until their selection probes pass (ADR-0074).
+CODEX_TOLERATED = {"docx", "pdf"}
+RETIRED_OFFICE_MIRRORS = {"pptx", "xlsx"}
 
 
 def check_manifest_parity() -> None:
@@ -105,6 +106,12 @@ def check_manifest_parity() -> None:
                   if (p / "SKILL.md").exists()},
     }
     clean = True
+    for skill_root in (HOME / ".codex/skills", HOME / ".agents/skills"):
+        for name in sorted(RETIRED_OFFICE_MIRRORS):
+            skill = skill_root / name
+            if skill.is_symlink() and (HOME / ".claude/plugins") in skill.resolve().parents:
+                fail(f"codex: Claude plugin の重複公開リンク: {skill.relative_to(HOME)}; native Office plugin を確認してリンクだけを除去する")
+                clean = False
     for agent in ("claude-code", "codex"):
         missing = expect[agent] - actual[agent]
         extra = actual[agent] - expect[agent]
