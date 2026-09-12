@@ -1,6 +1,6 @@
 ---
 title: "Documentation Index"
-updated_at: 2026-07-07
+updated_at: 2026-09-12
 ---
 
 # Documentation Index
@@ -18,6 +18,7 @@ updated_at: 2026-07-07
 | Adopting / forking this dotfiles repository | [adopting-this-dotfiles.md](adopting-this-dotfiles.md) |
 | Runner / Skill creation governance | [runner-skill-governance.md](runner-skill-governance.md) |
 | Tailscale remote access and VPS exit node | [tailscale-remote-access.md](tailscale-remote-access.md) |
+| AWS credentials, SSM and 1Password SSH agent | [aws-agent-access.md](aws-agent-access.md) |
 | Skill install manifest | [skills-install-manifest.md](skills-install-manifest.md) |
 | Chezmoi source / target semantics | [../.claude/skills/chezmoi-knowledge/SKILL.md](../.claude/skills/chezmoi-knowledge/SKILL.md) |
 
