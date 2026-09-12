@@ -3,6 +3,7 @@
 
 import contextlib
 from datetime import datetime, timezone
+import errno
 import http.server
 import importlib.machinery
 import importlib.util
@@ -14,7 +15,9 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -126,19 +129,85 @@ class CredentialProcessTests(unittest.TestCase):
         self.assertEqual((self.directory / "output").read_text(), "")
 
     def test_timeout_is_bounded_and_does_not_leak(self):
-        self.op.write_text('#!/usr/bin/env python3\nimport time\ntime.sleep(10)\n')
+        child_script = self.directory / "child.py"
+        child_pid = self.directory / "child.pid"
+        child_script.write_text('import time\ntime.sleep(30)\n')
+        self.op.write_text('#!/usr/bin/env python3\nimport subprocess, sys, time\nfrom pathlib import Path\n'
+                           f'child = subprocess.Popen([sys.executable, {str(child_script)!r}])\n'
+                           f'Path({str(child_pid)!r}).write_text(str(child.pid))\n'
+                           'time.sleep(30)\n')
         loader = importlib.machinery.SourceFileLoader("credential_helper", str(HELPER))
         module = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
-        loader.exec_module(module)
-        module.TIMEOUT_SECONDS = 0.05
+        # Importing a chezmoi source must not create deployable bytecode beside it.
+        with mock.patch.object(sys, "dont_write_bytecode", True):
+            loader.exec_module(module)
+        module.TIMEOUT_SECONDS = 1
         old_path = os.environ["PATH"]
         os.environ["PATH"] = self.environment["PATH"]
         try:
             with contextlib.redirect_stderr(__import__("io").StringIO()) as error:
                 self.assertEqual(module.fetch_credentials("test-account", self.env_file), 1)
             self.assertIn("timeout", error.getvalue())
+            self.assertTrue(child_pid.exists(), "provider did not spawn its child")
+            pid = int(child_pid.read_text())
+            for _ in range(100):
+                status = subprocess.run(["ps", "-p", str(pid), "-o", "stat="],
+                                        capture_output=True, text=True, timeout=5).stdout.strip()
+                if not status or status.startswith("Z"):
+                    break
+                time.sleep(0.01)
+            else:
+                os.kill(pid, 9)
+                self.fail("provider child survived the timeout")
         finally:
             os.environ["PATH"] = old_path
+
+    def test_provider_preserves_terminal_session(self):
+        # A PTY fixture models a caller's terminal; only fake credentials are used.
+        observations = self.directory / "sessions.jsonl"
+        self.op.write_text(FAKE_OP.replace(
+            'import os, subprocess, sys',
+            'import os, subprocess, sys, json\n'
+            f'with open({str(observations)!r}, "a") as stream:\n'
+            '    stream.write(json.dumps({"sid": os.getsid(0), "pgid": os.getpgrp(), '
+            '"pid": os.getpid()}) + "\\n")\n'
+            'fd = os.open("/dev/tty", os.O_RDONLY)\nos.close(fd)'))
+        caller = self.directory / "caller.py"
+        caller.write_text(
+            'import json, os, subprocess\n'
+            f'with open({str(observations)!r}, "a") as stream:\n'
+            '    stream.write(json.dumps({"sid": os.getsid(0), "pgid": os.getpgrp()}) + "\\n")\n'
+            'for _ in range(2):\n'
+            f'    result = subprocess.run({self.command!r}, capture_output=True, text=True, timeout=5)\n'
+            '    assert result.returncode == 0, result.stderr\n'
+            '    assert json.loads(result.stdout)["Version"] == 1\n')
+        # pty.fork creates a controlling terminal without changing the test runner's session.
+        import pty
+        pid, terminal = pty.fork()
+        if pid == 0:
+            os.execve(sys.executable, [sys.executable, str(caller)], self.environment)
+        try:
+            output = b""
+            while True:
+                try:
+                    chunk = os.read(terminal, 4096)
+                except OSError as error:
+                    if error.errno != errno.EIO:
+                        raise
+                    break
+                if not chunk:
+                    break
+                output += chunk
+            _, status = os.waitpid(pid, 0)
+            self.assertEqual(os.waitstatus_to_exitcode(status), 0, output.decode())
+        finally:
+            os.close(terminal)
+        parent, *children = [json.loads(line) for line in observations.read_text().splitlines()]
+        self.assertEqual(len(children), 2)
+        for child in children:
+            self.assertEqual(child["sid"], parent["sid"])
+            self.assertNotEqual(child["pgid"], parent["pgid"])
+            self.assertEqual(child["pgid"], child["pid"])
 
     @unittest.skipUnless(shutil.which("aws"), "AWS CLI is required for the consumer integration test")
     def test_real_aws_cli_consumes_credentials(self):

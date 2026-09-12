@@ -99,14 +99,17 @@ Use this only for wrapper availability. Do not use it as an authentication fallb
 
 Every `op` call may raise a 1Password authorization prompt that a human must approve with biometrics or a password. Plan the work around that cost, because an unattended prompt becomes `auth_timeout` and takes the whole command with it.
 
-Measured on macOS with desktop app integration: one `opmaterialize diff` spanning 21 separate `op` processes over 61 seconds needed a single approval. Authorization is not per file and not per process — one approval covers the processes that follow until the app locks again.
+On macOS/Linux, desktop-app authorization belongs to an account and terminal session and extends to child shells in that terminal. It expires after 10 minutes without CLI activity, after 12 hours at the latest, or when the app locks. A new terminal needs fresh authorization. See [1Password's authorization model](https://www.1password.dev/cli/app-integration-security).
 
-So the thing that multiplies prompts is not call volume, it is elapsed time between calls. Scattering `op` invocations across a long session lets the app lock in between, and each one prompts again.
+Before starting related OP operations, plan to run the existing wrapper calls in one PTY-backed tool invocation, or reuse the same still-running terminal session through the host's session handle. Creating a new PTY for each call does not preserve authorization. This is the primary execution plan, not a different path to try after an authentication failure.
 
-- Group `op` work into one contiguous stretch. Do not interleave long non-`op` work between `op` calls; batch the operations instead so one approval covers them all.
+- Group known operations into one contiguous stretch in that terminal. If a script is needed, put it in the task's `.context/` and call the existing wrapper for each operation with its own output directory; stop on unexpected failure. Preserve existing result-dependent decisions such as diff before an authorized restore.
+- The wrapper inherits its caller's session. Do not detach OP children with `setsid()` / `start_new_session=True`. A helper that needs group-based timeout cleanup can create a separate process group while keeping the session, as the AWS credential helper does.
+- If the host cannot retain a terminal, state that approval reuse across calls is unavailable; do not add a background daemon, GUI/Terminal fallback, or periodic calls just to keep authorization alive. No session token or credential cache is introduced by this workflow.
 - Say that a prompt is coming before starting, and roughly how many to expect. A prompt nobody is watching is a failed prompt.
 - Set `--timeout-seconds` for a human who may be away from the keyboard, not for the command's own runtime. The default is 300.
-- After a gap in `op` activity, expect the first call to prompt again. That is the app locking, not a broken setup.
+- After inactivity, a new terminal, or an app lock, expect another approval; do not infer a broken setup from that alone.
+- `op whoami` checks an already authenticated account and can return `account is not signed in` without prompting. For an authorized metadata-only app-integration check, use `op vault list --account <account>`; do not use `whoami` as an authentication warm-up.
 
 ## Failure Handling
 

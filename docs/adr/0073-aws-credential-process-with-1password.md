@@ -1,7 +1,7 @@
 ---
 title: "AWS SDK の credential_process を 1Password の参照ファイルで供給する"
 date: 2026-09-12
-worked_at: 2026-09-12T23:34:05+09:00
+worked_at: 2026-09-13T01:41:11+09:00
 agent_model: "Codex / GPT-6"
 status: accepted
 updated_at: 2026-09-13
@@ -19,6 +19,9 @@ updated_at: 2026-09-13
   env file から `op run` で取得した IAM 長期鍵を、AWS の Version 1 JSON として SDK へ返す。
 - 認証情報はメモリと子プロセスの pipe / environment だけを通し、ファイルやログに保存しない。
   一般用途の `oprun` のマスキングは維持し、このヘルパー内部の受け渡しだけ解除する。
+- `op` の起動は呼出元の端末セッションを維持し、タイムアウト用のプロセス群だけを分ける。
+  Python 3.11 以降の `process_group=0` を使い、`start_new_session=True` で端末を切り離さない。
+  AI の一連の OP 操作は `op-cli-runner` Skill に従い同じ PTY で実行する。
 - `~/.aws/config`、profile-to-item の参照ファイル、SSH agent の account / vault 選択は
   unmanaged とする。会社・案件固有値を chezmoi template へ持ち込まない。
 - 旧キーの保持をユーザーが選んだ場合、新しい認証経路を合意した別 profile に追加する。
@@ -40,6 +43,11 @@ AWS config へ SSH 型の include を仮定したり、全 profile をテンプ�
 SSO 等への移行は案件側の既存判断に従い、この変更では追加しない。
 
 5 分の上限、待機ログ、固定文言の失敗分類を設け、別 account / principal / provider へ再試行しない。
+1Password の承認は端末と account に結びつき、同じ端末の子プロセスへ共有される。
+Codex のコマンドごとの新セッションと、helper のセッション分離を実機で確認したため、
+呼出元から `op` まで端末を維持する。別々の端末間での共有や、無操作 10 分・最大 12 時間・
+アプリロックによる失効は変更しない。認証維持だけの常駐化・定期呼出し・ディスクキャッシュは追加しない。
+[1Password の公式仕様](https://www.1password.dev/cli/app-integration-security)に従う。
 新経路を STS で検証するまでは既存 credentials を削除しない。
 SSH agent の有効化と鍵登録、および AWS 側の SSM 設定が未完なら、ローカル実装だけで接続完了とはしない。
 
