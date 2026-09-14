@@ -112,6 +112,21 @@ Before starting related OP operations, plan to run the existing wrapper calls in
 - For a job that runs longer than 10 minutes (an RDS upgrade, a long wait loop), either keep the screen unlocked until it finishes or design the loop to survive the operator's absence: treat `prompt_error` as an immediate failure, keep retrying for longer than a plausible absence, and remember that the remote operation itself continues while the loop cannot observe it.
 - `op whoami` checks an already authenticated account and can return `account is not signed in` without prompting. For an authorized metadata-only app-integration check, use `op vault list --account <account>`; do not use `whoami` as an authentication warm-up.
 
+## AWS Jobs: One Authorization Per Job
+
+A job that calls AWS for hours cannot rely on the desktop-app authorization: it ends with inactivity, at 12 hours, or whenever the Mac is locked. Instead, spend the single approval on an STS session and run the job on that:
+
+```bash
+bash skills/op-cli-runner/scripts/with_aws_session.sh --profile oasys-<alias> --duration 14400 -- bash job.sh
+```
+
+- The wrapper calls `aws --profile <alias> sts get-session-token` once (one 1Password prompt), exports the temporary credentials and `AWS_PROFILE` to its own process tree, runs the command, and lets everything vanish with the process. Nothing is written to disk, no daemon is started, and `credential_process` is not consulted again. This is a job-scoped session, not a credential cache.
+- `--duration` is 900..129600 seconds (IAM user limit is 36 hours); the default is 14400 (4 hours). Choose the job's length, not the maximum.
+- The command must use `AWS_PROFILE`, never `aws --profile`: an explicit `--profile` makes the AWS CLI ignore environment credentials and prompt again on every call. The wrapper refuses a command line containing `--profile`.
+- Say before starting that exactly one prompt is coming. After `session ready` the operator may leave and the screen may lock.
+- Trade-off: for the session length the temporary credentials are visible as environment variables of the job's processes to the same user. Use the wrapper only for jobs that need it and keep the duration short. IP guardrails such as `DenyUnlessFromExitNode` still apply to these credentials.
+- The wrapper refuses to nest (`AWS_SESSION_TOKEN` already set) so a second approval is never spent by accident.
+
 ## Failure Handling
 
 Classify failures from `summary.json.failure_kind`:
@@ -138,5 +153,6 @@ After changing this skill, run:
 ```bash
 python3 skills/op-cli-runner/scripts/run_op_cli.py --help
 python3 -m py_compile skills/op-cli-runner/scripts/run_op_cli.py
+bash -n skills/op-cli-runner/scripts/with_aws_session.sh
 scripts/skill-quick-validate skills/op-cli-runner
 ```

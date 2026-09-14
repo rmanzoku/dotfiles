@@ -55,3 +55,15 @@ Terraform AWS provider 6.21.0 の実機検証で、`credential_process` の設�
 二重引用符の場合に起動が exit 127 となった。秘密情報を使わない `/usr/bin/true` でも再現し、
 最後に引用符不要の account サインインアドレスを置く形ではプロセス起動に進むことを確認した。
 設定手順をこの記法に統一する。別 SDK / principal への切替で回避せず、同じ profile の記法を修正する。
+
+# Addendum 2026-09-14
+
+worked_at: 2026-09-14T14:00:00+09:00 / agent_model: Claude Fable 5.1
+
+Mac の画面ロックで 1Password アプリがロックされ、CLI の承認が一度に全て失効することを実機で確認した
+（`pmset -g log` の `Display is turned off` の 1 秒後に `promptError`）。数時間のジョブを最初の承認で
+走り切るため、`op-cli-runner` に `scripts/with_aws_session.sh` を追加した。helper は変更せず長期鍵を返し続ける。
+ラッパーは helper 経由で `sts get-session-token` を 1 回だけ呼び、一時認証情報をジョブのプロセス環境変数にだけ
+載せる。ディスクキャッシュ・常駐・定期呼び出しは引き続き作らない。環境変数はジョブの間だけ同一ユーザーの
+プロセスから見えるため、必要なジョブに限り、ジョブ長に合わせた duration で使う。
+
