@@ -99,7 +99,7 @@ Use this only for wrapper availability. Do not use it as an authentication fallb
 
 Every `op` call may raise a 1Password authorization prompt that a human must approve with biometrics or a password. Plan the work around that cost, because an unattended prompt becomes `auth_timeout` and takes the whole command with it.
 
-On macOS/Linux, desktop-app authorization belongs to an account and terminal session and extends to child shells in that terminal. It expires after 10 minutes without CLI activity, after 12 hours at the latest, or when the app locks. A new terminal needs fresh authorization. See [1Password's authorization model](https://www.1password.dev/cli/app-integration-security).
+On macOS/Linux, desktop-app authorization belongs to an account and terminal session and extends to child shells in that terminal. It expires after 10 minutes without CLI activity, after 12 hours at the latest, or when the app locks. Locking the Mac (display off, lid closed, screen lock) locks the 1Password app with it and revokes every authorization at once: a prompt requested while the display is off fails immediately with `prompt_error`, and prompts after that wait for the CLI's roughly 60-second authorization timeout. A new terminal needs fresh authorization. See [1Password's authorization model](https://www.1password.dev/cli/app-integration-security).
 
 Before starting related OP operations, plan to run the existing wrapper calls in one PTY-backed tool invocation, or reuse the same still-running terminal session through the host's session handle. Creating a new PTY for each call does not preserve authorization. This is the primary execution plan, not a different path to try after an authentication failure.
 
@@ -108,7 +108,8 @@ Before starting related OP operations, plan to run the existing wrapper calls in
 - If the host cannot retain a terminal, state that approval reuse across calls is unavailable; do not add a background daemon, GUI/Terminal fallback, or periodic calls just to keep authorization alive. No session token or credential cache is introduced by this workflow.
 - Say that a prompt is coming before starting, and roughly how many to expect. A prompt nobody is watching is a failed prompt.
 - Set `--timeout-seconds` for a human who may be away from the keyboard, not for the command's own runtime. The default is 300.
-- After inactivity, a new terminal, or an app lock, expect another approval; do not infer a broken setup from that alone.
+- After inactivity, a new terminal, or an app lock, expect another approval; do not infer a broken setup from that alone. Verified 2026-09-14: a 30-second polling loop kept authorization alive for 14 minutes, then failed within one second of `Display is turned off` in `pmset -g log`, and recovered on the next approval after the display came back.
+- For a job that runs longer than 10 minutes (an RDS upgrade, a long wait loop), either keep the screen unlocked until it finishes or design the loop to survive the operator's absence: treat `prompt_error` as an immediate failure, keep retrying for longer than a plausible absence, and remember that the remote operation itself continues while the loop cannot observe it.
 - `op whoami` checks an already authenticated account and can return `account is not signed in` without prompting. For an authorized metadata-only app-integration check, use `op vault list --account <account>`; do not use `whoami` as an authentication warm-up.
 
 ## Failure Handling
