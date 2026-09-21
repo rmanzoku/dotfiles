@@ -16,11 +16,12 @@
 # Environment:
 #   VULTR_ENV_FILE   env file holding only the op:// reference
 #                    (default: ~/.config/op/vultr/oasys-vultr-agent.env)
-#   OP_ACCOUNT       1Password account (default: oasyswallet.1password.com)
+#   VULTR_OP_ACCOUNT 1Password account (default: oasyswallet.1password.com)
+#                    Deliberately not OP_ACCOUNT: that name is already used for the personal account.
 set -euo pipefail
 
 ENV_FILE="${VULTR_ENV_FILE:-$HOME/.config/op/vultr/oasys-vultr-agent.env}"
-OP_ACCOUNT="${OP_ACCOUNT:-oasyswallet.1password.com}"
+OP_ACCOUNT="${VULTR_OP_ACCOUNT:-oasyswallet.1password.com}"
 
 [ $# -gt 0 ] || { echo "usage: with-vultr <command> [args...]" >&2; exit 2; }
 [ -r "$ENV_FILE" ] || { echo "ERROR: env file not readable: $ENV_FILE" >&2; exit 2; }
