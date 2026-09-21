@@ -125,7 +125,23 @@ bash skills/op-cli-runner/scripts/with_aws_session.sh --profile oasys-<alias> --
 - The command must use `AWS_PROFILE`, never `aws --profile`: an explicit `--profile` makes the AWS CLI ignore environment credentials and prompt again on every call. The wrapper refuses a command line containing `--profile`.
 - Say before starting that exactly one prompt is coming. After `session ready` the operator may leave and the screen may lock.
 - Trade-off: for the session length the temporary credentials are visible as environment variables of the job's processes to the same user. Use the wrapper only for jobs that need it and keep the duration short. IP guardrails such as `DenyUnlessFromExitNode` still apply to these credentials.
+- Route through the tailnet exit node before any AWS call with the Agent IAM users (`oasys-*` profiles): `tailscale set --exit-node=<node from tailscale exit-node list> --exit-node-allow-lan-access=true`, and restore `tailscale set --exit-node=` when the job ends. The `AgentGuardrails` policy denies by source IP, and the symptom is misleading: read-only calls such as `ecs:ListClusters` or `lambda:ListFunctions` fail with `explicit deny in an identity-based policy: AgentGuardrails` while `sts get-caller-identity` still succeeds. Check `tailscale status --json | jq .ExitNodeStatus` before concluding that the policy itself forbids the action (verified 2026-09-14).
+- Temporary credentials from `sts get-session-token` cannot call IAM or STS APIs (`InvalidClientTokenId`) unless the session was created with MFA; run IAM reads with the profile's own credentials instead.
 - The wrapper refuses to nest (`AWS_SESSION_TOKEN` already set) so a second approval is never spent by accident.
+
+## Static-Key Providers: One Authorization Per Job
+
+Some providers issue only a long-lived API key, with no `sts get-session-token` equivalent — Vultr is the current example. There is nothing to exchange the approval for, so keep the whole job inside a single `op run` and let the desktop-app authorization cache cover it (per terminal session, 10 minutes idle, 12 hours maximum, revoked by screen lock).
+
+```bash
+with-vultr bash job.sh          # one approval for the whole script
+```
+
+- `with-vultr` (in `~/.local/bin`) routes through `with-exit-node` and injects `VULTR_API_KEY` from an env file holding only an `op://` reference. Both wrappers live in this dotfiles repo so any working repository can use them.
+- Splitting the work into several `op run` invocations spends one approval each time the cache has expired. Measured 2026-09-21: the first `op run` waited 59.8 s for the approval, the next one finished in 2.1 s.
+- The key's IP allowlist holds the exit node address only, so the command must also use IPv4 (`curl -4`); traffic leaving over IPv6 returns `401 Unauthorized IP address` and looks like an authentication failure.
+- Trade-off: unlike the AWS wrapper, the value in the environment is the long-lived key itself. Keep those jobs short, never echo the variable, and never write it to disk.
+- `op plugin` supports some of these CLIs (`op plugin list` shows `vultr-cli`), but a plugin stores its own config and still prompts per command; the env-file path above keeps the key in 1Password only.
 
 ## Failure Handling
 

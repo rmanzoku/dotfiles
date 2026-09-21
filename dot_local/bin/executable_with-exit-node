@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# with-exit-node — run a command through the tailnet exit node, then restore the previous state.
+#
+#   with-exit-node aws --profile oasys-staking sts get-caller-identity
+#   with-exit-node bash .context/<task>/job.sh
+#
+# Cloud guardrails deny API calls that do not come from the exit node
+# (AWS: the `DenyUnlessFromExitNode` statement in `AgentGuardrails`;
+#  Vultr: the API key's IP allowlist). Enabling by hand leaves the exit node
+# on when a job fails midway, so always go through this wrapper.
+#
+# Restores exactly what was there before: enabled stays enabled, disabled
+# returns to disabled — including on error or interrupt.
+#
+# Environment:
+#   EXIT_NODE     exit node host name (default: vm-6142a29b-81)
+#   EXPECTED_IP   expected egress IP; when set, a mismatch aborts (default: unset = report only)
+set -euo pipefail
+
+EXIT_NODE="${EXIT_NODE:-vm-6142a29b-81}"
+EXPECTED_IP="${EXPECTED_IP:-}"
+
+[ $# -gt 0 ] || { echo "usage: with-exit-node <command> [args...]" >&2; exit 2; }
+command -v tailscale >/dev/null || { echo "ERROR: tailscale not found" >&2; exit 2; }
+
+current_exit_node() {
+  tailscale status --json 2>/dev/null | python3 -c "
+import json,sys
+try: d=json.load(sys.stdin)
+except Exception: print(''); raise SystemExit
+for v in (d.get('Peer') or {}).values():
+    if v.get('ExitNode'): print(v.get('HostName') or ''); raise SystemExit
+print('')
+"
+}
+
+ORIGINAL="$(current_exit_node)"
+echo "[exit-node] state at start: ${ORIGINAL:-(disabled)}"
+
+restore() {
+  local rc=$?
+  if [ -z "$ORIGINAL" ]; then
+    echo "[exit-node] restoring: disabling"
+    tailscale set --exit-node= || echo "[exit-node] WARN: restore failed, check manually" >&2
+  else
+    echo "[exit-node] restoring: keeping $ORIGINAL"
+  fi
+  echo "[exit-node] state after restore: $(current_exit_node || echo 'unknown')"
+  exit $rc
+}
+trap restore EXIT INT TERM
+
+if [ "$ORIGINAL" != "$EXIT_NODE" ]; then
+  echo "[exit-node] enabling: $EXIT_NODE"
+  tailscale set --exit-node="$EXIT_NODE"
+  for i in $(seq 1 10); do
+    sleep 1
+    [ "$(current_exit_node)" = "$EXIT_NODE" ] && break
+    [ "$i" = 10 ] && { echo "ERROR: could not confirm the exit node is active" >&2; exit 1; }
+  done
+fi
+
+IP="$(/usr/bin/curl -4 -s --max-time 10 https://api.ipify.org || true)"
+echo "[exit-node] egress IP: ${IP:-(unknown)}"
+if [ -n "$EXPECTED_IP" ] && [ "$IP" != "$EXPECTED_IP" ]; then
+  echo "ERROR: egress IP $IP does not match EXPECTED_IP $EXPECTED_IP" >&2
+  exit 1
+fi
+
+echo "[exit-node] running: $*"
+"$@"

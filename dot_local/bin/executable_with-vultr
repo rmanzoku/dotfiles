@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# with-vultr — run a command with VULTR_API_KEY injected from 1Password, through the exit node.
+#
+#   with-vultr bash .context/<task>/job.sh
+#   with-vultr curl -4 -s -H "Authorization: Bearer $VULTR_API_KEY" https://api.vultr.com/v2/instances
+#
+# The key belongs to the Vultr Service User `ai-agent`; its API key allowlist
+# holds the exit node IP only, so calls must come from there and must use IPv4
+# (`curl -4`): traffic that leaves over IPv6 returns 401 Unauthorized IP address.
+#
+# 1Password authorization is cached per terminal session (10 min idle, 12 h max,
+# revoked by screen lock), so put multi-step work in ONE script and pass that
+# script here — one approval covers the whole job. Vultr keys are static; there
+# is no `sts get-session-token` equivalent as in with_aws_session.sh.
+#
+# Environment:
+#   VULTR_ENV_FILE   env file holding only the op:// reference
+#                    (default: ~/.config/op/vultr/oasys-vultr-agent.env)
+#   VULTR_OP_ACCOUNT 1Password account (default: oasyswallet.1password.com)
+#                    Deliberately not OP_ACCOUNT: that name is already used for the personal account.
+set -euo pipefail
+
+ENV_FILE="${VULTR_ENV_FILE:-$HOME/.config/op/vultr/oasys-vultr-agent.env}"
+OP_ACCOUNT="${VULTR_OP_ACCOUNT:-oasyswallet.1password.com}"
+
+[ $# -gt 0 ] || { echo "usage: with-vultr <command> [args...]" >&2; exit 2; }
+[ -r "$ENV_FILE" ] || { echo "ERROR: env file not readable: $ENV_FILE" >&2; exit 2; }
+command -v with-exit-node >/dev/null || { echo "ERROR: with-exit-node not found in PATH" >&2; exit 2; }
+
+exec with-exit-node op run --account "$OP_ACCOUNT" --env-file "$ENV_FILE" -- "$@"
