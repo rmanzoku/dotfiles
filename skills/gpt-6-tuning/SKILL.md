@@ -1,6 +1,6 @@
 ---
 name: gpt-6-tuning
-description: "Audit and rewrite prompts, AGENTS.md / CLAUDE.md, skills, and agent harness scaffolding to fit the GPT-6 family (gpt-6-astra, gpt-6.1-sol, gpt-6-sol, gpt-6-luna): over-asking and early-stop compensation, user-over-skill precedence, explicit completion criteria, risk-scaled testing, delegation prompts, progressive-disclosure skills, and effort carry-over, with variant allocation kept in the resolver. Use to migrate or readiness-check prompts for GPT-6. Not for broad SDK migrations."
+description: "Audit and rewrite prompts, AGENTS.md / CLAUDE.md, skills, and agent harness scaffolding for the GPT-6 family (astra, 6.1-sol, sol, luna): over-asking, early stops, skill conflicts, completion criteria, test volume, delegation, and effort. Use to migrate or readiness-check prompts for GPT-6. Not for broad SDK migrations."
 ---
 
 # GPT-6 Tuning

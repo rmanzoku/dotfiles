@@ -7,7 +7,7 @@ description: "Run Antigravity CLI (agy) headless with observable prompt, respons
 
 Use this skill when delegating work to Gemini through Antigravity CLI (`agy`). The runner calls `agy` in print mode and records the prompt, response, summary, stderr, and failure notes under `.context/<task>/` so the call can be audited and replayed.
 
-This is the successor to the gemini CLI route: the personal-tier gemini CLI was discontinued, and `agy` is the supported way to reach Gemini models headlessly. Frame each delegation as an outcome-first contract: prompt artifact, expected response artifact, timeout, model, permission posture, success criteria, and failure handling. Task-scoped editing may be delegated when the caller authorizes it; keep final judgment and irreversible side effects in the caller.
+Frame each delegation as an outcome-first contract: prompt artifact, expected response artifact, timeout, model, permission posture, success criteria, and failure handling. Task-scoped editing may be delegated when the caller authorizes it; keep final judgment and irreversible side effects in the caller.
 
 ## Core Rules
 
@@ -23,7 +23,7 @@ This is the successor to the gemini CLI route: the personal-tier gemini CLI was 
 
 ## Prompt transport
 
-agy's print mode accepts the prompt **only as an argv value** (`-p <prompt>`). Verified 2026-08-08 on agy 1.1.10:
+agy's print mode accepts the prompt **only as an argv value** (`-p <prompt>`). Verified 2026-08-08 on agy 1.1.10; agy 1.2.x adds `--input-format stream-json` (stdin NDJSON, requires `--output-format stream-json`), not yet verified as a transport for this runner:
 
 - `agy -p --model gemini-3.1-pro-low "…"` — `-p` swallows `--model` as its prompt value.
 - Piping the prompt on stdin returns `status: SUCCESS` with an **empty response**; stdin is not read as context.
@@ -46,17 +46,15 @@ Do not write secret values into prompt artifacts, repo files, or `.context/`.
 
 ## Caller Checklist
 
-Before running agy, decide explicitly:
+Before running agy, settle these items. Use the stated default when the task does not specify one; ask only when an item without a default (the source prompt's outcome, or `--model`) cannot be inferred from the task.
 
 - Task directory: choose `.context/<task>/`.
 - Prompt artifact: record outcome, exact delegated paths (or `none`), allowed side effects, success and stop conditions. `--output-dir` evidence is separate; retries keep this boundary. Keep one job per file.
 - Response artifact: pass `--response-artifact agy-response.json` when it belongs inside `--output-dir`; use an absolute path only when it must land elsewhere.
 - Model: required. Pick from `agy models` — currently `gemini-3.8-flash-{high,medium,low}`, `gemini-3.7-flash-{high,medium,low}`, `gemini-3.6-flash-{high,medium,low}`, `gemini-3.1-pro-{high,low}`, plus non-Gemini ids. The list changes often, so check `agy models` before relying on it. For registry-driven calls, resolve the id through the working repository's model registry (for example `rules/model_registry.yaml`) rather than hardcoding it in a caller script.
 - Effort: `--effort low|medium|high` when the task warrants it; omit to use the model default.
-- Permissions: `--skip-permissions` for anything needing web search or file access; omit for prompt-only tasks.
-- Timeout: rely on the 600-second default unless the contract says otherwise.
 - Working directory: `--cwd` sets the subprocess working directory. Use a per-batch sandbox directory when running independent measurements.
-- Write boundary: map delegated paths to caller-selected `--sandbox` / `--add-dir` controls when needed. If the CLI cannot enforce them, verify changed paths before acceptance or retry and stop on mismatch.
+- Write boundary: agy has no write-boundary flag (`--sandbox` restricts the terminal; `--add-dir` widens the workspace). Verify changed paths before acceptance or retry and stop on mismatch.
 - Expected artifacts: if the target artifact is agy's response itself, make it `--response-artifact`. Files that agy writes must be tracked outside this wrapper.
 
 Do not add "think hard", fixed progress-update scaffolds, or mandatory step-by-step narration to simulate effort. Use model selection, `--effort`, and explicit success criteria instead.
@@ -129,6 +127,8 @@ Treat any of these as failure, and read `summary.json` first:
 If a higher-level workflow needs a downstream blocked artifact, create it in the caller using that workflow's schema. Do not invent a downstream schema here and do not modify runner evidence artifacts.
 
 ## No-Call Validation
+
+Use these checks when changing or diagnosing the wrapper, not before ordinary delegations.
 
 - Run `--dry-run` with a valid prompt file. It should exit `0`, write `summary.json`, and require no backend call.
 - Run with a missing prompt file to confirm `failure.md` and `failure_reasons: ["invalid_prompt"]`.

@@ -38,7 +38,6 @@ gh skill install . instruction-cleaner --from-local --agent claude-code --scope 
 gh skill install . code-evaluator --from-local --agent claude-code --scope user
 gh skill install . opus-5-tuning --from-local --agent claude-code --scope user
 gh skill install . fable-5-tuning --from-local --agent claude-code --scope user
-gh skill install . gpt-5-6-tuning --from-local --agent claude-code --scope user
 gh skill install . gpt-6-tuning --from-local --agent claude-code --scope user
 gh skill install . codex-cli-runner --from-local --agent claude-code --scope user
 gh skill install . copilot-cli-runner --from-local --agent claude-code --scope user
@@ -67,7 +66,6 @@ gh skill install . instruction-cleaner --from-local --agent codex --scope user -
 gh skill install . code-evaluator --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . opus-5-tuning --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . fable-5-tuning --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
-gh skill install . gpt-5-6-tuning --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . gpt-6-tuning --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . claude-cli-runner --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . codex-cli-runner --from-local --agent codex --scope user --dir "$HOME/.codex/skills"

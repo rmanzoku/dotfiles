@@ -56,3 +56,27 @@ GPT-6 の公式ガイダンスは主に Astra 向けで、6.1-sol / 6-sol / luna
 - モデル名ごとに `resolve_prompt_profile` の結果を確認する（`gpt-6.1-sol`→`gpt-6`、`gpt-6-luna`→`gpt-6-luna`、`gpt-5.6-luna`→`gpt-5-6`、`claude-fable-5-1`→`fable-5`、bare alias→`none`）。
 - 新しい PATH で `codex` が解決できること、codex-cli-runner で実際に 1 回実行できることを確認する。
 - `scripts/chezmoi-drift --check-ignore` と `chezmoi diff` を確認する。
+
+## Addendum: runner review and legacy removal (2026-10-03)
+
+Three reviews of the CLI runners (opus-5-tuning, gpt-6-tuning, cleaner) were folded in. Proposals are in `.context/runner-review/`, which is not tracked.
+
+- Adopted:
+  - Claude and Codex Caller Checklists now say how to pick the prompt profile when `--model` is omitted, so the default path gets an adapter.
+  - Checklists in five runners use defaults first and ask only when an item has no default and cannot be inferred.
+  - Runtime validation runs only the checks the change touches.
+  - The Opus 5 adapters in claude and copilot now carry the same contract: no verification subagents, parallelism within source-prompt limits, artifact length within source-prompt limits.
+  - GPT-6 adapter: skip tests for low-impact edits; mark items blocked only when the context cannot settle them.
+  - Fixed dead references: `--ask-for-approval`, the `research` skill, the grok `--session-id` meaning, agy `--sandbox`/`--add-dir`, the op auth stop rule, and the hard-coded op paths.
+  - Removed duplicates and rules restated from governance.
+  - Removed the pinned `grok-4.5` example.
+- Removed legacy models: the codex-cli-runner GPT-5.5 / GPT-5.6 profiles and the `gpt-5-6-tuning` skill are retired. Older Codex models now get no adapter. Claude runners already cover only Opus 5.x and Fable 5.x.
+- Not adopted:
+  - GPT-6 adapter trims that overlap Codex built-in instructions (M1/M2): these need an A/B run first.
+  - Description rewrites for claude / gws / agy: these need firing probes.
+  - The gws `.env` ask rule: it is a credential gate and stays conservative.
+  - The shared "Keep it concise" response format: instruction-gc check 9 requires it to stay verbatim.
+  - Refusal classification text: the stream format is unverified.
+  - The grok 0.2.112 `--always-approve` observation: re-checking it needs a real call, and the current behavior is harmless.
+  - The agy stdin stream-json transport: it needs a probe.
+  - Moving op AWS / Vultr steps out of the skill: deferred to an owner decision.

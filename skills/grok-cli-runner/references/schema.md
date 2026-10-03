@@ -27,7 +27,6 @@ Optional top-level fields:
 {
   "task": "grok-build-review-diff",
   "request": {
-    "model": "grok-4.5",
     "input": [
       {
         "role": "system",

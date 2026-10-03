@@ -11,7 +11,7 @@ Use this skill for the execution mechanics of 1Password CLI commands. Keep highe
 
 Run `op` through one direct wrapper path and let failures remain visible. Do not add Terminal, AppleScript, GUI, or shell-session fallback paths inside this skill; they obscure the real failure mode.
 
-If `op whoami`, `op vault list`, or `opmaterialize diff` fails with `account is not signed in`, `promptError`, `authorization prompt dismissed`, `authorization timeout`, or a timeout, stop and report the classified failure from `summary.json`.
+If the wrapper classifies a failure as `auth_required`, `prompt_error`, `authorization_dismissed`, `auth_timeout`, `signin_unverified`, or `timeout`, stop and report it from `summary.json`. For `auth_transient`, re-run the original command once (see Direct Execution). Classify from `summary.json.failure_kind`, not from the raw message text.
 
 ## Safety
 
@@ -19,7 +19,7 @@ If `op whoami`, `op vault list`, or `opmaterialize diff` fails with `account is 
 - Do not run `op read`, `op item get --reveal`, or commands expected to write secret values to stdout. The wrapper rejects known stdout-secret forms before execution.
 - Prefer commands that write secrets directly to files, such as `op document get --out-file ...`, or workflows like `opmaterialize` that avoid printing secret contents.
 - Treat `op://...` references as sensitive operational material. The wrapper redacts them from metadata, but avoid passing them through command lines when a file or env-file handoff is available.
-- Save logs under `.context/<task>/`, not `/tmp`. The wrapper rejects `--output-dir` outside the command `--cwd` repository's `.context/` directory.
+- The wrapper rejects `--output-dir` outside the command `--cwd` repository's `.context/` directory.
 
 ## Wrapper
 
@@ -72,7 +72,7 @@ For 1Password-backed dotfiles:
    ```bash
    python3 skills/op-cli-runner/scripts/run_op_cli.py \
      --output-dir .context/<task>/op-diff \
-     --cwd /Users/rmanzoku/.local/share/chezmoi \
+     --cwd "$(chezmoi source-path)" \
      --timeout-seconds 900 \
      -- opmaterialize diff
    ```
@@ -82,7 +82,7 @@ For 1Password-backed dotfiles:
    ```bash
    python3 skills/op-cli-runner/scripts/run_op_cli.py \
      --output-dir .context/<task>/op-restore \
-     --cwd /Users/rmanzoku/.local/share/chezmoi \
+     --cwd "$(chezmoi source-path)" \
      --timeout-seconds 900 \
      -- opmaterialize restore
    ```

@@ -16,12 +16,12 @@ Frame each delegation as an outcome-first contract: source prompt, expected arti
 - Save the real assignment as `.context/<task>/prompt.md`.
 - Do not pass a large prompt body as an inline shell argument. Pass a short instruction that tells Codex to read `.context/<task>/run.prompt.md`.
 - Use the wrapper's 600-second timeout default, or pass an explicit timeout override when the task needs a shorter or longer limit.
-- Do not force `--sandbox`, `--ask-for-approval`, or bypass flags by default. Let Codex config/profile decide unless the caller explicitly requests an override via extra args.
+- Do not force `--sandbox`, `--approve-for-me`, or `--dangerously-bypass-*` flags by default. Let Codex config/profile decide unless the caller explicitly requests an override via extra args.
 - Do not treat 0-byte `run.events.jsonl` or `run.err` as a hang by itself.
 
 ## Caller Checklist
 
-Before running Codex, make these decisions explicitly:
+Before running Codex, settle these items. Use the stated default when the task does not specify one; ask only when an item without a default (the source prompt's outcome) cannot be inferred from the task.
 
 - Task directory: choose `.context/<task>/`.
 - Source prompt: write `.context/<task>/prompt.md` with the outcome, artifact paths, success criteria, allowed side effects, evidence rules, and stop condition. If an expected artifact path is absolute, put that same absolute path in the source prompt; `--expected-artifact` only verifies materialization.
@@ -30,7 +30,7 @@ Before running Codex, make these decisions explicitly:
 - When `--output-dir .context/<task>` is used, pass `--expected-artifact result.md`, not `--expected-artifact .context/<task>/result.md`; the latter resolves under `.context/<task>/.context/<task>/`.
 - Defaults: omit `--model`, `--effort`, and `--profile` unless the caller, model registry, or role explicitly requires an override.
 - Timeout: rely on the 600-second wrapper default unless the task contract says otherwise.
-- Prompt profile: rely on `--prompt-profile auto` when passing an explicit GPT-5.5, GPT-5.6, or GPT-6 model; use `--prompt-profile gpt-5-5`, `gpt-5-6`, `gpt-6`, or `gpt-6-luna` only when the CLI default is that generation and `--model` is omitted.
+- Prompt profile: when `--model` is passed, rely on `--prompt-profile auto`. When `--model` is omitted, read `model` from the effective Codex config (`~/.codex/config.toml`, or the `--profile` in use) and pass the matching profile: `gpt-6` for `gpt-6.1-sol` / `gpt-6-astra` / `gpt-6-sol`, `gpt-6-luna` for `gpt-6-luna`. Older generations get no adapter. Omitting both leaves the run without a generation adapter.
 - Extra Codex args: pass each Codex CLI token as its own `--extra-codex-arg=<token>` value, especially for leading-hyphen tokens.
 - Web search: `codex exec` does not accept `--search` (it exits 2 with `unexpected argument '--search'`). For research tasks that need web access, pass `--extra-codex-arg=--config --extra-codex-arg=tools.web_search=true`.
 
@@ -74,15 +74,9 @@ The wrapper writes `.context/<task>/run.prompt.md`, then passes only a file-refe
 Default behavior:
 
 - `--prompt-profile auto` is the default.
-- When `--model` explicitly looks like GPT-5.5 (`gpt-5.5`, `gpt-5-5`, or similar), `auto` applies the GPT-5.5 adapter to `run.prompt.md`.
-- When `--model` explicitly looks like GPT-5.6 (`gpt-5.6`, `gpt-5-6`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, or similar), `auto` applies the GPT-5.6 adapter to `run.prompt.md`.
 - When `--model` explicitly looks like GPT-6 (`gpt-6.1-sol`, `gpt-6-astra`, `gpt-6-sol`, or similar), `auto` applies the GPT-6 adapter; for `gpt-6-luna` it applies `gpt-6-luna`, which adds a verification line.
-- When `--model` is omitted, `auto` cannot know the Codex configured default. If the configured default is GPT-5.5, GPT-5.6, or GPT-6, pass the matching `--prompt-profile` explicitly.
+- When `--model` is omitted, `auto` resolves to `none` because the wrapper cannot read the Codex configured default. Check the configured `model` and pass the matching `--prompt-profile` (see Caller Checklist).
 - Pass `--prompt-profile none` to suppress model-specific prompt adaptation.
-
-The GPT-5.5 adapter is short and outcome-first. It tells Codex to honor the source prompt's outcome, success criteria, allowed side effects, evidence rules, output shape, and completion rule while relying on CLI/config effort rather than prompt magic words.
-
-The GPT-5.6 adapter is short, lean, and outcome-first. In addition to the GPT-5.5 contract it tells Codex to state each instruction once without boilerplate, handle routine local actions within the allowed side effects without asking, and treat external writes, destructive actions, and scope expansion as out of contract unless the source prompt explicitly authorizes them. Generation doctrine is maintained in the `gpt-5-6-tuning` skill.
 
 The GPT-6 adapter compensates for GPT-6's documented tendencies to ask for clarification too readily, pause on conflicting skill or AGENTS.md guidance, stop after a first implementation, and over-test. It tells Codex to infer intent and keep working, let the source prompt override skill guidance (quoting any instruction that causes a pause), finish every completion criterion, and scale verification to risk. Codex's built-in GPT-6 instructions already cover general autonomy, so the adapter stays short. The Luna base instructions skip tests unless asked, so `gpt-6-luna` adds one line to run the verification listed in the success criteria. Generation doctrine is maintained in the `gpt-6-tuning` skill; rationale is in ADR 0076.
 
@@ -121,16 +115,19 @@ Codex exposes image generation as an **agent tool (`imggen`), not a CLI subcomma
 - **`--skip-git-repo-check`** is required when the output directory is not inside a trusted git repository. Without it the run aborts with `Not inside a trusted directory`
 - **The image is not `last-message.md`.** The final message only reports the path. Track the image as an expected artifact and verify it yourself
 
-Run:
+Run (an image request is itself the caller's explicit sandbox decision under Core Rules; the wrapper's `--cwd` becomes Codex `-C`):
 
 ```bash
 python3 <skill-dir>/scripts/run_codex_cli.py \
   --prompt-file .context/<task>/prompt.md \
   --output-dir .context/<task> \
-  --expected-artifact <name>.jpg
+  --cwd <output-dir> \
+  --expected-artifact <absolute-path>/<name>.jpg \
+  --extra-codex-arg=--sandbox --extra-codex-arg=workspace-write \
+  --extra-codex-arg=--skip-git-repo-check
 ```
 
-Raw form when the wrapper's flags do not cover the sandbox and repo-check needs:
+The raw form below is equivalent and only for debugging outside the wrapper:
 
 ```bash
 timeout 600 codex exec --sandbox workspace-write --skip-git-repo-check --cd <output-dir> \
@@ -203,13 +200,9 @@ Use these patterns when testing the wrapper itself without spending Codex API bu
 ## Wrapper Notes
 
 - Resolve `<skill-dir>` from the location of this `SKILL.md`.
-- Pass `--cwd <project-root>` when Codex should run from a specific repository.
 - `summary.json.cwd` records the resolved `--cwd`; the shell directory that launched the wrapper is not recorded as a separate field.
-- Omit `--model`, `--effort`, and `--profile` by default so Codex CLI uses its configured defaults.
-- Pass `--model <model>` and `--effort <level>` from the caller when a model registry, role, or task explicitly requires overrides.
-- Use `--prompt-profile gpt-5-5`, `gpt-5-6`, `gpt-6`, or `gpt-6-luna` when the caller knows the CLI default model is that generation but does not pass `--model`.
-- Pass each expected output as `--expected-artifact`; use an absolute path or a path relative to the wrapper output directory.
-- Use `--extra-codex-arg` for narrow additions when explicitly required. Pass one Codex CLI token per wrapper argument, for example `--extra-codex-arg=--sandbox --extra-codex-arg=read-only`, `--extra-codex-arg=--ask-for-approval --extra-codex-arg=never`, or `--extra-codex-arg=--config --extra-codex-arg=key=value`.
+- See Caller Checklist for when to pass `--cwd`, `--model`, `--effort`, `--profile`, `--prompt-profile`, and `--expected-artifact`.
+- Use `--extra-codex-arg` for narrow additions when explicitly required. Pass one Codex CLI token per wrapper argument, for example `--extra-codex-arg=--sandbox --extra-codex-arg=read-only`, `--extra-codex-arg=--approve-for-me`, or `--extra-codex-arg=--config --extra-codex-arg=key=value`.
 - Keep final orchestration in the caller. This skill only runs Codex and records observable artifacts.
 
 ## Validation
@@ -221,7 +214,7 @@ scripts/skill-quick-validate skills/codex-cli-runner
 python3 <skill-dir>/scripts/run_codex_cli.py --help
 ```
 
-For runtime validation, run:
+Run the runtime checks the change touches: documentation-only edits need only `skill-quick-validate`; wrapper changes need the no-API checks; run real-backend smokes only when command construction, output parsing, or timeout handling changed. The checks are:
 
 - no-API command construction
 - no-API fake Codex success

@@ -34,11 +34,11 @@ Execute the source prompt literally and completely.
 - Treat the source prompt's outcome, constraints, tool limits, artifact paths, and completion criteria as the contract.
 - Deliver at the requested scope. If a scope change seems needed, note it in one sentence and continue the task as asked.
 - Do not add fixed progress-update scaffolding. Report progress only if the source prompt asks for it or a real blocker requires it.
-- Do not add verification passes, double-checks, or verification subagents beyond what the source prompt requires.
-- Use subagents only for independent, sizable, parallelizable work the source prompt authorizes; prefer direct completion otherwise.
+- Do not add verification passes or double-checks, and do not use subagents for verification, beyond what the source prompt requires.
+- Use subagents only for independent, sizable, parallelizable work the source prompt authorizes, within any parallelism limit it sets; complete everything else directly.
 - For review or finding tasks, do not silently filter findings by importance unless the source prompt explicitly asks for filtering at that phase.
 - If scope is ambiguous, resolve only what is explicitly supported by the source prompt and mark genuinely missing inputs as blocked.
-- Do not emulate effort with phrases like "think hard"; rely on the CLI effort setting supplied by the caller.
+- Keep written artifacts to what the source prompt's contract needs; treat any length, section, or format limit in the source prompt as binding.
 """
 
 FABLE_5_ADAPTER = """\
