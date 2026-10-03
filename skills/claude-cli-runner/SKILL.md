@@ -87,11 +87,14 @@ Default behavior:
 
 - `--prompt-profile auto` is the default.
 - When `--model` explicitly looks like Claude Opus 5 (`claude-opus-5`, `opus-5`), `auto` applies the Opus 5 adapter to `run.prompt.md`.
-- `auto` does not treat a bare `opus` alias as any specific version; pass an explicit prompt profile when the CLI default is known.
-- When `--model` is omitted, `auto` cannot know the Claude CLI configured default. If the configured default is Claude Opus 5, pass `--prompt-profile opus-5` explicitly.
+- When `--model` explicitly looks like Claude Fable 5 (`claude-fable-5`, `fable-5`), `auto` applies the Fable 5 adapter.
+- `auto` does not treat bare `opus` or `fable` aliases as any specific version; pass an explicit prompt profile when the CLI default is known.
+- When `--model` is omitted, `auto` cannot know the Claude CLI configured default. If the configured default is Claude Opus 5 or Fable 5, pass `--prompt-profile opus-5` or `--prompt-profile fable-5` explicitly.
 - Pass `--prompt-profile none` to suppress model-specific prompt adaptation.
 
 The Opus 5 adapter is intentionally short and positive. It tells Claude to execute the source prompt literally, deliver at the requested scope, avoid fixed progress scaffolding, avoid verification passes and subagents beyond what the source prompt requires, preserve coverage in review/finding phases, respect explicit tool/output limits, and rely on the CLI `--effort` setting instead of prompt magic words.
+
+The Fable 5 adapter is the same text the copilot-cli-runner uses. It treats the source prompt as a goal-and-constraints contract, keeps work at the requested scope, has Claude audit progress claims against tool results, and tells it not to stop over perceived context limits. Its rules come from the `fable-5-tuning` skill.
 
 ## Default Response Format
 
@@ -162,7 +165,7 @@ Add WebSearch/WebFetch or output-size limits only when the calling workflow's ev
 - `summary.json.cwd` records the resolved `--cwd`; the shell directory that launched the wrapper is not recorded as a separate field.
 - Omit `--model`, `--effort`, `--permission-mode`, and `--safe-mode` by default so Claude CLI uses its configured defaults.
 - Pass `--model <model>`, `--effort <level>`, `--permission-mode <mode>`, or `--safe-mode` from the caller when a model registry, role, or task explicitly requires overrides.
-- Use `--prompt-profile opus-5` when the caller knows the CLI default model is Claude Opus 5 but does not pass `--model`.
+- Use `--prompt-profile opus-5` or `--prompt-profile fable-5` when the caller knows the CLI default model is that generation but does not pass `--model`.
 - Pass each expected output as `--expected-artifact`; use an absolute path or a path relative to the wrapper output directory.
 - Use `--extra-claude-arg` for narrow additions such as `--tools` or `--add-dir` when needed. When the extra Claude argument itself starts with `-`, either `--extra-claude-arg --tools=...` or `--extra-claude-arg=--tools=...` is accepted.
 - Pass value-taking Claude options in combined `=` form (for example `--extra-claude-arg --tools=WebSearch,WebFetch`). A space-separated value token is appended just before the positional prompt, and variadic Claude options such as `--tools` and `--add-dir` absorb the prompt and break the run.

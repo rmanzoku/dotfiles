@@ -1,6 +1,6 @@
 name = "worker"
 description = "Use for ordinary owner-local implementation after the problem and scope are established. Handles coding and verification; returns durable or high-risk ambiguity to the parent orchestrator."
-model = "gpt-5.6-terra"
+model = "gpt-6.1-sol"
 model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
 developer_instructions = """
