@@ -47,7 +47,7 @@ GPT-6 の公式ガイダンスは主に Astra 向けで、6.1-sol / 6-sol / luna
 - 既定の `codex` コマンドで codex-cli-runner が使える。
 - `tech` / `biz` は Astra を使うため、ADR 0054 の Sol/high よりコストが上がる。
 - `tech` / `biz` / `personal` の agent file は git 管理外で 1Password に保存されている。他マシンへ反映するには `opmaterialize add` で manifest を更新する必要がある。
-- `gpt-6-tuning` skill はまだ作っていない。GPT-6 の prompting doctrine は本 ADR と codex-cli-runner の adapter を正本とし、skill にするかは別途判断する。
+- GPT-6 の prompting doctrine は `gpt-6-tuning` skill に置く。GPT-6.1 専用の prompting guidance は公式に存在せず、6.1-sol 固有なのは effort 範囲と Responses API 必須というパラメータ面だけなので、同じ skill で扱う。
 - `codex exec` の persistent mode と `ultra` effort が非対話実行でどう振る舞うかは未確認。短い smoke run（`gpt-6-luna` / `low`）は通常どおり終了した。
 
 ## Validation

@@ -1,6 +1,6 @@
 ---
 title: "Skill Install Manifest"
-updated_at: 2026-09-13
+updated_at: 2026-10-03
 ---
 
 # Skill Install Manifest
@@ -39,6 +39,7 @@ gh skill install . code-evaluator --from-local --agent claude-code --scope user
 gh skill install . opus-5-tuning --from-local --agent claude-code --scope user
 gh skill install . fable-5-tuning --from-local --agent claude-code --scope user
 gh skill install . gpt-5-6-tuning --from-local --agent claude-code --scope user
+gh skill install . gpt-6-tuning --from-local --agent claude-code --scope user
 gh skill install . codex-cli-runner --from-local --agent claude-code --scope user
 gh skill install . copilot-cli-runner --from-local --agent claude-code --scope user
 gh skill install . agent-orchestration-evaluator --from-local --agent claude-code --scope user
@@ -67,6 +68,7 @@ gh skill install . code-evaluator --from-local --agent codex --scope user --dir 
 gh skill install . opus-5-tuning --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . fable-5-tuning --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . gpt-5-6-tuning --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
+gh skill install . gpt-6-tuning --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . claude-cli-runner --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . codex-cli-runner --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . copilot-cli-runner --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
