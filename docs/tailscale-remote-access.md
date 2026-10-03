@@ -1,6 +1,6 @@
 ---
 title: "Tailscale Remote Access and VPS Exit Node"
-updated_at: 2026-08-12
+updated_at: 2026-10-03
 ---
 
 # Tailscale Remote Access and VPS Exit Node
@@ -146,7 +146,21 @@ Measure throughput **both with and without** the exit node. A single figure thro
 node says nothing without the baseline; in our case the home link, not the exit node, was the
 limiting factor.
 
-## 6. Rebuild Procedure
+## 6. Static-Key APIs Through the Exit Node
+
+Vultr issues only a long-lived API key, and its IP allowlist holds the exit node address only.
+Run the whole job through one wrapper so a single 1Password approval covers it:
+
+```bash
+with-vultr bash job.sh
+```
+
+- `with-vultr` (`~/.local/bin`) routes through `with-exit-node` and injects `VULTR_API_KEY` from an env file holding only an `op://` reference.
+- Use IPv4 (`curl -4`). Traffic leaving over IPv6 returns `401 Unauthorized IP address`, which looks like an authentication failure.
+- `op plugin list` shows `vultr-cli`, but the plugin keeps its own config and prompts per command; prefer the env-file path.
+- The one-approval pattern and its trade-offs are in the `op-cli-runner` skill.
+
+## 7. Rebuild Procedure
 
 A rebuild wipes all host configuration. The public IPv4, MAC, reverse DNS, security group
 assignment and name tag are preserved; nothing inside the OS is.

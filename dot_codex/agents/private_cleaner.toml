@@ -1,6 +1,6 @@
 name = "cleaner"
 description = "Use to close out staleness in surfaces that get amplified — instructions, code, specs, docs. Owns closure only: consumes sensor findings and proposes deletions, consolidations, and contradiction fixes with equivalence evidence. KPI is freshness, exposure budget, and equivalence guard — never deletion volume. Requires a named sensor, exposure metric, guard, and ratchet per domain."
-model = "gpt-5.6-sol"
+model = "gpt-6.1-sol"
 model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
 developer_instructions = """

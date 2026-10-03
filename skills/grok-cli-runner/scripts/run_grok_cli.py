@@ -71,7 +71,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Do not pass --verbatim. By default the wrapper sends the derived prompt verbatim.",
     )
-    parser.add_argument("--session-id", default=None, help="Create or resume a named Grok Build headless session.")
+    parser.add_argument("--session-id", default=None, help="Use a specific session UUID for a new Grok Build session (use --resume to continue one).")
     parser.add_argument("--resume", default=None, help="Resume an existing Grok Build session ID.")
     parser.add_argument(
         "--continue-session",

@@ -1,7 +1,7 @@
 ---
 title: "AWS credentials and EC2 access through 1Password"
 date: 2026-09-12
-updated_at: 2026-09-13
+updated_at: 2026-10-03
 agent_model: "Codex / GPT-6"
 ---
 
@@ -82,6 +82,21 @@ Mac の画面ロック（ディスプレイ消灯・蓋閉じ）でアプリも�
 ジョブ側は `aws --profile` を使わず `AWS_PROFILE` に依存すること（明示 `--profile` は環境変数の認証情報を無視する）。
 これは OP の承認再利用であり、AWS 認証情報のディスクキャッシュは追加しない。
 [公式の承認モデル](https://www.1password.dev/cli/app-integration-security)を参照する。
+
+## Agent IAM user と exit node
+
+Agent 用 IAM user（`oasys-*` profile）は `AgentGuardrails` policy の `DenyUnlessFromExitNode` で送信元 IP を制限している。
+AWS を呼ぶ前に tailnet の exit node を経由させ、ジョブ終了後に戻す。
+
+```bash
+tailscale set --exit-node=<tailscale exit-node list の node> --exit-node-allow-lan-access=true
+tailscale set --exit-node=
+```
+
+経由していないときの症状は紛らわしい。`sts get-caller-identity` は成功する一方、`ecs:ListClusters` や
+`lambda:ListFunctions` のような読み取りも `explicit deny in an identity-based policy: AgentGuardrails` で失敗する。
+policy 自体が操作を禁じていると判断する前に `tailscale status --json | jq .ExitNodeStatus` を確認する（2026-09-14 実機確認）。
+`with_aws_session.sh` の一時認証情報にもこの制限はかかる。
 
 ## 移行と検証
 

@@ -157,7 +157,7 @@ STALE_TERMS = [
     "gemini-cli-runner", "qwen-code", "dot_gemini", "dot_qwen",
     ".qwen/", "Qwen", "~/.gemini/", "oprun gemini",
     "dot_codex/private_config.toml.tmpl",
-    "opus-4-7", "opus-4-8", "gpt-5-5-tuning",
+    "opus-4-7", "opus-4-8", "gpt-5-5-tuning", "gpt-5-6-tuning",
     "docs-entrypoint-check", "--fast-forward-clean",
 ]
 # .claude/worktrees は Claude Code の nested worktree(repo 全体の複製 + その .context)。走査対象外

@@ -9,6 +9,8 @@ agent_model: OpenAI Codex GPT-5.6 Sol
 # ADR 0054: Codex 5.6 と Copilot review model を role 別に割り当てる
 
 > Fable の task-data authorization と credit floor は [ADR 0069](./0069-normalize-ai-cli-runner-data-boundaries.md) により一部更新された。30日保持、明示選択、hard cap、暗黙 fallback 禁止は維持する。
+>
+> Codex の role 別モデルと Copilot 既定モデルは [ADR 0076](./0076-move-ai-cli-runners-to-gpt-6-and-opus-5-5.md) で GPT-6 / Opus 5.5 世代へ更新された。
 
 ## Context
 

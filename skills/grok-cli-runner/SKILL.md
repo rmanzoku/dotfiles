@@ -14,10 +14,8 @@ Frame each delegation as an outcome-first contract: request artifact, expected r
 - Put every run under `.context/<task>/`.
 - Save the request as `.context/<task>/grok-request.json`.
 - Do not inline JSON request bodies into shell commands. Write the request artifact first and pass it with `--request-file`.
-- Use `--dry-run` for request-shape and command validation; it does not call Grok Build and intentionally does not create a response artifact.
-- In `--dry-run`, success is checked through `summary.json.dry_run_payload`; do not require `grok-response.json` to exist.
+- Use `--dry-run` for request-shape and command validation; it does not call Grok Build and intentionally does not create a response artifact, so check `summary.json.dry_run_payload` instead of `grok-response.json`.
 - Use the wrapper's 600-second process timeout default, or pass `--timeout-seconds` when the task needs a shorter or longer limit.
-- Use `--permission-mode auto` only for prompt-only tasks that need no tool calls.
 - `--no-plan` is the wrapper default; `--plan` is the opt-out and is only for when Grok Build plan mode is explicitly desired.
 - For any task that triggers a tool call — shell commands, file writes, and also read-only X post or Web fetches — pass `--permission-mode bypassPermissions`. Headless Grok cannot answer permission prompts: under `auto` the first tool call that needs approval is cancelled and the run ends with exit 0 and `stopReason=Cancelled`.
 - The wrapper passes `--verbatim` by default so Grok receives the derived prompt directly. Use `--no-verbatim` only when Grok Build's default prompt shaping is explicitly needed.
@@ -53,15 +51,13 @@ grok --no-auto-update -p "Say ok." --output-format json
 
 ## Caller Checklist
 
-Before running Grok, make these decisions explicitly:
+Before running Grok, settle these items. Use the stated default when the task does not specify one; ask only when an item without a default (the request's outcome) cannot be inferred from the task.
 
 - Task directory: choose `.context/<task>/`.
 - Request artifact: write `.context/<task>/grok-request.json` with top-level `task` and `request`.
 - Response artifact: pass `--response-artifact grok-response.json` when the response belongs inside `--output-dir`; use an absolute path only when the response must be written outside `--output-dir`.
 - Model: omit `--model` unless the caller or model registry requires an override. See the resolution chain under Standard Command Shape.
-- Timeout: rely on the 600-second wrapper default unless the task contract says otherwise.
-- Permission mode: rely on `--permission-mode auto` only for prompt-only tasks with no tool calls; pass `--permission-mode bypassPermissions` when the task uses any tool, including shell commands, file writes, and read-only X post or Web fetches (for example when the expected artifact is written by Grok itself, or when the task retrieves a public X post URL).
-- Verbatim mode: keep the default `--verbatim`; use `--no-verbatim` only for compatibility testing.
+- Permission mode: per Core Rules (`auto` only for prompt-only tasks; `bypassPermissions` for any tool call).
 - Output format: rely on `--output-format json`; use `streaming-json` only when incremental event capture matters, and `plain` only for compatibility.
 - Session state: omit `--session-id`, `--resume`, and `--continue-session` unless continuity is required and documented in the request.
 - Working directory: `--cwd` controls both the subprocess working directory and Grok Build `--cwd`.
@@ -98,11 +94,11 @@ Add these only when needed:
 - `--model <model>` to override model defaulting.
 - `--timeout-seconds <seconds>` to override the 600-second process timeout.
 - `--grok-bin <path>` when the `grok` executable is not on `PATH`.
-- `--permission-mode <mode>` when the caller explicitly chooses a Grok Build permission mode; use `bypassPermissions` for any task with tool calls, including read-only X post or Web fetches.
+- `--permission-mode <mode>` when the caller explicitly chooses one (see Core Rules).
 - `--plan` only when Grok Build plan mode is explicitly desired.
 - `--no-verbatim` only when the caller explicitly wants Grok Build's default prompt shaping.
 - `--always-approve` only when tool side effects are explicitly accepted; the wrapper then omits `--permission-mode`.
-- `--session-id <id>`, `--resume <id>`, or `--continue-session` only when session continuity is part of the task.
+- `--session-id <uuid>` (names a new session only), `--resume <id>`, or `--continue-session` only when session state is part of the task.
 - `--output-format streaming-json` only when event capture matters.
 
 For request-shape validation without a backend call:
@@ -247,7 +243,7 @@ scripts/skill-quick-validate skills/grok-cli-runner
 python3 skills/grok-cli-runner/scripts/run_grok_cli.py --help
 ```
 
-For runtime validation, run:
+Run the runtime checks the change touches: documentation-only edits need only `skill-quick-validate`; wrapper changes need the no-call checks; run real-backend smokes only when command construction, output parsing, or timeout handling changed. The checks are:
 
 - no-call dry-run success
 - invalid request failure

@@ -34,7 +34,8 @@ This Skill exists because a thin wrapper can reject unsafe local execution, but 
 5. Before running an unfamiliar command, confirm the command surface with `gws schema <service.resource.method>` or `gws <service> <resource> --help`. Do not guess flags or subcommands; observed 400 `validationError` failures came from invented arguments and subcommands such as `--spreadsheet-id`, `sheets values get`, and `drive ls`.
 6. Run `gws-account <profile> <gws args...>`.
 7. If credentials are missing or expired, recover only within the same profile using the Login Flow below.
-8. Record any persistent workflow change in the working repository docs or the relevant Skill, not in ad hoc memory.
+
+Done when the `gws-account <profile>` command exits 0 and its output answers the task; after any login, also when `auth status` shows `token_valid: true` with the expected user and one API call the task depends on succeeds.
 
 ## Login Flow
 
@@ -89,8 +90,7 @@ Forbidden recovery paths:
 
 ## Command Patterns
 
-Use file-backed prompts or `.context/` artifacts for complex handoffs and long command plans.
-For simple commands, run the wrapper directly:
+Run the wrapper directly:
 
 ```bash
 gws-account <profile> auth status
@@ -106,4 +106,3 @@ When a command fails, classify the failure before continuing:
 - `invalid_grant` / `invalid_rapt`: the token for the profile expired. This is a known recurring operational event, not a broken setup. Recover with `gws-account <profile> auth login` for the same profile.
 - HTTP `403` `insufficientPermissions`: the profile's granted scopes do not cover the API (for example a drive-only profile calling Gmail). This is expected behavior, not an account problem. Resolve by re-authenticating the same profile with the additional scopes.
 - HTTP `400` `validationError`: the command shape was likely guessed. Re-check with `gws schema` or `--help` before retrying.
-- `rg` exit `1` during local checks means no matches, not a command failure.

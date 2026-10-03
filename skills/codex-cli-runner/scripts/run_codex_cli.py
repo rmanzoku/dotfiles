@@ -23,32 +23,25 @@ ERROR_RE = re.compile(
     re.IGNORECASE,
 )
 
-GPT_5_5_MODEL_RE = re.compile(r"gpt[-_.]?5[-_.]?5", re.IGNORECASE)
-GPT_5_6_MODEL_RE = re.compile(r"gpt[-_.]?5[-_.]?6", re.IGNORECASE)
+GPT_6_MODEL_RE = re.compile(r"gpt[-_.]?6(?!\d)", re.IGNORECASE)
+LUNA_MODEL_RE = re.compile(r"luna", re.IGNORECASE)
 
-GPT_5_5_ADAPTER = """\
-## GPT-5.5 Prompt Adapter
+GPT_6_ADAPTER = """\
+## GPT-6 Prompt Adapter
 
 Complete the source prompt as an outcome-first task contract.
 
 - Treat the source prompt's outcome, success criteria, allowed side effects, evidence rules, output shape, and completion rule as the contract.
-- Prefer the smallest sufficient plan and tool use that completes the contract.
-- Do not emulate reasoning effort with phrases like "think hard" or mandatory step-by-step narration; rely on the CLI/config effort setting supplied by the caller.
-- If a required input is missing, mark that item blocked with the missing input instead of guessing.
-- Keep final output concise unless the source prompt asks for a detailed report.
+- Infer intent from the source prompt and repository context and keep working; do not stop to ask about choices you can resolve from available context.
+- Complete reversible, in-contract work without asking; actions outside the allowed side effects are out of contract unless the source prompt authorizes them.
+- The source prompt takes precedence over skill or AGENTS.md guidance; if such guidance makes you pause or leave work unfinished, name the file and quote the instruction.
+- Finish every completion criterion, including running, inspecting, and fixing when the contract asks for it; a first implementation is not completion by itself.
+- Verify in proportion to risk: run the checks the contract requires and tests appropriate to the change; skip tests for reversible, low-impact edits the contract does not ask to test.
+- If a required input cannot be determined from the source prompt or repository context, mark that item blocked with the missing input; do not invent it.
 """
 
-GPT_5_6_ADAPTER = """\
-## GPT-5.6 Prompt Adapter
-
-Complete the source prompt as an outcome-first task contract.
-
-- Treat the source prompt's outcome, success criteria, allowed side effects, evidence rules, output shape, and completion rule as the contract.
-- Prefer the smallest sufficient plan and tool use that completes the contract; state each instruction once and add no boilerplate the contract does not need.
-- Handle routine local actions within the allowed side effects without asking; treat external writes, destructive actions, and scope expansion as out of contract unless the source prompt explicitly authorizes them.
-- Do not emulate reasoning effort with phrases like "think hard" or mandatory step-by-step narration; rely on the CLI/config effort setting supplied by the caller.
-- If a required input is missing, mark that item blocked with the missing input instead of guessing.
-- Keep final output concise unless the source prompt asks for a detailed report.
+GPT_6_LUNA_ADDENDUM = """\
+- Run the verification listed in the success criteria even if not otherwise asked to test.
 """
 
 STRUCTURED_MARKDOWN_OUTPUT = """\
@@ -112,9 +105,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--prompt-profile",
-        choices=("auto", "gpt-5-5", "gpt-5-6", "none"),
+        choices=("auto", "gpt-6", "gpt-6-luna", "none"),
         default="auto",
-        help="Prompt adapter profile. Auto applies a GPT adapter for explicit GPT-5.5 or GPT-5.6 models.",
+        help="Prompt adapter profile. Auto applies the GPT-6 adapter for explicit GPT-6 models.",
     )
     parser.add_argument(
         "--extra-codex-arg",
@@ -165,10 +158,8 @@ def compact_json(value: Any) -> str:
 def resolve_prompt_profile(requested: str, model: str | None) -> str:
     if requested != "auto":
         return requested
-    if model and GPT_5_5_MODEL_RE.search(model):
-        return "gpt-5-5"
-    if model and GPT_5_6_MODEL_RE.search(model):
-        return "gpt-5-6"
+    if model and GPT_6_MODEL_RE.search(model):
+        return "gpt-6-luna" if LUNA_MODEL_RE.search(model) else "gpt-6"
     return "none"
 
 
@@ -181,10 +172,10 @@ def write_launch_prompt(path: Path, source_prompt: Path, profile: str) -> None:
         "---",
         "",
     ]
-    if profile == "gpt-5-5":
-        sections.extend([GPT_5_5_ADAPTER, ""])
-    elif profile == "gpt-5-6":
-        sections.extend([GPT_5_6_ADAPTER, ""])
+    if profile == "gpt-6":
+        sections.extend([GPT_6_ADAPTER, ""])
+    elif profile == "gpt-6-luna":
+        sections.extend([GPT_6_ADAPTER + GPT_6_LUNA_ADDENDUM, ""])
     sections.extend([STRUCTURED_MARKDOWN_OUTPUT, ""])
     sections.extend(
         [

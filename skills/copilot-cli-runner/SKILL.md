@@ -25,7 +25,7 @@ Frame each delegation as an outcome-first contract: source prompt, expected arti
 
 ## Caller Checklist
 
-Before running Copilot, make these decisions explicitly:
+Before running Copilot, settle these items. Use the stated default when the task does not specify one; ask only when an item without a default (the source prompt's outcome, or the `--max-ai-credits` cap) cannot be inferred from the task.
 
 - Task directory: choose `.context/<task>/`.
 - Source prompt: write `.context/<task>/prompt.md` with the outcome, artifact paths, success criteria, allowed side effects, evidence rules, and stop condition.
@@ -42,7 +42,7 @@ Before running Copilot, make these decisions explicitly:
 - Prompt profile: use `--prompt-profile auto` by default; it adds an Opus 5 or Fable 5 generation adapter when `--model` names that generation. Pass `--prompt-profile none` only when the source prompt already contains a complete Copilot-specific launch contract.
 - Extra Copilot args: pass each Copilot CLI token as its own `--extra-copilot-arg=<token>` value, especially for leading-hyphen tokens.
 
-Do not add "think hard", fixed progress-update scaffolds, or mandatory step-by-step narration to simulate effort. Use `--effort` only when the caller explicitly asks for an effort override.
+Do not add "think hard", fixed progress-update scaffolds, or mandatory step-by-step narration to simulate effort. Set effort with `--effort` as decided under Budget.
 
 ## Standard Command Shape
 
@@ -70,7 +70,7 @@ The wrapper writes:
 - `run.prompt.md`: launch prompt sent to Copilot, including any prompt profile adapter
 - `run.events.jsonl`: Copilot JSONL stdout events
 - `run.err`: stderr
-- `summary.json`: command, exit code, elapsed time, byte counts, parsed errors, prompt profile, `failure_reasons`, `nonfatal_reasons`, `recommended_next_action`, and `expected_artifacts`
+- `summary.json`: command, resolved `cwd`, exit code, elapsed time, byte counts, parsed errors, prompt profile, `failure_reasons`, `nonfatal_reasons`, `recommended_next_action`, and `expected_artifacts`
 - `failure.md`: only when the wrapper run fails
 
 `summary.json` also records the Copilot session id, raw result usage (tokens/credits or legacy premium requests when emitted), and the declared credit budget.
@@ -79,7 +79,7 @@ The wrapper writes:
 
 - Use interactive `/usage` without sending a model prompt to read monthly used/total credits. Record the observation in the task artifact when spend is material.
 - Set `--max-ai-credits` below the known remainder; pass that remainder as `--available-ai-credits-before` so the wrapper rejects an impossible cap before launch.
-- Use `medium` or `low` for routine artifact completion. Use `high` for capability-sensitive end-to-end work. Do not use `xhigh` without an explicit reason and budget.
+- Take effort from the caller or model registry when one is set; control spend with `--max-ai-credits`, not by lowering that effort. When neither sets it, use `medium` or `low` for routine artifact completion and `high` for capability-sensitive end-to-end work; use `xhigh` only with an explicit reason and budget.
 - After completion, inspect `summary.json.usage`; after material runs, check `/usage` again because the plan balance is the billing authority.
 - `--allow-uncapped` is an explicit exception for non-Fable models, not a default. Fable always requires `--max-ai-credits`.
 - A timeout limits wall time, not necessarily spend. Use both timeout and credit cap.
@@ -91,15 +91,15 @@ The wrapper writes `.context/<task>/run.prompt.md`, then passes only a file-refe
 
 Default behavior:
 
-- `--prompt-profile auto` is the default. It applies the Copilot adapter, and adds a model-generation adapter when `--model` explicitly looks like Claude Opus 5 (`claude-opus-5`, `opus-5`) or Claude Fable 5 (`claude-fable-5`, `fable-5`).
+- `--prompt-profile auto` is the default. It applies the Copilot adapter, and adds a model-generation adapter when `--model` explicitly looks like Claude Opus 5 (`claude-opus-5`, `opus-5`, and minor versions such as `claude-opus-5.5`) or Claude Fable 5 (`claude-fable-5`, `fable-5`, and minor versions such as `claude-fable-5.1`).
 - `--prompt-profile copilot` forces the Copilot adapter only.
 - `--prompt-profile opus-5` and `--prompt-profile fable-5` force the Copilot adapter plus that generation adapter. Use them when the caller knows the Copilot CLI configured default model is that generation but does not pass `--model`.
 - `auto` does not treat bare aliases such as `opus` or `fable` as a specific generation; pass an explicit prompt profile when the configured default is known.
 - `--prompt-profile none` suppresses prompt adaptation.
 
-The Copilot adapter is short and outcome-first. It tells Copilot to execute the source prompt literally, write requested artifacts exactly where specified, respect allowed side effects, keep output concise unless the source prompt asks otherwise, and stop when the source contract is complete or blocked.
+The Copilot adapter is short and outcome-first. It tells Copilot to treat the source prompt as an outcome-first task contract, write requested artifacts exactly where specified, use the smallest sufficient plan, mark missing inputs blocked, and keep output concise unless the source prompt asks otherwise.
 
-The Opus 5 generation adapter tells the model to deliver at the requested scope, avoid verification passes and extra review agents beyond the source prompt, delegate only authorized independent parallel work, avoid fixed progress scaffolding, and preserve coverage in review/finding phases.
+The Opus 5 generation adapter tells the model to deliver at the requested scope, avoid verification passes and verification subagents beyond the source prompt, delegate only authorized independent parallel work within any limit the source prompt sets, avoid fixed progress scaffolding, preserve coverage in review/finding phases, and keep written artifacts within the source prompt's limits. It is the same contract as the claude-cli-runner Opus 5 adapter.
 
 The Claude Fable 5 generation adapter tells the model to execute the source prompt as a goal-and-constraints contract, act without waiting for step-by-step direction, stay at the requested scope, ground progress claims in tool results, proceed autonomously on reversible in-scope work, and never stop early on account of perceived context limits.
 
@@ -174,10 +174,7 @@ Use these patterns when testing the wrapper itself without spending Copilot API 
 ## Wrapper Notes
 
 - Resolve `<skill-dir>` from the location of this `SKILL.md`.
-- Pass `--cwd <project-root>` when Copilot should run from a specific repository.
-- Omit `--model`, `--effort`, and `--agent` by default so Copilot CLI uses its configured defaults.
-- Pass `--model <model>`, `--effort <level>`, and `--agent <agent>` from the caller when a model registry, role, or task explicitly requires overrides.
-- Pass each expected output as `--expected-artifact`; use an absolute path or a path relative to the wrapper output directory. If the artifact is directly inside `.context/<task>/`, pass only the filename.
+- See Caller Checklist for when to pass `--cwd`, `--model`, `--effort`, `--agent`, and `--expected-artifact`.
 - Use `--extra-copilot-arg` only to pass caller-supplied Copilot CLI overrides. Pass one Copilot CLI token per wrapper argument, for example `--extra-copilot-arg=--allow-tool --extra-copilot-arg=shell(git)`, `--extra-copilot-arg=--add-dir --extra-copilot-arg=/path/to/dir`, or `--extra-copilot-arg=--allow-url --extra-copilot-arg=github.com`.
 - Keep final orchestration in the caller. This skill only runs Copilot and records observable artifacts.
 - On `Ctrl-C`, the wrapper terminates the entire timeout/Copilot process group. Verify no orphan process remains before rerunning after any abnormal termination.
@@ -192,7 +189,7 @@ python3 <skill-dir>/scripts/run_copilot_cli.py --help
 python3 <skill-dir>/scripts/test_run_copilot_cli.py
 ```
 
-For runtime validation, run:
+Run the runtime checks the change touches: documentation-only edits need only `skill-quick-validate`; wrapper changes need the no-API checks; run real-backend smokes only when command construction, output parsing, or timeout handling changed. The checks are:
 
 - no-API command construction
 - no-API fake Copilot success

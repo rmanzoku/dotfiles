@@ -35,7 +35,6 @@ Complete the source prompt as an outcome-first task contract.
 - Treat the source prompt's outcome, artifact paths, success criteria, allowed side effects, evidence rules, output shape, and stop condition as the contract.
 - Write requested artifacts exactly where specified.
 - Prefer the smallest sufficient plan and tool use that completes the contract.
-- Do not emulate reasoning effort with phrases like "think hard" or mandatory step-by-step narration; rely on the CLI/config effort setting supplied by the caller.
 - If a required input is missing, mark that item blocked with the missing input instead of guessing.
 - Keep final output concise unless the source prompt asks for a detailed report.
 """
@@ -44,10 +43,11 @@ OPUS_5_ADAPTER = """\
 ## Claude Opus 5 Generation Adapter
 
 - Deliver at the requested scope. If a scope change seems needed, note it in one sentence and continue the task as asked.
-- Do not add verification passes, double-checks, or extra review agents beyond what the source prompt requires.
-- Delegate only independent, sizable, parallelizable work the source prompt authorizes; prefer direct completion otherwise.
+- Do not add verification passes or double-checks, and do not use subagents for verification, beyond what the source prompt requires.
+- Use subagents only for independent, sizable, parallelizable work the source prompt authorizes, within any parallelism limit it sets; complete everything else directly.
 - Do not add fixed progress-update scaffolding. Report progress only if the source prompt asks for it or a real blocker requires it.
 - For review or finding tasks, do not silently filter findings by importance unless the source prompt explicitly asks for filtering at that phase.
+- Keep written artifacts to what the source prompt's contract needs; treat any length, section, or format limit in the source prompt as binding.
 """
 
 FABLE_5_ADAPTER = """\
