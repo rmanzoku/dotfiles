@@ -200,6 +200,7 @@ Use these patterns when testing the wrapper itself without spending Codex API bu
 ## Wrapper Notes
 
 - Resolve `<skill-dir>` from the location of this `SKILL.md`.
+- The wrapper runs `--codex-bin` (default `codex`) from `PATH`. On macOS the ChatGPT app bundles Codex at `/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex`. If `codex` is not on `PATH`, pass that path with `--codex-bin` or link it into a directory on `PATH`; do not conclude that Codex is not installed.
 - `summary.json.cwd` records the resolved `--cwd`; the shell directory that launched the wrapper is not recorded as a separate field.
 - See Caller Checklist for when to pass `--cwd`, `--model`, `--effort`, `--profile`, `--prompt-profile`, and `--expected-artifact`.
 - Use `--extra-codex-arg` for narrow additions when explicitly required. Pass one Codex CLI token per wrapper argument, for example `--extra-codex-arg=--sandbox --extra-codex-arg=read-only`, `--extra-codex-arg=--approve-for-me`, or `--extra-codex-arg=--config --extra-codex-arg=key=value`.
