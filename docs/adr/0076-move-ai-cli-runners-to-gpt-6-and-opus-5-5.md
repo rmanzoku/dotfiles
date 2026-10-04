@@ -80,3 +80,7 @@ Three reviews of the CLI runners (opus-5-tuning, gpt-6-tuning, cleaner) were fol
   - The grok 0.2.112 `--always-approve` observation: re-checking it needs a real call, and the current behavior is harmless.
   - The agy stdin stream-json transport: it needs a probe.
   - Moving op AWS / Vultr steps out of the skill: deferred to an owner decision.
+
+## Addendum: codex on PATH (2026-10-04)
+
+The `dot_zprofile` PATH entry only reaches login shells. Agents and automations started from desktop apps kept an older PATH and could not find `codex`. The fix replaces that entry with a chezmoi-managed symlink, `~/.local/bin/codex`, pointing at the ChatGPT.app bundle. `~/.local/bin` is on PATH in every observed context, and the bundled launcher resolves symlinks to find its own files. codex-cli-runner now documents the bundle path for hosts where `codex` is not on PATH.
