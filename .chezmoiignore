@@ -11,6 +11,10 @@ skills
 
 # macOS
 .DS_Store
+{{ if ne .chezmoi.os "darwin" }}
+Library/LaunchAgents/local.ac-awake.plist
+{{ end }}
+Library/Logs/local.ac-awake.err.log
 
 # Secrets (managed outside chezmoi)
 .aws/config

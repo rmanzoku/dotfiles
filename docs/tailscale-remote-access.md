@@ -47,6 +47,30 @@ only rather than all users. Connect by MagicDNS FQDN:
 open vnc://<host>.<tailnet>.ts.net
 ```
 
+### Restart and login checks
+
+Enable Tailscale's **Start on Login** setting and verify that its login helper is enabled
+under System Settings → General → Login Items & Extensions. The Standalone app starts
+after user login; it is not a pre-login remote-access service. See the
+[official macOS variant comparison](https://tailscale.com/docs/concepts/macos-variants).
+
+For a GUI work app that must reopen, add the installed app to **Open at Login** in the
+same settings panel. Verify its actual bundle identifier and path: an app's displayed name
+may differ from its product name. These selections are machine-local login items, not
+globally deployed LaunchAgents. Remove the added item to undo the change.
+
+Test restart only when work is saved and someone can unlock FileVault and log in locally.
+Keep the lid open and AC connected. If **Reopen windows when logging back in** is offered,
+turn it off to distinguish login-item startup from window restoration. If it is absent,
+record that limitation; do not require another restart just to find the option. After login, verify
+that Tailscale reconnects and the work app opens without manual launch, then test Screen
+Sharing from another tailnet device. Check work-app authentication and task resumption
+separately; an open window alone does not prove either. If an app needs manual launch,
+record that as an automatic-start failure.
+
+Unattended restart requires a separately verified route through FileVault unlock and
+pre-login network access. Enabling login items alone does not establish that route.
+
 ## 2. Tailnet Policy
 
 Before the exit node can advertise a tag, the tailnet policy file needs a `tagOwners` entry.
