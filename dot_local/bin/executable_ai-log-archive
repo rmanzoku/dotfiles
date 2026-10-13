@@ -32,9 +32,15 @@ if ! mkdir "$lock" 2>/dev/null; then
   log "skipped: another run holds $lock"
   exit 0
 fi
-trap 'rm -rf "$lock"' EXIT INT TERM
+trap 'rm -rf "$lock"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
-host="$(scutil --get LocalHostName 2>/dev/null || hostname -s)"
+# launchd PATH has no /usr/sbin; a lowercase `hostname -s` fallback once wrote to a second prefix.
+if ! host="$(/usr/sbin/scutil --get LocalHostName)"; then
+  log "failed: cannot read LocalHostName"
+  exit 1
+fi
 output="$state_dir/sync-output.txt"
 failed=0
 
