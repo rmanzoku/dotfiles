@@ -77,4 +77,4 @@ AWS 側の作成は 1 回だけ行う。
 4. `~/.config/ai-log-archive/env` を作り、手動で `ai-log-archive` を 1 回実行して初回分を上げる。
 5. `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/local.ai-log-archive.plist` で登録する。
 
-別のマシンでは、同じ IAM ユーザーのアクセスキーを `~/.aws/credentials` の専用 profile に置き、手順 3〜5 を行う。S3 のキーは `<LocalHostName>/` で分かれるため、マシン同士で衝突しない。
+別のマシンでは、同じ IAM ユーザーにマシン専用のアクセスキーを発行し（1 ユーザー 2 本まで）、それを `~/.aws/credentials` の専用 profile に置き、手順 3〜5 を行う。S3 のキーは `<LocalHostName>/` で分かれるため、マシン同士で衝突しない。
