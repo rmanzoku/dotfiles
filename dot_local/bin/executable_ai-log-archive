@@ -1,0 +1,69 @@
+#!/bin/sh
+# Copy AI CLI session logs to S3 as a differential sync.
+# Runs daily from launchd; a missed day is caught up by the next run because
+# `aws s3 sync` uploads every file whose size or mtime differs from S3.
+# Never deletes anything in S3 or locally.
+set -eu
+
+config="${AI_LOG_ARCHIVE_CONFIG:-$HOME/.config/ai-log-archive/env}"
+state_dir="$HOME/Library/Caches/ai-log-archive"
+
+log() {
+  printf '%s ai-log-archive: %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$*"
+}
+
+if [ ! -r "$config" ]; then
+  log "failed: config not found: $config"
+  exit 66
+fi
+# The config holds only non-secret values: bucket name and AWS profile name.
+. "$config"
+bucket="${AI_LOG_ARCHIVE_BUCKET:?AI_LOG_ARCHIVE_BUCKET is not set in $config}"
+profile="${AI_LOG_ARCHIVE_AWS_PROFILE:?AI_LOG_ARCHIVE_AWS_PROFILE is not set in $config}"
+
+if ! command -v aws >/dev/null 2>&1; then
+  log "failed: aws CLI not found in PATH"
+  exit 127
+fi
+
+mkdir -p "$state_dir"
+lock="$state_dir/lock"
+if ! mkdir "$lock" 2>/dev/null; then
+  log "skipped: another run holds $lock"
+  exit 0
+fi
+trap 'rm -rf "$lock"' EXIT INT TERM
+
+host="$(scutil --get LocalHostName 2>/dev/null || hostname -s)"
+output="$state_dir/sync-output.txt"
+failed=0
+
+log "start: bucket=$bucket profile=$profile host=$host"
+for entry in \
+  "claude-projects:$HOME/.claude/projects" \
+  "codex-sessions:$HOME/.codex/sessions" \
+  "codex-archived-sessions:$HOME/.codex/archived_sessions"
+do
+  name="${entry%%:*}"
+  src="${entry#*:}"
+  if [ ! -d "$src" ]; then
+    log "skip: $name (not found: $src)"
+    continue
+  fi
+  dest="s3://$bucket/$host/$name/"
+  log "sync: $name -> $dest"
+  if aws s3 sync "$src" "$dest" --profile "$profile" --no-progress >"$output" 2>&1; then
+    log "done: $name uploaded=$(grep -c '^upload:' "$output" || true)"
+  else
+    status=$?
+    failed=1
+    log "failed: $name exit=$status uploaded=$(grep -c '^upload:' "$output" || true)"
+    grep -v '^upload:' "$output" | tail -n 20 | sed 's/^/  /'
+  fi
+done
+
+if [ "$failed" -ne 0 ]; then
+  log "finish: with failures (next run retries the remaining files)"
+  exit 1
+fi
+log "finish: ok"
