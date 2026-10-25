@@ -2,7 +2,7 @@
 title: "Keep owner-specific automation prompts machine-local"
 created_at: 2026-10-14T02:05:29+09:00
 agent_model: "GPT-6"
-status: accepted
+status: superseded
 ---
 
 # Context
@@ -21,3 +21,7 @@ The uncommitted Issue Intake automation definition included owner-specific Googl
 On a new machine, first create the automation in Codex with the intended repository and an owner-approved prompt containing the required account boundaries and mutation policy. Then apply the managed definition, review the local configuration, and activate it explicitly when appropriate. The shared definition sets `PAUSED`.
 
 This intentionally leaves project policy restoration to the owner or the working repository. This dotfiles repository restores scheduling metadata; it does not recreate authorization or private account mappings. Runtime state remains ignored under the existing automation ignore rules.
+
+# Update (2026-10-25)
+
+The Codex Desktop automation `changer-issue-intake` was removed from this repository and from the machine. Issue intake now runs as a machine-local Claude Desktop scheduled task owned by the working repository's lane workflow, so this repository no longer restores its schedule metadata. The principle above still applies: the scheduled task's owner-specific prompt, principals, and mutation policy live only in the machine-local task definition and are not imported into git.
