@@ -1,6 +1,6 @@
 ---
 title: "Skill Install Manifest"
-updated_at: 2026-10-03
+updated_at: 2026-10-25
 ---
 
 # Skill Install Manifest
@@ -39,7 +39,7 @@ gh skill install . code-evaluator --from-local --agent claude-code --scope user
 gh skill install . opus-5-tuning --from-local --agent claude-code --scope user
 gh skill install . fable-5-tuning --from-local --agent claude-code --scope user
 gh skill install . gpt-6-tuning --from-local --agent claude-code --scope user
-gh skill install . codex-cli-runner --from-local --agent claude-code --scope user
+gh skill install . codex-runner --from-local --agent claude-code --scope user
 gh skill install . copilot-cli-runner --from-local --agent claude-code --scope user
 gh skill install . agent-orchestration-evaluator --from-local --agent claude-code --scope user
 gh skill install . ai-usage-coach --from-local --agent claude-code --scope user
@@ -68,7 +68,7 @@ gh skill install . opus-5-tuning --from-local --agent codex --scope user --dir "
 gh skill install . fable-5-tuning --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . gpt-6-tuning --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . claude-cli-runner --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
-gh skill install . codex-cli-runner --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
+gh skill install . codex-runner --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . copilot-cli-runner --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . agent-orchestration-evaluator --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . ai-usage-coach --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
@@ -148,15 +148,19 @@ gh skill install mizchi/skills empirical-prompt-tuning --agent codex --scope use
 - status: installed globally for Claude Code and Codex
 - install mode: direct `gh skill install` from upstream GitHub repository
 - reason: upstream is publisher-discoverable on GitHub, so direct external install is the standard path
-- update note: inspect changes with `gh skill preview mattpocock/skills grill-me` before running `gh skill update grill-me`
+- pin: `v1.3.1`（wrapper と本体を同じ release へ揃える）
+- update note: inspect both skills with `gh skill preview mattpocock/skills <skill>` and refresh both agents to the same release
+- dependency: v1.3.1 の `grill-me` は `grilling` を呼び出すため、同じ release の `grilling` も両 agent へ配備する
 
 #### Claude Code / Codex install
 
 repo root で実行する。
 
 ```bash
-gh skill install mattpocock/skills grill-me --agent claude-code --scope user
-gh skill install mattpocock/skills grill-me --agent codex --scope user --dir "$HOME/.codex/skills"
+gh skill install mattpocock/skills grill-me --pin v1.3.1 --agent claude-code --scope user --force
+gh skill install mattpocock/skills grill-me --pin v1.3.1 --agent codex --scope user --force --dir "$HOME/.codex/skills"
+gh skill install mattpocock/skills grilling --pin v1.3.1 --agent claude-code --scope user --force
+gh skill install mattpocock/skills grilling --pin v1.3.1 --agent codex --scope user --force --dir "$HOME/.codex/skills"
 ```
 
 ### `freee-api-skill`

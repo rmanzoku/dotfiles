@@ -70,7 +70,7 @@ Expected runner mapping:
 | Provider / backend | Preferred runner |
 |---|---|
 | Claude Code CLI | `claude-cli-runner` |
-| Codex CLI | Use `codex-cli-runner` when available; do not inline `codex exec` details in dependent skills. If unavailable, keep only an explicit resolver fallback contract. |
+| Codex | Use `codex-runner` when available; do not inline `codex exec` details in dependent skills. If unavailable, keep only an explicit resolver fallback contract. |
 | Grok CLI or API-backed handoff | `grok-cli-runner` |
 | Copilot CLI | `copilot-cli-runner` |
 | Gemini backend (Antigravity CLI) | `agy-cli-runner` |

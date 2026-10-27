@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Runner"
+  short_description: "Run Codex app-server with goals and observable artifacts"
+  default_prompt: "Use $codex-runner with stdio app-server and a goal by default; select the existing daemon optionally or explicit exec for named profiles, recording JSON-RPC events, binary metadata, timeouts, and artifacts."

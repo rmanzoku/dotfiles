@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run Codex CLI with JSONL artifacts and failure summaries."""
+"""Run Codex app-server (or explicit legacy exec) with observable artifacts."""
 
 from __future__ import annotations
 
@@ -13,6 +13,8 @@ import sys
 import time
 from pathlib import Path
 from typing import Any
+
+from codex_app_server import run_app_server, log
 
 
 ERROR_RE = re.compile(
@@ -60,7 +62,7 @@ Do not wrap the entire response in JSON or a Markdown code fence. Keep it concis
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run codex exec with JSONL output, timeout, and artifact checks."
+        description="Run Codex app-server with goals, timeout, and artifact checks."
     )
     parser.add_argument("--prompt-file", required=True, help="Path to the saved prompt.md file.")
     parser.add_argument("--output-dir", required=True, help="Directory for run artifacts.")
@@ -78,7 +80,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--profile",
         default=None,
-        help="Codex config profile. Omit to use the Codex CLI configured default.",
+        help="Codex config profile; supported only with --transport exec.",
     )
     parser.add_argument("--timeout-seconds", type=int, default=600, help="Timeout in seconds. Defaults to 600.")
     parser.add_argument(
@@ -115,7 +117,23 @@ def parse_args() -> argparse.Namespace:
         default=[],
         help="Additional Codex CLI argument. Repeat for each token.",
     )
-    return parser.parse_args()
+    parser.add_argument("--transport", choices=("app-server", "exec"), default="app-server")
+    parser.add_argument("--app-server-daemon", action="store_true", help="Connect to the existing daemon over its Unix WebSocket; never start or stop it.")
+    goal = parser.add_mutually_exclusive_group()
+    goal.add_argument("--goal-objective")
+    goal.add_argument("--goal-objective-file", help="Read the goal objective from a file.")
+    goal.add_argument("--no-goal", action="store_true")
+    args = parser.parse_args()
+    if args.timeout_seconds <= 0:
+        parser.error("--timeout-seconds must be positive")
+    if args.transport == "exec" and (args.app_server_daemon or args.goal_objective or args.goal_objective_file):
+        parser.error("daemon and goal objectives require --transport app-server")
+    if args.transport == "app-server":
+        if args.timeout_bin:
+            parser.error("--timeout-bin applies only to --transport exec")
+        if args.extra_codex_arg:
+            parser.error("--extra-codex-arg applies only to --transport exec; app-server uses config")
+    return args
 
 
 def resolve_timeout_bin(explicit: str | None) -> str:
@@ -126,6 +144,14 @@ def resolve_timeout_bin(explicit: str | None) -> str:
         if resolved:
             return resolved
     raise SystemExit("No timeout binary found. Install GNU coreutils or pass --timeout-bin.")
+
+
+def resolve_codex_bin(binary: str, cwd: Path) -> str | None:
+    # subprocess resolves relative executable paths and PATH entries after chdir.
+    if os.path.dirname(binary):
+        return shutil.which(str(cwd / binary))
+    search_path = os.pathsep.join(str(cwd / entry) for entry in os.get_exec_path())
+    return shutil.which(binary, path=search_path)
 
 
 def artifact_path(raw: str, output_dir: Path) -> Path:
@@ -166,7 +192,7 @@ def resolve_prompt_profile(requested: str, model: str | None) -> str:
 def write_launch_prompt(path: Path, source_prompt: Path, profile: str) -> None:
     sections = [
         "---",
-        "task: codex-cli-runner-launch",
+        "task: codex-runner-launch",
         f"source_prompt: {source_prompt}",
         f"prompt_profile: {profile}",
         "---",
@@ -215,7 +241,12 @@ def write_failure(path: Path, summary: dict[str, Any]) -> None:
     recommendation = summary.get("recommended_next_action", "Inspect artifacts and rerun with adjusted limits.")
 
     body = [
-        "# Codex CLI Run Failure",
+        "---",
+        "task: codex-runner",
+        "phase_or_step: failure",
+        f"created_at: {time.strftime('%Y-%m-%dT%H:%M:%S%z')}",
+        "---",
+        "# Codex Run Failure",
         "",
         f"- Command: `{command}`",
         f"- Exit code: `{summary['exit_code']}`",
@@ -250,7 +281,6 @@ def main() -> int:
     prompt_file = Path(args.prompt_file).expanduser().resolve()
     output_dir = Path(args.output_dir).expanduser().resolve()
     cwd = Path(args.cwd).expanduser().resolve()
-    timeout_bin = resolve_timeout_bin(args.timeout_bin)
 
     if not prompt_file.exists() or not prompt_file.is_file():
         print(f"prompt file does not exist: {prompt_file}", file=sys.stderr)
@@ -263,6 +293,9 @@ def main() -> int:
     last_message_path = output_dir / "last-message.md"
     summary_path = output_dir / "summary.json"
     failure_path = output_dir / "failure.md"
+    # A reused output directory must not let stale runner evidence prove success.
+    for path in (last_message_path, summary_path, failure_path):
+        path.unlink(missing_ok=True)
     prompt_profile = resolve_prompt_profile(args.prompt_profile, args.model)
     write_launch_prompt(launch_prompt_path, prompt_file, prompt_profile)
 
@@ -271,7 +304,7 @@ def main() -> int:
         "Write the requested artifacts exactly where specified."
     )
     command = [
-        timeout_bin,
+        resolve_timeout_bin(args.timeout_bin) if args.transport == "exec" else "",
         str(args.timeout_seconds),
         args.codex_bin,
         "exec",
@@ -290,20 +323,61 @@ def main() -> int:
     command.extend([*args.extra_codex_arg, short_prompt])
 
     start = time.monotonic()
-    with events_path.open("wb") as stdout_fh, stderr_path.open("wb") as stderr_fh:
-        proc = subprocess.run(
-            command,
-            cwd=str(cwd),
-            # codex exec blocks reading an open non-TTY stdin (e.g. background shells); force immediate EOF.
-            stdin=subprocess.DEVNULL,
-            stdout=stdout_fh,
-            stderr=stderr_fh,
-            check=False,
-        )
+    metadata = {"transport": "exec", "thread_id": None, "goal": None, "turn_count": 0}
+    runner_failures: list[str] = []
+    runner_nonfatal: list[str] = []
+    requested_codex_bin = args.codex_bin
+    codex_bin_path = resolve_codex_bin(requested_codex_bin, cwd)
+    codex_version = None
+    codex_version_error = None
+    profile_rejected = args.transport == "app-server" and args.profile is not None
+    if not profile_rejected and codex_bin_path:
+        log("checking Codex binary version")
+        try:
+            version = subprocess.run([codex_bin_path, "--version"], cwd=cwd,
+                                     stdin=subprocess.DEVNULL, capture_output=True,
+                                     text=True, timeout=5, check=False)
+            if version.returncode == 0 and version.stdout.strip():
+                codex_version = version.stdout.strip()
+            else:
+                codex_version_error = "version_probe_failed"
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            codex_version_error = type(exc).__name__
+        if codex_version_error:
+            runner_nonfatal.append("codex_version_unavailable")
+            log("Codex binary version unavailable")
+    if profile_rejected or not codex_bin_path:
+        command = []
+        exit_code = 2
+        metadata["transport"] = ("app-server-daemon" if args.app_server_daemon else "app-server-stdio") if args.transport == "app-server" else "exec"
+        reason = "profile_unsupported_app_server" if profile_rejected else "codex_binary_unavailable"
+        runner_failures.append(reason)
+        message = ("app-server cannot select a profile; use --transport exec or remove --profile."
+                   if profile_rejected else "Codex binary could not be resolved; check --codex-bin and PATH.")
+        log(message)
+        events_path.write_text("", encoding="utf-8")
+        stderr_path.write_text(message + "\n", encoding="utf-8")
+    elif args.transport == "app-server":
+        args.codex_bin = codex_bin_path
+        result = run_app_server(args, cwd, short_prompt, events_path, stderr_path, last_message_path)
+        command = result.pop("command")
+        exit_code = result.pop("exit_code")
+        runner_failures = result.pop("failure_reasons")
+        runner_nonfatal.extend(result.pop("nonfatal_reasons"))
+        metadata = result
+    else:
+        command[2] = codex_bin_path
+        log("start transport=exec")
+        with events_path.open("wb") as stdout_fh, stderr_path.open("wb") as stderr_fh:
+            proc = subprocess.run(
+                command, cwd=str(cwd), stdin=subprocess.DEVNULL,
+                stdout=stdout_fh, stderr=stderr_fh, check=False,
+            )
+        exit_code = proc.returncode
     elapsed = round(time.monotonic() - start, 3)
 
     records = load_json_lines(events_path)
-    error_events = [record for record in records if record_is_error(record)]
+    error_events = [record for record in records if record_is_error(record)] if args.transport == "exec" else []
     last_event = records[-1] if records else None
     last_error_event = error_events[-1] if error_events else None
     stderr_text = stderr_path.read_text(encoding="utf-8", errors="replace") if stderr_path.exists() else ""
@@ -329,18 +403,19 @@ def main() -> int:
     expected_ok = all(item["exists"] and item["non_empty"] for item in expected)
     events_present = events_path.exists() and events_path.stat().st_size > 0
     success_evidence_ok = (
-        proc.returncode == 0
+        exit_code == 0
+        and not runner_failures
         and not error_events
         and events_present
         and last_message_non_empty
         and expected_ok
     )
 
-    failure_reasons: list[str] = []
-    nonfatal_reasons: list[str] = []
-    if proc.returncode == 124:
+    failure_reasons: list[str] = runner_failures
+    nonfatal_reasons: list[str] = runner_nonfatal
+    if exit_code == 124 and "timeout" not in failure_reasons:
         failure_reasons.append("timeout")
-    elif proc.returncode != 0:
+    elif exit_code != 0 and not failure_reasons:
         failure_reasons.append("nonzero_exit")
     if stderr_error:
         if success_evidence_ok:
@@ -356,7 +431,9 @@ def main() -> int:
     if not expected_ok:
         failure_reasons.append("missing_expected_artifact")
 
-    if "timeout" in failure_reasons:
+    if "profile_unsupported_app_server" in failure_reasons:
+        recommended = "app-server cannot select a profile; use --transport exec or remove --profile."
+    elif "timeout" in failure_reasons:
         recommended = "Inspect run.events.jsonl for partial progress, then rerun with a tighter prompt or larger timeout."
     elif "stderr_cli_error" in failure_reasons:
         recommended = "Fix authentication, model, permission, trust, policy, quota, or rate-limit settings before rerunning."
@@ -371,13 +448,16 @@ def main() -> int:
 
     summary = {
         "command": command,
-        "codex_bin": args.codex_bin,
+        "codex_bin": requested_codex_bin,
+        "codex_bin_path": codex_bin_path,
+        "codex_version": codex_version,
+        "codex_version_error": codex_version_error,
         "cwd": str(cwd),
         "prompt_file": str(prompt_file),
         "launch_prompt_path": str(launch_prompt_path),
         "prompt_profile": prompt_profile,
         "output_dir": str(output_dir),
-        "exit_code": proc.returncode,
+        "exit_code": exit_code,
         "elapsed_seconds": elapsed,
         "events_path": str(events_path),
         "stderr_path": str(stderr_path),
@@ -394,14 +474,17 @@ def main() -> int:
         "failure_reasons": failure_reasons,
         "nonfatal_reasons": nonfatal_reasons,
         "recommended_next_action": recommended,
+        **metadata,
     }
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     if failure_reasons:
         write_failure(failure_path, summary)
+        log("failed reasons=" + ",".join(failure_reasons))
         return 1
     if failure_path.exists():
         failure_path.unlink()
+    log(f"complete elapsed={elapsed}s")
     return 0
 
 
