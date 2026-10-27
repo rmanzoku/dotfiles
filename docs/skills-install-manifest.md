@@ -1,6 +1,6 @@
 ---
 title: "Skill Install Manifest"
-updated_at: 2026-10-25
+updated_at: 2026-10-27
 ---
 
 # Skill Install Manifest
@@ -199,4 +199,22 @@ repo root で実行する。
 ```bash
 gh skill install vercel/vercel vercel-cli --pin 6331571e2fe14de31a01d00deead9e7a349e53a6 --agent claude-code --scope user --force
 gh skill install vercel/vercel vercel-cli --pin 6331571e2fe14de31a01d00deead9e7a349e53a6 --agent codex --scope user --force --dir "$HOME/.codex/skills"
+```
+
+### `yomiyasu`
+
+- upstream: [nanaism/yomiyasu `skills/yomiyasu`](https://github.com/nanaism/yomiyasu/tree/main/skills/yomiyasu)
+- status: installed globally for Claude Code and Codex
+- install mode: direct `gh skill install` from upstream GitHub repository
+- pin: `v2.1.1`
+- reason: AI 生成の日本語を名前指定時だけ推敲する third-party skill で、repo へ vendor せず upstream release を使う
+- update note: inspect changes with `gh skill preview nanaism/yomiyasu yomiyasu` and refresh both agents to the same release
+
+#### Claude Code / Codex install
+
+repo root で実行する。
+
+```bash
+gh skill install nanaism/yomiyasu yomiyasu --pin v2.1.1 --agent claude-code --scope user --force
+gh skill install nanaism/yomiyasu yomiyasu --pin v2.1.1 --agent codex --scope user --force --dir "$HOME/.codex/skills"
 ```
