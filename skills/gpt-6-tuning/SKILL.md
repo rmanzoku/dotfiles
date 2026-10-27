@@ -58,8 +58,8 @@ description: "Audit and rewrite prompts, AGENTS.md / CLAUDE.md, skills, and agen
     GPT-6.1 専用の prompting guidance はなく、公式 docs で 6.1-sol に固有なのはパラメータ面だけ（effort は `low`〜`max`、`none` / `minimal` 非対応、tool calling は Responses API 必須）。挙動補正は本スキルの GPT-6 共通項目を適用し、品質とコストは代表タスクで Astra と比較して決める。
 12. **Codex 組み込み指示と重複させない**
     Codex は GPT-6 用の base instructions で、行動への偏り、ユーザー指示の優先、不要な警告の抑制などをすでに注入している。Codex 経由で使う prompt にはこれらを再掲せず、タスク固有の契約だけを書く。
-13. **実行経路は codex-cli-runner の prompt profile が担う**
-    GPT-6 の CLI 実行では、`codex-cli-runner` の `gpt-6` / `gpt-6-luna` prompt profile が世代補正を注入する。role prompt に世代補正を固定しない。
+13. **実行経路は codex-runner の prompt profile が担う**
+    GPT-6 の Codex 実行では、`codex-runner` の `gpt-6` / `gpt-6-luna` prompt profile が世代補正を注入する。role prompt に世代補正を固定しない。
 
 ## 未確認事項
 

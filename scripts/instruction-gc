@@ -14,7 +14,7 @@ check スクリプト。検出のみで修正はしない。定期実行は仕�
   6b. 露出予算 vs docs/instruction-baseline.json(常時露出 3 面 + first-party skill 本文字数 +
       skill 本文の確認ゲート語彙数。超過 = warn。ゲート数は人間往復の予算: ADR-0068)
   7. skill-manager doctor の fail 集約(fail)
-  8. runner mapping parity(表と skills/*-cli-runner の 1:1 / fail)
+  8. runner mapping parity(表と skills/*-runner の 1:1 / fail)
   9. runner skill 間の共有ブロック逐語検査(fail)
   10. manifest parity 例外の revisit 条件(warn)
   11. first-party description 間の固有トークン重複(取り合い候補 / info)
@@ -405,18 +405,18 @@ def check_doctor() -> None:
 
 
 def check_runner_mapping_parity() -> None:
-    section("8. runner mapping parity (skills/*-cli-runner vs orchestration table)")
+    section("8. runner mapping parity (skills/*-runner vs orchestration table)")
     doc = REPO / "skills/agent-orchestration-evaluator/SKILL.md"
     text = doc.read_text()
     m = re.search(r"Expected runner mapping:\n(.*?)(?=\n#|\Z)", text, re.S)
     if not m:
         fail("agent-orchestration-evaluator: Expected runner mapping 表が見つからない")
         return
-    table_runners = set(re.findall(r"`([a-z0-9-]+-cli-runner)`", m.group(1)))
+    table_runners = set(re.findall(r"`([a-z0-9-]+-runner)`", m.group(1)))
     # op / gws はツール CLI runner でありモデル backend ではない。
     # orchestration の runner mapping 表はモデル委譲経路だけを扱う
     non_model = {"op-cli-runner", "gws-cli-runner"}
-    repo_runners = {p.name for p in (REPO / "skills").glob("*-cli-runner")} - non_model
+    repo_runners = {p.name for p in (REPO / "skills").glob("*-runner")} - non_model
     missing = repo_runners - table_runners
     retired = table_runners - repo_runners
     for r in sorted(missing):
@@ -433,14 +433,14 @@ THINK_HARD_SENTENCE = (
     'Do not add "think hard", fixed progress-update scaffolds, '
     "or mandatory step-by-step narration to simulate effort."
 )
-THINK_HARD_FILES = ["codex-cli-runner", "copilot-cli-runner", "grok-cli-runner", "agy-cli-runner"]
+THINK_HARD_FILES = ["codex-runner", "copilot-cli-runner", "grok-cli-runner", "agy-cli-runner"]
 SHARED_SECTIONS = [
     ("Default Response Format", "## Default Response Format",
-     ["codex-cli-runner", "claude-cli-runner", "copilot-cli-runner"]),
+     ["codex-runner", "claude-cli-runner", "copilot-cli-runner"]),
     ("Image Success Criteria (additional)", "### Success Criteria (additional)",
-     ["codex-cli-runner", "grok-cli-runner"]),
+     ["codex-runner", "grok-cli-runner"]),
     ("Image Cautions", "### Cautions",
-     ["codex-cli-runner", "grok-cli-runner"]),
+     ["codex-runner", "grok-cli-runner"]),
 ]
 
 
@@ -531,7 +531,7 @@ def check_description_token_overlap() -> None:
 
 MODEL_RUNNERS = [
     "claude-cli-runner",
-    "codex-cli-runner",
+    "codex-runner",
     "agy-cli-runner",
     "grok-cli-runner",
     "copilot-cli-runner",

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Codex CLI Runner"
-  short_description: "Run Codex CLI with observable artifacts"
-  default_prompt: "Use $codex-cli-runner to run a Codex CLI subprocess with JSONL events, timeout guards, and failure artifacts."
