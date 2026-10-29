@@ -1,0 +1,4 @@
+interface:
+  display_name: "Meeting Transcribe"
+  short_description: "Transcribe Soundcore or Recite recordings locally with speaker labels"
+  default_prompt: "Use $meeting-transcribe to turn a Soundcore audio export or a Recite recording folder into a local speaker-labeled diarized.txt without sending audio off the Mac."
