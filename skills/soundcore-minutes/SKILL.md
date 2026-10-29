@@ -1,11 +1,11 @@
 ---
 name: soundcore-minutes
-description: Retrieve transcripts, summaries, and meeting minutes from Anker Soundcore Work or Soundcore AI at ai.soundcore.com using an authenticated browser session. Use when the user mentions Soundcore Work, Soundcore AI, Anker AI voice recorder, ai.soundcore.com, or asks Codex or Claude in Chrome to collect minutes from the Soundcore web UI where no external API is available.
+description: Operate Anker Soundcore Work or Soundcore AI at ai.soundcore.com in an authenticated browser session to export a recording's audio (OGG) for local transcription with meeting-transcribe, or to read an already generated transcript and summary. Use when the user mentions Soundcore Work, Soundcore AI, Anker AI voice recorder, ai.soundcore.com, or asks to collect minutes from the Soundcore web UI.
 ---
 
 # Soundcore Minutes
 
-Use this skill to operate the Soundcore AI web UI and turn a selected recording into usable minutes. The site has no public API, so treat the browser UI as the source of truth and avoid inventing fields that are not visible.
+Use this skill to operate the Soundcore AI web UI. The normal route exports the recording's audio and transcribes it on the Mac with `meeting-transcribe`; Soundcore's own paid transcription is not used. The site has no public API, so treat the browser UI as the source of truth and avoid inventing fields that are not visible.
 
 ## Tool Choice
 
@@ -43,11 +43,18 @@ Do not start at step 3. In the observed incident the connector was already conne
 1. Open `https://ai.soundcore.com/home` in the selected browser tool.
 2. Confirm the page is authenticated and shows the recording library or equivalent home view.
 3. Identify the target recording from the user's criteria: title, date, time, duration, participants, matter name, or the most recent recording.
-4. Open the target recording and wait until the transcript and summary panes finish loading.
-5. Capture visible metadata, summary, action items, topics, speakers, and transcript text.
-6. Open the transcript pane with the `文字起こし` button, then call `get_page_text` once. Observed 2026-08-29: a 48-minute transcript came back complete in a single call with no scrolling, because the pane is not virtualized. Scroll through the transcript area and collect segments only if the returned text is visibly truncated.
-7. Produce minutes from extracted content only. Mark unavailable fields as `未確認` instead of guessing.
-8. Include the source recording identifier in the final answer: visible title plus date/time or URL when available.
+4. Open the recording page, then use `共有` (top right) → `音声をエクスポート` → OGG. The file is saved as `~/Downloads/<recording title>.ogg`. Do not press `生成`: it starts Soundcore's paid, slow transcription.
+5. Move the file out of `~/Downloads` into a git-ignored location of the working repository (for example under `.context/`), then follow the `meeting-transcribe` skill to produce `diarized.txt`.
+
+### Reading an existing Soundcore transcript
+
+Only when a transcript was already generated in Soundcore, or the user explicitly asks for Soundcore's own output:
+
+1. Open the target recording and wait until the transcript and summary panes finish loading.
+2. Capture visible metadata, summary, action items, topics, speakers, and transcript text.
+3. Open the transcript pane with the `文字起こし` button, then call `get_page_text` once. Observed 2026-08-29: a 48-minute transcript came back complete in a single call with no scrolling, because the pane is not virtualized. Scroll through the transcript area and collect segments only if the returned text is visibly truncated.
+4. Produce minutes from extracted content only. Mark unavailable fields as `未確認` instead of guessing.
+5. Include the source recording identifier in the final answer: visible title plus date/time or URL when available.
 
 ## Extraction Rules
 
@@ -55,7 +62,7 @@ Do not start at step 3. In the observed incident the connector was already conne
 - Keep the raw transcript separate from the cleaned minutes when the user asks for both.
 - If Soundcore provides both an AI summary and full transcript, use the transcript to verify and enrich the summary.
 - When multiple recordings match the user's criteria, list the candidates and ask the user to choose before extracting confidential content.
-- Do not store transcript content in repo files, `.context/`, or logs unless the user explicitly asks for a file artifact.
+- Do not store transcript content in repo files, `.context/`, or logs unless the user explicitly asks for a file artifact. The exported audio and the `meeting-transcribe` outputs are such file artifacts: keep them in a git-ignored location only.
 - If creating a file artifact, ask for or infer a destination inside the current workspace; do not write sensitive minutes to `/tmp` or unrelated folders.
 - If the browser tool cannot read a virtualized transcript reliably, use the site's visible export, copy, or download controls when available.
 

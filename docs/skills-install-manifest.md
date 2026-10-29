@@ -1,6 +1,6 @@
 ---
 title: "Skill Install Manifest"
-updated_at: 2026-10-27
+updated_at: 2026-10-29
 ---
 
 # Skill Install Manifest
@@ -44,6 +44,7 @@ gh skill install . copilot-cli-runner --from-local --agent claude-code --scope u
 gh skill install . agent-orchestration-evaluator --from-local --agent claude-code --scope user
 gh skill install . ai-usage-coach --from-local --agent claude-code --scope user
 gh skill install . soundcore-minutes --from-local --agent claude-code --scope user
+gh skill install . meeting-transcribe --from-local --agent claude-code --scope user
 gh skill install . ghq-repo-placement --from-local --agent claude-code --scope user
 gh skill install . op-cli-runner --from-local --agent claude-code --scope user
 gh skill install . onepassword-secret-materialize --from-local --agent claude-code --scope user
@@ -73,6 +74,7 @@ gh skill install . copilot-cli-runner --from-local --agent codex --scope user --
 gh skill install . agent-orchestration-evaluator --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . ai-usage-coach --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . soundcore-minutes --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
+gh skill install . meeting-transcribe --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . ghq-repo-placement --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . op-cli-runner --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
 gh skill install . onepassword-secret-materialize --from-local --agent codex --scope user --dir "$HOME/.codex/skills"
@@ -88,6 +90,12 @@ gh skill install . gws-cli-runner --from-local --agent codex --scope user --dir 
 
 ```bash
 python3 ~/.claude/skills/dads-design/scripts/dads-docs fetch
+```
+
+`meeting-transcribe` は、Apple 音声認識の実行ファイル・Python venv・話者分離モデルを git 管理せず、共有キャッシュ `~/.cache/meeting-transcribe/` に置く（[ADR-0083](adr/0083-move-meeting-transcribe-to-global-skill.md)）。新しいマシンでは install 後に一度実行する。両 agent は同じキャッシュを参照するので 1 回でよい。macOS 26 以降・Xcode・`ffmpeg` が要る。
+
+```bash
+bash ~/.claude/skills/meeting-transcribe/scripts/setup.sh
 ```
 
 ## Third-party external skills
