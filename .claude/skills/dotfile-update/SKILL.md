@@ -3,7 +3,7 @@ name: dotfile-update
 description: >
   chezmoi 管理の dotfiles リポジトリで dotfile を追加・変更・削除するためのワークフロースキル。
   `dot_*` ファイル、`.chezmoiignore`、`Brewfile`、共通ルールファイル
-  （`.chezmoitemplates/common-rules.md`、`dot_claude/CLAUDE.md`、`dot_codex/AGENTS.md.tmpl`）を
+  （`.chezmoitemplates/common-rules.md`、`dot_claude/CLAUDE.md.tmpl`、`dot_codex/AGENTS.md.tmpl`）を
   編集する依頼で必ず使用すること。
   AI 間の設定対応、`json` から `toml` への変換、chezmoi の
   `private_` / `dot_` / `symlink_` 属性や source / target の対応確認が関わる依頼にも適用すること。
@@ -47,7 +47,7 @@ chezmoi のソースファイルを直接編集する。
 
 | 設定カテゴリ | Claude | Codex |
 |---|---|---|
-| 指示ファイル | `dot_claude/CLAUDE.md` | `dot_codex/AGENTS.md.tmpl` |
+| 指示ファイル | `dot_claude/CLAUDE.md.tmpl` | `dot_codex/AGENTS.md.tmpl` |
 | クライアント設定 | `dot_claude/private_settings.json` | `dot_codex/modify_private_config.toml.tmpl` |
 
 判断ルール:
@@ -69,14 +69,14 @@ chezmoi のソースファイルを直接編集する。
 共通ルール（`# 共通ルール` と `# Plan 共通ルール`）の正本は `.chezmoitemplates/common-rules.md` である。
 `dot_codex/AGENTS.md.tmpl` は
 `includeTemplate "common-rules.md"` で共通ブロックを取り込み、AI 固有セクションだけを各ファイルに持つ。
-`dot_claude/CLAUDE.md` は配備後の `~/.codex/AGENTS.md` を import するため、template を include しない。
+`dot_claude/CLAUDE.md.tmpl` も同じく `includeTemplate "common-rules.md"` で共通ブロックを取り込み、Codex 固有節は含まない。
 
 - 共通ルールを変更する場合は `.chezmoitemplates/common-rules.md` だけを編集し、各 `.tmpl` へ同文を複製しない。
 - AI 固有の挙動は各 `.tmpl` の固有セクション（`# Codex 固有ルール` など）へ書く。
 - `includeTemplate` に渡す `localDir` / `globalFile` は AI ごとの指示保存先パラメータである。共通 template 内に新しい分岐やパラメータを増やす場合は ADR で背景を残す。
-- 共通ルール変更後は `chezmoi cat ~/.codex/AGENTS.md` で render を確認する。
+- 共通ルール変更後は `chezmoi cat ~/.codex/AGENTS.md` と `chezmoi cat ~/.claude/CLAUDE.md` で render を確認する。
 
-Claude Code 固有ルール（`# Claude Code 固有ルール` 以降）は `dot_claude/CLAUDE.md` のみに存在する。
+Claude Code 固有ルール（`# Claude Code 固有ルール` 以降）は `dot_claude/CLAUDE.md.tmpl` のみに存在する。
 
 共通ルールや指示ファイルを更新したときの追加確認:
 - 恒久運用の変更なら、必要に応じて `docs/adr/` に背景判断を残す。
@@ -85,7 +85,7 @@ Claude Code 固有ルール（`# Claude Code 固有ルール` 以降）は `dot_
 
 ### 4. グローバル配備文書のレビュー
 
-`.chezmoitemplates/common-rules.md`、`dot_claude/CLAUDE.md`、`dot_codex/AGENTS.md.tmpl`、
+`.chezmoitemplates/common-rules.md`、`dot_claude/CLAUDE.md.tmpl`、`dot_codex/AGENTS.md.tmpl`、
 および `.chezmoiignore` の解釈を説明する文書を更新した場合は、最終利用者向け文面として不自然な説明が混入していないかレビューする。
 
 固定レビュー観点:
@@ -133,4 +133,4 @@ scripts/chezmoi-drift
 - chezmoi の仕様に自信がない場合は、推測で編集せず公式ドキュメントを確認してから変更すること
 - `python` のような互換コマンドが必要な場合は、まず `symlink_` source で足りるかを確認し、macOS shim の都合で不適切な場合だけ wrapper script を検討すること
 - `.claude/skills/` 配下を更新した場合は、`skill-creator` の手順に従い repo ローカルの `scripts/skill-quick-validate <skill-dir>` で基本妥当性を確認すること
-- `dot_claude/CLAUDE.md` や `dot_codex/AGENTS.md.tmpl` のような `dot_*` 配下の変更は `dotfile-update` の責務とし、hook 変更だけを先行適用しないこと
+- `dot_claude/CLAUDE.md.tmpl` や `dot_codex/AGENTS.md.tmpl` のような `dot_*` 配下の変更は `dotfile-update` の責務とし、hook 変更だけを先行適用しないこと

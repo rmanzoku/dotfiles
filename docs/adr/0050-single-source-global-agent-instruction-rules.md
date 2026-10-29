@@ -34,3 +34,7 @@ docs-evaluator によるリポジトリ評価（`.context/docs-evaluator/2026070
 - `dot_*` 側の実装は Codex が担当した（`dot_*` 編集禁止ルールは維持。委譲記録: `.context/20260707-instruction-single-source/codex-run/`、セッション artifact）。
 - render 検証で 3 target とも意図した差分のみであることを確認済み。`chezmoi apply` はユーザー確認後に実施する。
 - ADR 番号は 0049 まで使用済みとなり、本 ADR が 0050 を使用する。
+
+## 改訂（2026-10-29, Claude Opus 5.5）
+
+Decision 1 のうち「`dot_claude/CLAUDE.md` は配備後の `~/.codex/AGENTS.md` を import する」を改める。`dot_claude/CLAUDE.md.tmpl` も `includeTemplate "common-rules.md"` で共通ブロックを取り込む（`localDir` は `.claude/`、`globalFile` は `~/.claude/CLAUDE.md`）。Claude Code が Codex 固有節を読んだうえで「無視せよ」と指示される構成をやめるため。詳細は [ADR 0084](0084-orchestrator-rules-and-claude-template.md)。

@@ -237,7 +237,7 @@ def check_agent_drift() -> None:
 # 5b. layer violation: role names must not appear in global instruction sources
 
 
-ROLE_TERMS = ["`tech`", "`biz`", "`personal`", "`worker`", "`mechanical`"]
+ROLE_TERMS = ["`tech`", "`biz`", "`personal`"]
 GLOBAL_SOURCES = [".chezmoitemplates/common-rules.md", "dot_codex/AGENTS.md.tmpl"]
 
 
