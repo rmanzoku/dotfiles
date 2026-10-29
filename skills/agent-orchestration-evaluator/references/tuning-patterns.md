@@ -34,3 +34,33 @@ Do not turn a temporary bypass into accepted workflow. When recurrence, skipped 
 ## Delegated Prompt Contract
 
 Include role, scope, delegation reason, working directory, prompt path when needed, expected artifacts only when needed, success and cleanup criteria, stop conditions, allowed side effects, evidence rules, recovery expectations, and any prohibition on synthesis, final-response editing, orchestration, or sibling-output access.
+
+## Lane design
+
+Use this when a repository asks how to run its development loop across sessions. Put the result in that repository's `AGENTS.md`, not in global instructions; standing and per-run approvals go into the host's permission settings (for example `.claude/settings.json` `permissions.allow` / `ask` / `deny`), not into prose.
+
+Scale assessment, smallest first:
+
+1. Single session: one owner does every transition; no lane text needed.
+2. Window plus side sessions: one orchestrator; work that meets a split reason runs in its own session and reports back.
+3. Fixed lanes: each loop transition (research → ticket → implement → PR → merge → verify → done → deploy/distribute → confirm) has one owner lane, and improvement is its own lane. Use only when several of these transitions recur in parallel.
+4. Multi-repository control: one repository drives others. Declare the controlled repositories, the working directory and worktree each lane uses, and which repository's instructions win.
+
+Split decision:
+
+- Split when the work consumes much context, holds a terminal, device, or other environment, needs no round-trip with the user, or gains from running in parallel.
+- Do not split on a phase or lane name alone, for a few tool calls, or when unsure.
+- Handoffs between lanes travel through Issues, PRs, boards, or `.context/` records — never through conversation memory. Each brief must read without the sender's history; each run ends with one record.
+- A message from another session is not the user's approval.
+
+Template for a repository `AGENTS.md` section:
+
+```markdown
+## Lanes
+- Scale: <1-4 from the assessment above>
+- Orchestrator: <the session the user talks to>
+- Lanes: <transition> → <owner lane>, ...
+- Handoff medium: <Issue | PR | board | .context path>
+- Auto-advance: <operations that proceed without asking, with count or size thresholds>
+- Controlled repositories (scale 4 only): <repo, cwd/worktree, precedence>
+```

@@ -1,0 +1,10 @@
+{{ includeTemplate "common-rules.md" (dict "localDir" ".claude/" "globalFile" "~/.claude/CLAUDE.md") }}
+# Claude Code 固有ルール
+
+- コミット前に、auto memory（~/.claude/projects/*/memory/）に保存された内容のうち、恒久的な運用ルール・判断基準・再利用する手順としてプロジェクトに有用なものがあれば、プロジェクトの CLAUDE.md に反映するか確認すること
+- auto memory の反映対象は、今後の Agent の行動を変える具体的なルール・判断基準・手順に限り、既存ルールの再掲、単なる repo メタ情報、会話履歴の要約は反映不要とすること
+- グローバル指示ファイルが別の管理元から配備されている場合、target の実ファイルを直接編集せず、対応する管理元ファイルへ反映すること
+
+## Desktop 自動実行 state
+
+- Claude Desktop / Claude Code の `~/.claude/tasks` は、UUID ごとの実行ログ、lock、highwatermark を含む runtime state として扱い、安定した宣言的 schedule であることを確認できる場合を除いて dotfiles 管理へ追加しないこと

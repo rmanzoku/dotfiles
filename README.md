@@ -93,7 +93,6 @@ WORKSPACE_REPO_HOST_PATH="github.com/<owner>/<workspace-repo>" \
 
 `personal` や `tech` などのサブエージェントは skill ではなく、Claude Code / Codex の private agent 定義として管理します。
 定義ファイルや private secretary の facts / assets は git に入れず、1Password の `Secrets Manifest` から `opmaterialize restore` で復元します。
-一方、個人的な判断や private context を含まない `worker` / `mechanical` は git 追跡された chezmoi source から直接復元し、1Password には保存しません。
 この手順は元利用者の private state を復元するためのものです。流用者は自分の agent 定義と fact store を用意してください。
 
 新しいマシンでは 1Password にサインインして `opmaterialize restore` を実行した後、サブエージェント関連 target を再 apply します。
@@ -113,13 +112,9 @@ chezmoi apply --parent-dirs \
 test -r ~/.claude/agents/personal.md
 test -r ~/.claude/agents/biz.md
 test -r ~/.claude/agents/tech.md
-test -r ~/.claude/agents/worker.md
-test -r ~/.claude/agents/mechanical.md
 test -r ~/.codex/agents/personal.toml
 test -r ~/.codex/agents/biz.toml
 test -r ~/.codex/agents/tech.toml
-test -r ~/.codex/agents/worker.toml
-test -r ~/.codex/agents/mechanical.toml
 test -r ~/.config/private-secretary/facts.jsonl
 ```
 
@@ -199,7 +194,7 @@ Conductor などのツールが git worktree を立ち上げて dotfiles を編�
 
 | 実ファイル | chezmoi ソース |
 |-----------|----------------|
-| `.claude/CLAUDE.md` | `dot_claude/CLAUDE.md` |
+| `.claude/CLAUDE.md` | `dot_claude/CLAUDE.md.tmpl` |
 | `.claude/settings.json` | `dot_claude/private_settings.json` |
 | `.codex/AGENTS.md` | `dot_codex/AGENTS.md.tmpl` |
 | `.codex/config.toml` | `dot_codex/modify_private_config.toml.tmpl` |

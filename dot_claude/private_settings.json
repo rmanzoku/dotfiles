@@ -68,7 +68,7 @@
     "document-skills@anthropic-agent-skills": true,
     "skill-creator@claude-plugins-official": true,
     "claude-code-metrics-plugin@oasys-dev-marketplace": true,
-    "codex@openai-codex": true,
+    "codex@openai-codex": false,
     "vercel@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
