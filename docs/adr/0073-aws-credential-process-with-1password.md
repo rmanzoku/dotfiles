@@ -4,7 +4,7 @@ date: 2026-09-12
 worked_at: 2026-09-13T01:41:11+09:00
 agent_model: "Codex / GPT-6"
 status: accepted
-updated_at: 2026-09-13
+updated_at: 2026-11-01
 ---
 
 # Context
@@ -20,7 +20,7 @@ updated_at: 2026-09-13
 - 認証情報はメモリと子プロセスの pipe / environment だけを通し、ファイルやログに保存しない。
   一般用途の `oprun` のマスキングは維持し、このヘルパー内部の受け渡しだけ解除する。
 - `op` の起動は呼出元の端末セッションを維持し、タイムアウト用のプロセス群だけを分ける。
-  Python 3.11 以降の `process_group=0` を使い、`start_new_session=True` で端末を切り離さない。
+  `preexec_fn=os.setpgrp` を使い、`start_new_session=True` で端末を切り離さない（Addendum 2026-11-01）。
   AI の一連の OP 操作は `op-cli-runner` Skill に従い同じ PTY で実行する。
 - `~/.aws/config`、profile-to-item の参照ファイル、SSH agent の account / vault 選択は
   unmanaged とする。会社・案件固有値を chezmoi template へ持ち込まない。
@@ -67,3 +67,16 @@ Mac の画面ロックで 1Password アプリがロックされ、CLI の承認�
 載せる。ディスクキャッシュ・常駐・定期呼び出しは引き続き作らない。環境変数はジョブの間だけ同一ユーザーの
 プロセスから見えるため、必要なジョブに限り、ジョブ長に合わせた duration で使う。
 
+
+# Addendum 2026-11-01
+
+worked_at: 2026-11-01 / agent_model: Claude Opus 5.5
+
+shebang の `#!/usr/bin/env python3` が macOS 標準の `/usr/bin/python3`（3.9.6）に解決され、
+Python 3.11 で追加された `Popen(process_group=0)` が `TypeError` となり、全 profile の `credential_process` が失敗した。
+`process_group=0` と同じ `setpgid(0, 0)` を行う `preexec_fn=os.setpgrp` に置き換え、3.9 でも動くようにした。
+端末セッションを維持する判断は変えず、`start_new_session=True`（setsid）は引き続き使わない。
+helper は単一スレッドで起動するため、`preexec_fn` のスレッド非安全性は問題にならない。
+shebang で 3.11 以上を指定する案は採らなかった。Homebrew は `python3` を 3.11 以上へ常に
+リンクするとは限らず（観測時は `python3.13` / `python3.14` のみで、PATH の `python3` は `/usr/bin/python3`）、
+バージョン付きの絶対パスはマシンと Homebrew の更新に依存するためである。
