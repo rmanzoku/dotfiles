@@ -34,7 +34,7 @@ Before running Codex, settle these items. Use the stated default when the task d
 - Transport: stdio is the default; daemon is an explicit option sharing the desktop server and can be interrupted by daemon updates. Exec is explicit and has no goal lifecycle.
 - Config profile: use `--profile` only with `--transport exec`. With either app-server route it fails before any Codex process, including the version probe, with `profile_unsupported_app_server` in `summary.json`. Remove the profile or select exec; it is never ignored.
 - Goal: use the default objective unless the task needs its own; store a multiline objective in a file and use `--goal-objective-file`. Goal options and daemon selection cannot be combined with exec (except `--no-goal`, which is redundant for exec).
-- Prompt profile: when `--model` is passed, rely on `--prompt-profile auto`. When `--model` is omitted, read the non-secret `model` setting from the effective config (or the exec profile) and pass the matching adapter: `gpt-6` for `gpt-6.1-sol` / `gpt-6.1-terra` / `gpt-6-astra` / `gpt-6-sol`, `gpt-6-luna` for `gpt-6-luna`. For daemon runs, confirm its model or explicitly pass `--model`. Older generations get no adapter. Omitting both leaves the run without a generation adapter.
+- Prompt profile: when `--model` is passed, rely on `--prompt-profile auto`. When `--model` is omitted, read the non-secret `model` setting from the effective config (or the exec profile) and pass the matching adapter: `gpt-6` for `gpt-6.2-sol` / `gpt-6.2-astra` / `gpt-6.1-sol` / `gpt-6.1-terra` / `gpt-6-astra` / `gpt-6-sol`, `gpt-6-luna` for `gpt-6-luna`. For daemon runs, confirm its model or explicitly pass `--model`. Older generations get no adapter. Omitting both leaves the run without a generation adapter.
 - Extra Codex args and `--timeout-bin`: exec only; app-server rejects them rather than ignoring them. Pass each exec token as its own `--extra-codex-arg=<token>` value.
 
 Do not add "think hard", fixed progress-update scaffolds, or mandatory step-by-step narration to simulate effort. Use `--effort` only when the caller explicitly asks for an effort override.
@@ -70,7 +70,7 @@ The wrapper writes `.context/<task>/run.prompt.md`, then sends only a file-refer
 Default behavior:
 
 - `--prompt-profile auto` is the default.
-- When `--model` explicitly looks like GPT-6 (`gpt-6.1-sol`, `gpt-6.1-terra`, `gpt-6-astra`, `gpt-6-sol`, or similar), `auto` applies the GPT-6 adapter; for `gpt-6-luna` it applies `gpt-6-luna`, which adds a verification line.
+- When `--model` explicitly looks like GPT-6 (`gpt-6.2-sol`, `gpt-6.2-astra`, `gpt-6.1-sol`, `gpt-6.1-terra`, `gpt-6-astra`, `gpt-6-sol`, or similar), `auto` applies the GPT-6 adapter; for `gpt-6-luna` it applies `gpt-6-luna`, which adds a verification line.
 - When `--model` is omitted, `auto` resolves to `none` because the wrapper cannot read the Codex configured default. Check the configured `model` and pass the matching `--prompt-profile` (see Caller Checklist).
 - Pass `--prompt-profile none` to suppress model-specific prompt adaptation.
 
