@@ -288,6 +288,16 @@ def remote_branch_classification(
     if row["name"] in protected:
         return "keep", "protected branch"
 
+    # A branch that PRs have targeted is a long-lived integration or deployment branch
+    # (for example main or staging behind the default branch). Being merged into the
+    # default branch is not evidence that it is finished, and plans without branch
+    # protection on private repositories cannot mark it protected.
+    base_prs = [pr for pr in prs if pr.get("baseRefName") == row["name"]]
+    if base_prs:
+        numbers = ", ".join(f"#{pr.get('number')}" for pr in base_prs[:3])
+        more = f" and {len(base_prs) - 3} more" if len(base_prs) > 3 else ""
+        return "keep", f"base branch of PR {numbers}{more}"
+
     branch_prs = same_repository_prs(prs, row["name"])
     open_prs = [pr for pr in branch_prs if pr.get("state") == "OPEN" and not pr.get("mergedAt")]
     if open_prs:
