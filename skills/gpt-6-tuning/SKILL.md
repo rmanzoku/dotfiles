@@ -1,13 +1,13 @@
 ---
 name: gpt-6-tuning
-description: "Audit and rewrite prompts, AGENTS.md / CLAUDE.md, skills, and agent harness scaffolding for the GPT-6 family (astra, 6.1-sol, sol, luna): over-asking, early stops, skill conflicts, completion criteria, test volume, delegation, and effort. Use to migrate or readiness-check prompts for GPT-6. Not for broad SDK migrations."
+description: "Audit and rewrite prompts, AGENTS.md / CLAUDE.md, skills, and agent harness scaffolding for the GPT-6 family (astra, 6.1-sol, sol, luna): over-asking, early stops, skill conflicts, completion criteria, test volume, delegation, and effort. Use to migrate or readiness-check prompts for GPT-6. For GPT-6.2, use gpt-6-2-tuning. Not for broad SDK migrations."
 ---
 
 # GPT-6 Tuning
 
 リポジトリのドキュメント・スキル・プロンプト・エージェント運用ルールを GPT-6 世代の挙動に合わせて整備するためのスキル。
 
-本スキルは **人間やエージェントが読む運用文書・プロンプト側** の整備に特化する。SDK 移行、API クライアント実装、プロダクト機能の作り替えは、OpenAI 公式 docs を確認したうえで別タスクとして扱う。
+本スキルは **人間やエージェントが読む運用文書・プロンプト側** の整備に特化する。SDK 移行、API クライアント実装、プロダクト機能の作り替えは、OpenAI 公式 docs を確認したうえで別タスクとして扱う。GPT-6.2（`gpt-6.2-astra`、`gpt-6.2-sol`）は挙動の補正が一部逆向きになるため、`gpt-6-2-tuning` を使う。
 
 ## 起動する場面
 
