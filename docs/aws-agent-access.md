@@ -1,7 +1,7 @@
 ---
 title: "AWS credentials and EC2 access through 1Password"
 date: 2026-09-12
-updated_at: 2026-10-03
+updated_at: 2026-11-01
 agent_model: "Codex / GPT-6"
 ---
 
@@ -67,7 +67,7 @@ AWS コマンド全体を包み、進捗を記録する。認証エラー時は�
 
 ## 端末セッションと承認の再利用
 
-ヘルパーは Python 3.11 以降を使い、呼び出し元の端末セッションを維持して `op` を起動する。
+ヘルパーは macOS 標準の `/usr/bin/python3`（3.9）でも動き、呼び出し元の端末セッションを維持して `op` を起動する。
 タイムアウト時の終了対象だけを独立したプロセス群にし、端末から切り離さない。
 AI は `op-cli-runner` の手順に従い、一連の AWS / OP 操作を同じ PTY 内でまとめるか、
 実行中の端末セッションを継続利用する。毎回新しい PTY を作っても承認は引き継がれない。
